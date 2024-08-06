@@ -3,8 +3,11 @@ package com.vv.personal.twm.mkt.market.warehouse;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.mkt.market.warehouse.holding.PortfolioData;
 import com.vv.personal.twm.mkt.remote.feign.MarketDataEngineFeign;
 import com.vv.personal.twm.mkt.util.DateFormatUtil;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
@@ -15,6 +18,8 @@ import java.util.TreeSet;
  * @since 2023-11-24
  */
 @Slf4j
+@Getter
+@Setter
 public class TickerDataWarehouse {
 
     private final MarketDataEngineFeign marketDataEngineFeign;
@@ -24,6 +29,7 @@ public class TickerDataWarehouse {
     private final LocalDate startDateOfInvestment;
     private final LocalDate startDateForAnalysis;
     private final LocalDate endDate;
+    private PortfolioData portfolioData;
 
     public TickerDataWarehouse(MarketDataEngineFeign marketDataEngineFeign, TreeSet<String> instruments, LocalDate startDateOfInvestment, LocalDate endDate, LocalDate startDateForAnalysis) {
         this.marketDataEngineFeign = marketDataEngineFeign;
@@ -50,7 +56,7 @@ public class TickerDataWarehouse {
                     adjustedClosePriceTable.put(date, imnt, data.getPrice());
             });
         });
-        System.out.println(adjustedClosePriceTable);
+        log.debug(adjustedClosePriceTable.toString());
     }
 
 }

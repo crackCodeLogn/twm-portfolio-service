@@ -3,10 +3,11 @@ package com.vv.personal.twm.mkt.config;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.mkt.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.mkt.market.warehouse.holding.PortfolioData;
+import com.vv.personal.twm.mkt.model.AdjustedCostBase;
 import com.vv.personal.twm.mkt.remote.feign.MarketDataEngineFeign;
 import com.vv.personal.twm.mkt.util.DateFormatUtil;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,10 +20,10 @@ import java.util.TreeSet;
  */
 @Slf4j
 @Configuration
+@AllArgsConstructor
 public class BeanSupplier {
 
-    @Autowired
-    private MarketDataEngineFeign marketDataEngineFeign;
+    private final MarketDataEngineFeign marketDataEngineFeign;
 
     @Bean
     public PortfolioData extractPortfolioData() {
@@ -58,7 +59,29 @@ public class BeanSupplier {
         LocalDate startDateForAnalysis = endDate.minusYears(7);
         TickerDataWarehouse warehouse = new TickerDataWarehouse(marketDataEngineFeign, instruments, firstStartDate, endDate, startDateForAnalysis);
         warehouse.generateData();
+        warehouse.setPortfolioData(portfolioData);
         return warehouse;
+    }
+
+    @Bean
+    public AdjustedCostBase createAdjustedCostBase() {
+        log.info("Initiating creation of adjusted cost base data");
+        PortfolioData portfolioData = extractPortfolioData();
+        AdjustedCostBase adjustedCostBase = new AdjustedCostBase();
+
+        portfolioData.getPortfolio().getInvestmentsList().forEach(adjustedCostBase::addBlock);
+        adjustedCostBase.getInstruments()
+                .forEach(instrument ->
+                        adjustedCostBase.getAccountTypes()
+                                .forEach(accountType ->
+//                                        log.info("{}:{} -> {} => [{}]", instrument, accountType,
+//                                                adjustedCostBase.getAdjustedCost(instrument, accountType),
+//                                                adjustedCostBase.getInvestmentData(instrument, accountType)); // verbose
+
+                                                log.info("{}:{} -> {}", instrument, accountType, adjustedCostBase.getAdjustedCost(instrument, accountType))
+                                ));
+        log.info("Completed creation of adjusted cost base data");
+        return adjustedCostBase;
     }
 
 }
