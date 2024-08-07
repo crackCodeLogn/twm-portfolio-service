@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class BeanSupplierTest {
+    private static final double PRECISION = Math.pow(10, -6);
 
     @Mock
     private MarketDataEngineFeign marketDataEngineFeign;
@@ -41,8 +42,8 @@ class BeanSupplierTest {
         AdjustedCostBase adjustedCostBase = beanSupplier.createAdjustedCostBase();
         assertNotNull(adjustedCostBase);
 
-        assertEquals(15.17, adjustedCostBase.getAdjustedCost("SU.TO", TFSA), Math.pow(10, -6));
-        assertEquals(1.34, adjustedCostBase.getAdjustedCost("SU.TO", NR), Math.pow(10, -6));
+        assertEquals(15.17, adjustedCostBase.getAdjustedCost("SU.TO", TFSA), PRECISION);
+        assertEquals(1.34, adjustedCostBase.getAdjustedCost("SU.TO", NR), PRECISION);
     }
 
     private MarketDataProto.Investment generateInvestment(String symbol, String name, String sector, MarketDataProto.InstrumentType instrumentType, String date, double price, double qty, MarketDataProto.AccountType accountType) {
