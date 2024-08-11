@@ -1,8 +1,8 @@
-package com.vv.personal.twm.mkt.config;
+package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.mkt.model.AdjustedCostBase;
-import com.vv.personal.twm.mkt.remote.feign.MarketDataEngineFeign;
+import com.vv.personal.twm.portfolio.model.AdjustedCostBase;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -4,7 +4,7 @@ eureka:
       defaultZone: http://localhost:2012/eureka/
 spring:
   application:
-    name: twm-mkt-service
+    name: twm-portfolio-service
 
 server:
   port: 40037

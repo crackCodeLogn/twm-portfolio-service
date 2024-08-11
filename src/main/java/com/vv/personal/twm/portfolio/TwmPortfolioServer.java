@@ -1,4 +1,4 @@
-package com.vv.personal.twm.mkt;
+package com.vv.personal.twm.portfolio;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,12 +21,12 @@ import java.util.TimeZone;
 @EnableDiscoveryClient
 @EnableFeignClients
 @SpringBootApplication
-public class TwmMktServer {
+public class TwmPortfolioServer {
 
     public static void main(String[] args) {
         //http://localhost:40037/swagger-ui/index.html
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of("EST", ZoneId.SHORT_IDS))); //force setting
-        SpringApplication.run(TwmMktServer.class, args);
+        SpringApplication.run(TwmPortfolioServer.class, args);
     }
 
     @Autowired

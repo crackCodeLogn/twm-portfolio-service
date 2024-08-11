@@ -1,11 +1,11 @@
-package com.vv.personal.twm.mkt.config;
+package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.mkt.market.warehouse.TickerDataWarehouse;
-import com.vv.personal.twm.mkt.market.warehouse.holding.PortfolioData;
-import com.vv.personal.twm.mkt.model.AdjustedCostBase;
-import com.vv.personal.twm.mkt.remote.feign.MarketDataEngineFeign;
-import com.vv.personal.twm.mkt.util.DateFormatUtil;
+import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
+import com.vv.personal.twm.portfolio.market.warehouse.holding.PortfolioData;
+import com.vv.personal.twm.portfolio.model.AdjustedCostBase;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
+import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;

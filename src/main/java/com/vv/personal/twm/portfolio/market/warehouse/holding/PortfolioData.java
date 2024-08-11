@@ -1,4 +1,4 @@
-package com.vv.personal.twm.mkt.market.warehouse.holding;
+package com.vv.personal.twm.portfolio.market.warehouse.holding;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import lombok.Getter;

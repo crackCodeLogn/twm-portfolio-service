@@ -1,4 +1,4 @@
-package com.vv.personal.twm.mkt.market;
+package com.vv.personal.twm.portfolio.market;
 
 /**
  * @author Vivek

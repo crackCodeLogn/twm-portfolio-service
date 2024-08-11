@@ -1,4 +1,4 @@
-package com.vv.personal.twm.mkt.remote.feign;
+package com.vv.personal.twm.portfolio.remote.feign;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import org.springframework.cloud.openfeign.FeignClient;

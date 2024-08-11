@@ -1,6 +1,6 @@
-package com.vv.personal.twm.mkt.remote;
+package com.vv.personal.twm.portfolio.remote;
 
-import com.vv.personal.twm.mkt.market.warehouse.TickerDataWarehouse;
+import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController("market")
 @Controller
-@RequestMapping("/mkt/")
+@RequestMapping("/portfolio/")
 @AllArgsConstructor
-public class MarketController {
+public class PortfolioController {
 
     private final TickerDataWarehouse tickerDataWarehouse;
 
@@ -26,7 +26,7 @@ public class MarketController {
         return "hi";
     }
 
-    @GetMapping("/portfolio")
+    @GetMapping("/data")
     public void getPortfolio() {
         log.info("Firing get portfolio request");
         tickerDataWarehouse.generateData();

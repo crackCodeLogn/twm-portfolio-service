@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.vv.personal</groupId>
-    <artifactId>twm-mkt-service</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>twm-mkt-service</name>
-    <description>twm-mkt-service</description>
+    <artifactId>twm-portfolio-service</artifactId>
+    <version>0.1.1</version>
+    <name>twm-portfolio-service</name>
+    <description>TWM Portfolio service</description>
     <properties>
         <java.version>17</java.version>
         <spring-starter.version>4.1.3</spring-starter.version>
