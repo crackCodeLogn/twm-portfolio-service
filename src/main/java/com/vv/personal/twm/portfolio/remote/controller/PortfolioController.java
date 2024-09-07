@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.remote;
+package com.vv.personal.twm.portfolio.remote.controller;
 
 import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import lombok.AllArgsConstructor;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2023-11-23
  */
 @Slf4j
-@RestController("market")
+@RestController("portfolio")
 @Controller
 @RequestMapping("/portfolio/")
 @AllArgsConstructor
