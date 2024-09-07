@@ -25,12 +25,12 @@ public interface MarketDataEngineFeign {
                                          @PathVariable String start,
                                          @PathVariable String end);
 
-    @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}")
+    @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&original=1")
     MarketDataProto.Ticker getTickerDataWithoutCountryCode(@PathVariable String symbol,
                                                            @PathVariable String start,
                                                            @PathVariable String end);
 
-    @GetMapping("/proto/mkt/portfolio")
-    MarketDataProto.Portfolio getPortfolioData();
+    @GetMapping("/proto/mkt/portfolio/{orderDirection}")
+    MarketDataProto.Portfolio getPortfolioData(@PathVariable String orderDirection);
 
 }

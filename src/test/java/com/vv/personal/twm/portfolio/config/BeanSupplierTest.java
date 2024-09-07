@@ -14,6 +14,7 @@ import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDat
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.InstrumentType.EQUITY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
@@ -33,12 +34,12 @@ class BeanSupplierTest {
     @Test
     public void testBeanSupplier() {
         MarketDataProto.Portfolio portfolio = MarketDataProto.Portfolio.newBuilder()
-                .addInvestments(generateInvestment("SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 10.34, 20, TFSA))
-                .addInvestments(generateInvestment("SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 1.34, 20, NR))
-                .addInvestments(generateInvestment("SU.TO", "Suncor", "energy", EQUITY, "2024-08-07", 20, 20, TFSA))
+                .addInstruments(generateInstrument("SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 10.34, 20, TFSA))
+                .addInstruments(generateInstrument("SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 1.34, 20, NR))
+                .addInstruments(generateInstrument("SU.TO", "Suncor", "energy", EQUITY, "2024-08-07", 20, 20, TFSA))
                 .build();
 
-        when(marketDataEngineFeign.getPortfolioData()).thenReturn(portfolio);
+        when(marketDataEngineFeign.getPortfolioData(anyString())).thenReturn(portfolio);
         AdjustedCostBase adjustedCostBase = beanSupplier.createAdjustedCostBase();
         assertNotNull(adjustedCostBase);
 
@@ -46,8 +47,8 @@ class BeanSupplierTest {
         assertEquals(1.34, adjustedCostBase.getAdjustedCost("SU.TO", NR), PRECISION);
     }
 
-    private MarketDataProto.Investment generateInvestment(String symbol, String name, String sector, MarketDataProto.InstrumentType instrumentType, String date, double price, double qty, MarketDataProto.AccountType accountType) {
-        return MarketDataProto.Investment.newBuilder()
+    private MarketDataProto.Instrument generateInstrument(String symbol, String name, String sector, MarketDataProto.InstrumentType instrumentType, String date, double price, double qty, MarketDataProto.AccountType accountType) {
+        return MarketDataProto.Instrument.newBuilder()
                 .setTicker(MarketDataProto.Ticker.newBuilder()
                         .setSymbol(symbol)
                         .setName(name)

@@ -15,23 +15,23 @@ import java.util.stream.Collectors;
  */
 public class AdjustedCostBase {
 
-    private final ConcurrentHashMap<String, Pair<Map<MarketDataProto.AccountType, Node>, List<MarketDataProto.Investment>>> acbMap;
+    private final ConcurrentHashMap<String, Pair<Map<MarketDataProto.AccountType, Node>, List<MarketDataProto.Instrument>>> acbMap;
 
     public AdjustedCostBase() {
         acbMap = new ConcurrentHashMap<>();
     }
 
-    public void addBlock(MarketDataProto.Investment investment) {
-        Pair<Map<MarketDataProto.AccountType, Node>, List<MarketDataProto.Investment>> nodeListPair =
-                acbMap.computeIfAbsent(investment.getTicker().getSymbol(),
+    public void addBlock(MarketDataProto.Instrument instrument) {
+        Pair<Map<MarketDataProto.AccountType, Node>, List<MarketDataProto.Instrument>> nodeListPair =
+                acbMap.computeIfAbsent(instrument.getTicker().getSymbol(),
                         k -> Pair.of(new HashMap<>(), new ArrayList<>()));
 
         Map<MarketDataProto.AccountType, Node> nodeMap = nodeListPair.getLeft();
-        List<MarketDataProto.Investment> investmentList = nodeListPair.getRight();
-        investmentList.add(investment);
+        List<MarketDataProto.Instrument> instrumentList = nodeListPair.getRight();
+        instrumentList.add(instrument);
 
-        Node node = nodeMap.computeIfAbsent(investment.getAccountType(), k -> new Node());
-        node.updateData(investment.getQty(), investment.getTicker().getData(0).getPrice()); // todo - verify if only the first instance is required
+        Node node = nodeMap.computeIfAbsent(instrument.getAccountType(), k -> new Node());
+        node.updateData(instrument.getQty(), instrument.getTicker().getData(0).getPrice()); // todo - verify if only the first instance is required
     }
 
     public double getAdjustedCost(String instrument, MarketDataProto.AccountType accountType) {
@@ -44,13 +44,13 @@ public class AdjustedCostBase {
                 / acbMap.get(instrument).getKey().get(accountType).getQuantity();
     }
 
-    public List<MarketDataProto.Investment> getInvestmentData(String instrument) {
+    public List<MarketDataProto.Instrument> getInstrumentData(String instrument) {
         return acbMap.getOrDefault(instrument, Pair.of(new HashMap<>(), new ArrayList<>())).getRight();
     }
 
-    public List<MarketDataProto.Investment> getInvestmentData(String instrument, MarketDataProto.AccountType accountType) {
+    public List<MarketDataProto.Instrument> getInstrumentData(String instrument, MarketDataProto.AccountType accountType) {
         return acbMap.getOrDefault(instrument, Pair.of(new HashMap<>(), new ArrayList<>())).getRight()
-                .stream().filter(investment -> investment.getAccountType() == accountType)
+                .stream().filter(imnt -> imnt.getAccountType() == accountType)
                 .collect(Collectors.toList());
     }
 
