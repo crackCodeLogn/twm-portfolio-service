@@ -8,14 +8,14 @@ import lombok.Getter;
  */
 @Getter
 public enum InstrumentType {
-    STK(1),
-    ETF(2),
-    GIC(3),
-    CRYPTO(4);
+  STK(1),
+  ETF(2),
+  GIC(3),
+  CRYPTO(4);
 
-    private final int imntType;
+  private final int imntType;
 
-    InstrumentType(int imntType) {
-        this.imntType = imntType;
-    }
+  InstrumentType(int imntType) {
+    this.imntType = imntType;
+  }
 }

@@ -20,21 +20,21 @@ import org.springframework.web.bind.annotation.RestController;
 @AllArgsConstructor
 public class PortfolioController {
 
-    @Qualifier("ticker-dwh-s")
-    private final TickerDataWarehouse soldTickerDataWarehouse;
+  @Qualifier("ticker-dwh-s")
+  private final TickerDataWarehouse soldTickerDataWarehouse;
 
-    @Qualifier("ticker-dwh-b")
-    private final TickerDataWarehouse boughtTickerDataWarehouse;
+  @Qualifier("ticker-dwh-b")
+  private final TickerDataWarehouse boughtTickerDataWarehouse;
 
-    @GetMapping("/")
-    public String get() {
-        return "hi";
-    }
+  @GetMapping("/")
+  public String get() {
+    return "hi";
+  }
 
-    @GetMapping("/data")
-    public void getPortfolio() {
-        log.info("Firing get portfolio request");
-        soldTickerDataWarehouse.generateData();
-        log.info("get portf request completed");
-    }
+  @GetMapping("/data")
+  public void getPortfolio() {
+    log.info("Firing get portfolio request");
+    soldTickerDataWarehouse.generateData();
+    log.info("get portf request completed");
+  }
 }

@@ -8,17 +8,17 @@ import lombok.Getter;
  */
 @Getter
 public enum OrderDirection {
-    BUY("b"),
-    SELL("s");
+  BUY("b"),
+  SELL("s");
 
-    private final String direction;
+  private final String direction;
 
-    OrderDirection(String direction) {
-        this.direction = direction;
-    }
+  OrderDirection(String direction) {
+    this.direction = direction;
+  }
 
-    @Override
-    public String toString() {
-        return direction;
-    }
+  @Override
+  public String toString() {
+    return direction;
+  }
 }

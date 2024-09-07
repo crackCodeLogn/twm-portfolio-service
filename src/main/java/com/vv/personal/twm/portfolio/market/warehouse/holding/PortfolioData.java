@@ -10,15 +10,14 @@ import lombok.Getter;
 @Getter
 public class PortfolioData {
 
-    private final MarketDataProto.Portfolio portfolio;
+  private final MarketDataProto.Portfolio portfolio;
 
-    public PortfolioData(MarketDataProto.Portfolio portfolio) {
-        this.portfolio = portfolio;
-    }
+  public PortfolioData(MarketDataProto.Portfolio portfolio) {
+    this.portfolio = portfolio;
+  }
 
-    @Override
-    public String toString() {
-        return portfolio.toString();
-    }
-
+  @Override
+  public String toString() {
+    return portfolio.toString();
+  }
 }

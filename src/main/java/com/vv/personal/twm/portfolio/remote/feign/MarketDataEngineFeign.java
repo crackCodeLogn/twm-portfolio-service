@@ -12,25 +12,23 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "market-data", url = "localhost:8083")
 public interface MarketDataEngineFeign {
 
-    @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")
-    String getTickerName(@PathVariable String countryCode,
-                         @PathVariable String symbol);
+  @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")
+  String getTickerName(@PathVariable String countryCode, @PathVariable String symbol);
 
-    @GetMapping("/mkt/{countryCode}/ticker/sector/{symbol}")
-    String getTickerSector(@PathVariable String countryCode, @PathVariable String symbol);
+  @GetMapping("/mkt/{countryCode}/ticker/sector/{symbol}")
+  String getTickerSector(@PathVariable String countryCode, @PathVariable String symbol);
 
-    @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&country={countryCode}")
-    MarketDataProto.Ticker getTickerData(@PathVariable String countryCode,
-                                         @PathVariable String symbol,
-                                         @PathVariable String start,
-                                         @PathVariable String end);
+  @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&country={countryCode}")
+  MarketDataProto.Ticker getTickerData(
+      @PathVariable String countryCode,
+      @PathVariable String symbol,
+      @PathVariable String start,
+      @PathVariable String end);
 
-    @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&original=1")
-    MarketDataProto.Ticker getTickerDataWithoutCountryCode(@PathVariable String symbol,
-                                                           @PathVariable String start,
-                                                           @PathVariable String end);
+  @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&original=1")
+  MarketDataProto.Ticker getTickerDataWithoutCountryCode(
+      @PathVariable String symbol, @PathVariable String start, @PathVariable String end);
 
-    @GetMapping("/proto/mkt/portfolio/{orderDirection}")
-    MarketDataProto.Portfolio getPortfolioData(@PathVariable String orderDirection);
-
+  @GetMapping("/proto/mkt/portfolio/{orderDirection}")
+  MarketDataProto.Portfolio getPortfolioData(@PathVariable String orderDirection);
 }
