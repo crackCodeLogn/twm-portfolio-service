@@ -34,12 +34,11 @@ class BeanSupplierTest {
     MarketDataProto.Portfolio portfolio =
         MarketDataProto.Portfolio.newBuilder()
             .addInstruments(
-                generateInstrument(
-                    "SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 10.34, 20, TFSA))
+                generateInstrument("SU.TO", "Suncor", "energy", EQUITY, 20240806, 10.34, 20, TFSA))
             .addInstruments(
-                generateInstrument("SU.TO", "Suncor", "energy", EQUITY, "2024-08-06", 1.34, 20, NR))
+                generateInstrument("SU.TO", "Suncor", "energy", EQUITY, 20240806, 1.34, 20, NR))
             .addInstruments(
-                generateInstrument("SU.TO", "Suncor", "energy", EQUITY, "2024-08-07", 20, 20, TFSA))
+                generateInstrument("SU.TO", "Suncor", "energy", EQUITY, 20240807, 20, 20, TFSA))
             .build();
 
     when(marketDataEngineFeign.getPortfolioData(anyString())).thenReturn(portfolio);
@@ -55,7 +54,7 @@ class BeanSupplierTest {
       String name,
       String sector,
       MarketDataProto.InstrumentType instrumentType,
-      String date,
+      int date,
       double price,
       double qty,
       MarketDataProto.AccountType accountType) {
