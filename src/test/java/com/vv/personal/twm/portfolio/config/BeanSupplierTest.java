@@ -3,13 +3,14 @@ package com.vv.personal.twm.portfolio.config;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.AccountType.NR;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.AccountType.TFSA;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.InstrumentType.EQUITY;
+import static com.vv.personal.twm.portfolio.TestConstants.PRECISION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.model.AdjustedCostBase;
+import com.vv.personal.twm.portfolio.model.AdjustedCostBase2;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
  */
 @ExtendWith(MockitoExtension.class)
 class BeanSupplierTest {
-  private static final double PRECISION = Math.pow(10, -6);
 
   @Mock private MarketDataEngineFeign marketDataEngineFeign;
 
@@ -42,11 +42,11 @@ class BeanSupplierTest {
             .build();
 
     when(marketDataEngineFeign.getPortfolioData(anyString())).thenReturn(portfolio);
-    AdjustedCostBase adjustedCostBase = beanSupplier.createAdjustedCostBase();
-    assertNotNull(adjustedCostBase);
+    AdjustedCostBase2 adjustedCostBase2 = beanSupplier.createAdjustedCostBase();
+    assertNotNull(adjustedCostBase2);
 
-    assertEquals(15.17, adjustedCostBase.getAdjustedCost("SU.TO", TFSA), PRECISION);
-    assertEquals(1.34, adjustedCostBase.getAdjustedCost("SU.TO", NR), PRECISION);
+    assertEquals(15.17, adjustedCostBase2.getAdjustedCost("SU.TO", TFSA), PRECISION);
+    assertEquals(1.34, adjustedCostBase2.getAdjustedCost("SU.TO", NR), PRECISION);
   }
 
   private MarketDataProto.Instrument generateInstrument(

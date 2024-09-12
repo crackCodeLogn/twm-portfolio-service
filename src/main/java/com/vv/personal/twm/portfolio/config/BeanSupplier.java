@@ -3,7 +3,7 @@ package com.vv.personal.twm.portfolio.config;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.market.warehouse.holding.PortfolioData;
-import com.vv.personal.twm.portfolio.model.AdjustedCostBase;
+import com.vv.personal.twm.portfolio.model.AdjustedCostBase2;
 import com.vv.personal.twm.portfolio.model.OrderDirection;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
@@ -67,17 +67,17 @@ public class BeanSupplier {
 
   @Bean
   // todo - think about updating this from the sold portfolio as well
-  public AdjustedCostBase createAdjustedCostBase() {
+  public AdjustedCostBase2 createAdjustedCostBase() {
     log.info("Initiating creation of adjusted cost base data");
     PortfolioData portfolioData = extractBoughtPortfolioData();
-    AdjustedCostBase adjustedCostBase = new AdjustedCostBase();
+    AdjustedCostBase2 adjustedCostBase2 = new AdjustedCostBase2();
 
-    portfolioData.getPortfolio().getInstrumentsList().forEach(adjustedCostBase::addBlock);
-    adjustedCostBase
+    portfolioData.getPortfolio().getInstrumentsList().forEach(adjustedCostBase2::addBlock);
+    adjustedCostBase2
         .getInstruments()
         .forEach(
             instrument ->
-                adjustedCostBase
+                adjustedCostBase2
                     .getAccountTypes()
                     .forEach(
                         accountType ->
@@ -93,9 +93,9 @@ public class BeanSupplier {
                                 "{}:{} -> {}",
                                 instrument,
                                 accountType,
-                                adjustedCostBase.getAdjustedCost(instrument, accountType))));
+                                adjustedCostBase2.getAdjustedCost(instrument, accountType))));
     log.info("Completed creation of adjusted cost base data");
-    return adjustedCostBase;
+    return adjustedCostBase2;
   }
 
   private TickerDataWarehouse getTickerDataWarehouse(PortfolioData portfolioData) {

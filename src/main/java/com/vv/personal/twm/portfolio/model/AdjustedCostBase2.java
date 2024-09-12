@@ -12,13 +12,14 @@ import org.apache.commons.lang3.tuple.Pair;
  * @author Vivek
  * @since 2024-08-06
  */
-public class AdjustedCostBase {
+@Deprecated(forRemoval = true)
+public class AdjustedCostBase2 {
 
   private final ConcurrentHashMap<
           String, Pair<Map<MarketDataProto.AccountType, Node>, List<MarketDataProto.Instrument>>>
       acbMap;
 
-  public AdjustedCostBase() {
+  public AdjustedCostBase2() {
     acbMap = new ConcurrentHashMap<>();
   }
 
