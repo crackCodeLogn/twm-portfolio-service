@@ -6,6 +6,7 @@ import static com.vv.personal.twm.portfolio.TestConstants.PRECISION;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,25 +32,27 @@ class DataListTest {
 
     dataList.display();
 
-    assertEquals(10, dataList.getHead().getRunningQuantity(), PRECISION);
-    assertEquals(51, dataList.getHead().getAcb().getTotalAcb(), PRECISION);
-    assertEquals(5.1, dataList.getHead().getAcb().getAcbPerShare(), PRECISION);
-    assertEquals(BUY, dataList.getHead().getInstrument().getDirection());
+    List<DataNode> result = dataList.getData();
 
-    assertEquals(30, dataList.getHead().getNext().getRunningQuantity(), PRECISION);
-    assertEquals(251, dataList.getHead().getNext().getAcb().getTotalAcb(), PRECISION);
-    assertEquals(8.3666666, dataList.getHead().getNext().getAcb().getAcbPerShare(), PRECISION);
-    assertEquals(BUY, dataList.getHead().getNext().getInstrument().getDirection());
+    assertEquals(10, result.get(0).getRunningQuantity(), PRECISION);
+    assertEquals(51, result.get(0).getAcb().getTotalAcb(), PRECISION);
+    assertEquals(5.1, result.get(0).getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(BUY, result.get(0).getInstrument().getDirection());
 
-    assertEquals(25, dataList.getTail().getPrev().getRunningQuantity(), PRECISION);
-    assertEquals(191, dataList.getTail().getPrev().getAcb().getTotalAcb(), PRECISION);
-    assertEquals(7.64, dataList.getTail().getPrev().getAcb().getAcbPerShare(), PRECISION);
-    assertEquals(SELL, dataList.getTail().getPrev().getInstrument().getDirection());
+    assertEquals(30, result.get(1).getRunningQuantity(), PRECISION);
+    assertEquals(251, result.get(1).getAcb().getTotalAcb(), PRECISION);
+    assertEquals(8.3666666, result.get(1).getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(BUY, result.get(1).getInstrument().getDirection());
 
-    assertEquals(35, dataList.getTail().getRunningQuantity(), PRECISION);
-    assertEquals(341, dataList.getTail().getAcb().getTotalAcb(), PRECISION);
-    assertEquals(9.742857143, dataList.getTail().getAcb().getAcbPerShare(), PRECISION);
-    assertEquals(BUY, dataList.getTail().getInstrument().getDirection());
+    assertEquals(25, result.get(2).getRunningQuantity(), PRECISION);
+    assertEquals(191, result.get(2).getAcb().getTotalAcb(), PRECISION);
+    assertEquals(7.64, result.get(2).getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(SELL, result.get(2).getInstrument().getDirection());
+
+    assertEquals(35, result.get(3).getRunningQuantity(), PRECISION);
+    assertEquals(341, result.get(3).getAcb().getTotalAcb(), PRECISION);
+    assertEquals(9.742857143, result.get(3).getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(BUY, result.get(3).getInstrument().getDirection());
   }
 
   private MarketDataProto.Instrument generateInstrument(

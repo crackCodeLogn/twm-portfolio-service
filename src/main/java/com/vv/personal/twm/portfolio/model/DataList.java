@@ -1,6 +1,8 @@
 package com.vv.personal.twm.portfolio.model;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,14 +17,27 @@ public class DataList {
 
   private DataNode head;
   private DataNode tail;
+  private int blocks;
 
   public DataList() {
     head = null;
     tail = null;
+    blocks = 0;
+  }
+
+  public List<DataNode> getData() {
+    List<DataNode> data = new ArrayList<>(blocks);
+    DataNode current = head;
+    while (current != null) {
+      data.add(current);
+      current = current.getNext();
+    }
+    return data;
   }
 
   public void addBlock(MarketDataProto.Instrument instrument) {
     DataNode dataNode = new DataNode(instrument);
+    blocks++;
     if (head == null) {
       head = dataNode;
       tail = dataNode;
@@ -82,9 +97,5 @@ public class DataList {
       MarketDataProto.Instrument sellInstrument, MarketDataProto.Instrument instrument) {
     return sellInstrument.getTicker().getData(0).getDate()
         > instrument.getTicker().getData(0).getDate();
-  }
-
-  DataNode getHead() { // only allowed for testing
-    return head;
   }
 }
