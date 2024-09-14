@@ -3,7 +3,7 @@ package com.vv.personal.twm.portfolio.config;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.AccountType.NR;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.AccountType.TFSA;
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.InstrumentType.EQUITY;
-import static com.vv.personal.twm.portfolio.TestConstants.PRECISION;
+import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -45,8 +45,8 @@ class DataConfigTest {
     AdjustedCostBase2 adjustedCostBase2 = dataConfig.createAdjustedCostBase();
     assertNotNull(adjustedCostBase2);
 
-    assertEquals(15.17, adjustedCostBase2.getAdjustedCost("SU.TO", TFSA), PRECISION);
-    assertEquals(1.34, adjustedCostBase2.getAdjustedCost("SU.TO", NR), PRECISION);
+    assertEquals(15.17, adjustedCostBase2.getAdjustedCost("SU.TO", TFSA), DELTA_PRECISION);
+    assertEquals(1.34, adjustedCostBase2.getAdjustedCost("SU.TO", NR), DELTA_PRECISION);
   }
 
   private MarketDataProto.Instrument generateInstrument(

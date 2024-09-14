@@ -56,6 +56,12 @@ public class DataNode {
       }
     }
 
-    acb = ACB.builder().totalAcb(totalAcb).acbPerShare(totalAcb / runningQuantity).build();
+    // cannot allow negative, but seems if 0, then tax implications become crazy - future work maybe
+    // https://www.adjustedcostbase.ca/blog/can-my-adjusted-cost-base-be-negative/
+    totalAcb = Math.max(totalAcb, 0);
+
+    double acbPerShare =
+        runningQuantity > 0 ? totalAcb / runningQuantity : 0.0; // looks like position closure if 0
+    acb = ACB.builder().totalAcb(totalAcb).acbPerShare(acbPerShare).build();
   }
 }

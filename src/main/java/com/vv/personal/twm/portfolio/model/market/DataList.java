@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * @author Vivek
  * @since 2024-09-11
- *     <p>Hold a linked list of DataNode
+ *     <p>Hold a doubly linked list of DataNode
  */
 @Slf4j
 @Getter
@@ -73,7 +73,7 @@ public class DataList {
     }
 
     // dataNode.computeAcb(); // removing from here due to possible middle placement of sell blocks
-    // causing lot of compute overhead
+    // causing a lot of compute overhead
   }
 
   /** Invoke at end of construction of DataList, in order to compute ACB for all nodes of list */
@@ -83,6 +83,11 @@ public class DataList {
       current.computeAcb();
       current = current.getNext();
     }
+  }
+
+  @Override
+  public String toString() { // todo - later, look at streamlining the head and tail outputs
+    return String.format("DataList [head=%s, tail=%s, blocks=%s]", head, tail, blocks);
   }
 
   public void display() {

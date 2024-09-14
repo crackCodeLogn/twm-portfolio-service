@@ -1,6 +1,6 @@
 package com.vv.personal.twm.portfolio.model.market;
 
-import static com.vv.personal.twm.portfolio.TestConstants.PRECISION;
+import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
@@ -22,9 +22,9 @@ class DataNodeTest {
     assertNull(dataNode.getPrev());
     assertNull(dataNode.getNext());
     assertNotNull(dataNode.getInstrument());
-    assertEquals(10, dataNode.getRunningQuantity(), PRECISION);
-    assertEquals(5.1, dataNode.getAcb().getAcbPerShare(), PRECISION);
-    assertEquals(51, dataNode.getAcb().getTotalAcb(), PRECISION);
+    assertEquals(10, dataNode.getRunningQuantity(), DELTA_PRECISION);
+    assertEquals(5.1, dataNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(51, dataNode.getAcb().getTotalAcb(), DELTA_PRECISION);
   }
 
   @Test
@@ -44,13 +44,13 @@ class DataNodeTest {
     secondNode.computeAcb();
 
     //    System.out.println(firstNode);
-    assertEquals(10, firstNode.getRunningQuantity(), PRECISION);
-    assertEquals(51, firstNode.getAcb().getTotalAcb(), PRECISION);
-    assertEquals(5.1, firstNode.getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(10, firstNode.getRunningQuantity(), DELTA_PRECISION);
+    assertEquals(51, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5.1, firstNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
 
-    assertEquals(30, secondNode.getRunningQuantity(), PRECISION);
-    assertEquals(251, secondNode.getAcb().getTotalAcb(), PRECISION);
-    assertEquals(8.3666666, secondNode.getAcb().getAcbPerShare(), PRECISION);
+    assertEquals(30, secondNode.getRunningQuantity(), DELTA_PRECISION);
+    assertEquals(251, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(8.3666666, secondNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
   }
 
   private MarketDataProto.Instrument generateInstrument(
