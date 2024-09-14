@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
 import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TickerDataWarehouseService {
 
+  private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
   private final MarketDataEngineFeign marketDataEngineFeign;
 
   public TickerDataWarehouse getTickerDataWarehouse(PortfolioData portfolioData) {
@@ -38,7 +40,9 @@ public class TickerDataWarehouseService {
     TickerDataWarehouse warehouse =
         new TickerDataWarehouse(
             marketDataEngineFeign, instruments, firstStartDate, endDate, startDateForAnalysis);
-    warehouse.generateData();
+
+    if (tickerDataWarehouseConfig.isLoad()) warehouse.generateData();
+
     warehouse.setPortfolioData(portfolioData);
     return warehouse;
   }

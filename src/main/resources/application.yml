@@ -1,13 +1,17 @@
+spring:
+  application:
+    name: twm-portfolio-service
+server:
+  port: 40037
+
+warehouse:
+  load: false
+
+
 eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:2012/eureka/
-spring:
-  application:
-    name: twm-portfolio-service
-
-server:
-  port: 40037
 
 feign:
   client:
@@ -15,3 +19,7 @@ feign:
       default:
         connectTimeout: 10000 #milliseconds
         readTimeout: 10000
+
+logging:
+  level:
+    .: debug
