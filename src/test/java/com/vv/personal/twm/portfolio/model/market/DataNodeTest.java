@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.model;
+package com.vv.personal.twm.portfolio.model.market;
 
 import static com.vv.personal.twm.portfolio.TestConstants.PRECISION;
 import static org.junit.jupiter.api.Assertions.*;

@@ -10,7 +10,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.model.AdjustedCostBase2;
+import com.vv.personal.twm.portfolio.model.market.AdjustedCostBase2;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,11 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 2024-08-06
  */
 @ExtendWith(MockitoExtension.class)
-class BeanSupplierTest {
+class DataConfigTest {
 
   @Mock private MarketDataEngineFeign marketDataEngineFeign;
 
-  @InjectMocks private BeanSupplier beanSupplier;
+  @InjectMocks private DataConfig dataConfig;
 
   @Test
   public void testBeanSupplier() {
@@ -42,7 +42,7 @@ class BeanSupplierTest {
             .build();
 
     when(marketDataEngineFeign.getPortfolioData(anyString())).thenReturn(portfolio);
-    AdjustedCostBase2 adjustedCostBase2 = beanSupplier.createAdjustedCostBase();
+    AdjustedCostBase2 adjustedCostBase2 = dataConfig.createAdjustedCostBase();
     assertNotNull(adjustedCostBase2);
 
     assertEquals(15.17, adjustedCostBase2.getAdjustedCost("SU.TO", TFSA), PRECISION);

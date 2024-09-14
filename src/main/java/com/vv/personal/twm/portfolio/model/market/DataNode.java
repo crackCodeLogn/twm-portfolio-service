@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.model;
+package com.vv.personal.twm.portfolio.model.market;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import lombok.*;

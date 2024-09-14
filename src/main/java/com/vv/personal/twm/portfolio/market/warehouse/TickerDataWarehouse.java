@@ -3,7 +3,7 @@ package com.vv.personal.twm.portfolio.market.warehouse;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.market.warehouse.holding.PortfolioData;
+import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
