@@ -56,7 +56,11 @@ public class DataList {
           if (isCorrectPlaceForSell(instrument, last.getInstrument())) {
             dataNode.setNext(last.getNext());
             dataNode.setPrev(last);
-            last.getNext().setPrev(dataNode);
+            if (last.getNext() != null) {
+              last.getNext().setPrev(dataNode);
+            } else {
+              tail = dataNode;
+            }
             last.setNext(dataNode);
             insertedSellNode = true;
             break;

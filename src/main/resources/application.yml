@@ -22,4 +22,4 @@ feign:
 
 logging:
   level:
-    .: debug
+    .: info

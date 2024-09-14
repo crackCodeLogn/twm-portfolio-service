@@ -32,8 +32,9 @@ public class CompleteMarketData {
 
               dataListMap.get(instrument.getAccountType()).addBlock(instrument);
             });
+  }
 
-    // computing ACB
+  public void computeAcb() {
     marketData.values().forEach(collection -> collection.values().forEach(DataList::computeAcb));
   }
 }
