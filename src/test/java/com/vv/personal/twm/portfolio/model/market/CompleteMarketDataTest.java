@@ -32,6 +32,7 @@ class CompleteMarketDataTest {
     System.out.println(portfolio);
 
     marketData.populate(portfolio);
+    marketData.computeAcb();
     Map<String, Map<MarketDataProto.AccountType, DataList>> result = marketData.getMarketData();
 
     assertFalse(result.isEmpty());

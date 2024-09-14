@@ -83,37 +83,4 @@ public class DataConfig {
         "Completed market data load completed in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
     return marketData;
   }
-
-  /*
-  @Bean
-  public AdjustedCostBase2 createAdjustedCostBase() {
-    log.info("Initiating creation of adjusted cost base data");
-    PortfolioData portfolioData = extractBoughtPortfolioData();
-    AdjustedCostBase2 adjustedCostBase2 = new AdjustedCostBase2();
-
-    portfolioData.getPortfolio().getInstrumentsList().forEach(adjustedCostBase2::addBlock);
-    adjustedCostBase2
-        .getInstruments()
-        .forEach(
-            instrument ->
-                adjustedCostBase2
-                    .getAccountTypes()
-                    .forEach(
-                        accountType ->
-                            //                                        log.info("{}:{} -> {} =>
-                            // [{}]", instrument, accountType,
-                            //
-                            // adjustedCostBase.getAdjustedCost(instrument, accountType),
-                            //
-                            // adjustedCostBase.getInvestmentData(instrument, accountType)); //
-                            // verbose
-
-                            log.info(
-                                "{}:{} -> {}",
-                                instrument,
-                                accountType,
-                                adjustedCostBase2.getAdjustedCost(instrument, accountType))));
-    log.info("Completed creation of adjusted cost base data");
-    return adjustedCostBase2;
-  } */
 }

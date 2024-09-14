@@ -2,12 +2,14 @@ package com.vv.personal.twm.portfolio.model.market;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
  * @author Vivek
  * @since 2024-09-11
  */
+@Slf4j
 @Getter
 @Setter
 public class DataNode {
@@ -17,6 +19,7 @@ public class DataNode {
   private DataNode prev;
   private double runningQuantity;
   private ACB acb;
+  private boolean oneTimeProcessed;
 
   public DataNode(MarketDataProto.Instrument instrument) {
     this.instrument = instrument;
@@ -24,6 +27,7 @@ public class DataNode {
     this.prev = null;
     this.acb = null;
     this.runningQuantity = instrument.getQty();
+    this.oneTimeProcessed = false;
   }
 
   @Override
@@ -44,12 +48,28 @@ public class DataNode {
 
     } else { // consider direction now
       if (instrument.getDirection() == MarketDataProto.Direction.BUY) {
-        runningQuantity += prev.getRunningQuantity();
+        if (!oneTimeProcessed) {
+          runningQuantity += prev.getRunningQuantity();
+          oneTimeProcessed = true;
+        } else {
+          log.warn(
+              "Not updating BUY runningQuantity for {} as it has already been processed!",
+              instrument.getTicker().getSymbol());
+        }
+
         totalAcb =
             prev.getAcb().getTotalAcb()
                 + (instrument.getQty() * instrument.getTicker().getData(0).getPrice());
-      } else {
-        runningQuantity = prev.getRunningQuantity() - runningQuantity;
+      } else { // SELL direction
+        if (!oneTimeProcessed) {
+          runningQuantity = prev.getRunningQuantity() - runningQuantity;
+          oneTimeProcessed = true;
+        } else {
+          log.warn(
+              "Not updating SELL runningQuantity for {} as it has already been processed!",
+              instrument.getTicker().getSymbol());
+        }
+
         totalAcb =
             prev.getAcb().getTotalAcb()
                 - (instrument.getQty() * instrument.getTicker().getData(0).getPrice());

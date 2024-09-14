@@ -53,6 +53,52 @@ class DataNodeTest {
     assertEquals(8.3666666, secondNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
   }
 
+  @Test
+  public void preventMultiComputeAcbInBuy() {
+    MarketDataProto.Instrument firstImnt =
+        generateInstrument(10, 5.1, MarketDataProto.Direction.BUY);
+    MarketDataProto.Instrument secondImnt =
+        generateInstrument(20, 10, MarketDataProto.Direction.BUY);
+
+    DataNode firstNode = new DataNode(firstImnt);
+    DataNode secondNode = new DataNode(secondImnt);
+
+    firstNode.setNext(secondNode);
+    secondNode.setPrev(firstNode);
+
+    firstNode.computeAcb();
+    assertEquals(51, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    secondNode.computeAcb();
+    assertEquals(251, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+
+    firstNode.computeAcb();
+    assertEquals(51, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    secondNode.computeAcb();
+    assertEquals(251, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+  }
+
+  @Test
+  public void preventMultiComputeAcbInSell() {
+    MarketDataProto.Instrument firstImnt =
+        generateInstrument(10, 5.1, MarketDataProto.Direction.BUY);
+    MarketDataProto.Instrument secondImnt =
+        generateInstrument(1, 10, MarketDataProto.Direction.SELL);
+
+    DataNode firstNode = new DataNode(firstImnt);
+    DataNode secondNode = new DataNode(secondImnt);
+
+    firstNode.setNext(secondNode);
+    secondNode.setPrev(firstNode);
+
+    firstNode.computeAcb();
+    assertEquals(51, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    secondNode.computeAcb();
+    assertEquals(41, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+
+    secondNode.computeAcb();
+    assertEquals(41, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+  }
+
   private MarketDataProto.Instrument generateInstrument(
       double qty, double price, MarketDataProto.Direction direction) {
     return MarketDataProto.Instrument.newBuilder()
