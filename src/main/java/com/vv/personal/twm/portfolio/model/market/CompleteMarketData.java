@@ -13,6 +13,7 @@ import lombok.Getter;
 @Getter
 public class CompleteMarketData {
 
+  // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
 
   public CompleteMarketData() {

@@ -75,9 +75,9 @@ public class DataConfig {
     CompleteMarketData marketData = new CompleteMarketData();
     log.info("Starting complete market data load");
     StopWatch stopWatch = StopWatch.createStarted();
-    marketData.populate(extractBoughtPortfolioData().getPortfolio());
-    marketData.populate(extractSoldPortfolioData().getPortfolio());
-    marketData.computeAcb();
+    marketData.populate(extractBoughtPortfolioData().getPortfolio()); // first populate the buy side
+    marketData.populate(extractSoldPortfolioData().getPortfolio()); // then populate the sell side
+    marketData.computeAcb(); // compute the ACB once all the data has been populated
     stopWatch.stop();
     log.info(
         "Completed market data load completed in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
