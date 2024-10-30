@@ -4,7 +4,7 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
 import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
-import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
 import java.util.TreeSet;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 public class TickerDataWarehouseService {
 
   private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
-  private final MarketDataEngineFeign marketDataEngineFeign;
+  private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
 
   public TickerDataWarehouse getTickerDataWarehouse(PortfolioData portfolioData) {
     LocalDate firstStartDate = LocalDate.of(2999, 12, 31);
@@ -39,7 +39,11 @@ public class TickerDataWarehouseService {
     LocalDate startDateForAnalysis = endDate.minusYears(7);
     TickerDataWarehouse warehouse =
         new TickerDataWarehouse(
-            marketDataEngineFeign, instruments, firstStartDate, endDate, startDateForAnalysis);
+            marketDataPythonEngineFeign,
+            instruments,
+            firstStartDate,
+            endDate,
+            startDateForAnalysis);
 
     if (tickerDataWarehouseConfig.isLoad()) warehouse.generateData();
 

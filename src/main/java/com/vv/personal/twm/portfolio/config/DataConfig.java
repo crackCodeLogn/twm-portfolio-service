@@ -5,7 +5,7 @@ import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.model.market.CompleteMarketData;
 import com.vv.personal.twm.portfolio.model.market.OrderDirection;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
-import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Lazy;
 @AllArgsConstructor
 public class DataConfig {
 
-  private final MarketDataEngineFeign marketDataEngineFeign;
+  private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final TickerDataWarehouseService tickerDataWarehouseService;
 
   @Qualifier("portfolio-b")
@@ -33,7 +33,7 @@ public class DataConfig {
   public PortfolioData extractBoughtPortfolioData() {
     StopWatch stopwatch = StopWatch.createStarted();
     MarketDataProto.Portfolio portfolio =
-        marketDataEngineFeign.getPortfolioData(OrderDirection.BUY.getDirection());
+        marketDataPythonEngineFeign.getPortfolioData(OrderDirection.BUY.getDirection());
     stopwatch.stop();
     log.info(
         "Loaded portfolio of {} bought stocks in {}s",
@@ -47,7 +47,7 @@ public class DataConfig {
   public PortfolioData extractSoldPortfolioData() {
     StopWatch stopwatch = StopWatch.createStarted();
     MarketDataProto.Portfolio portfolio =
-        marketDataEngineFeign.getPortfolioData(OrderDirection.SELL.getDirection());
+        marketDataPythonEngineFeign.getPortfolioData(OrderDirection.SELL.getDirection());
     stopwatch.stop();
     log.info(
         "Loaded portfolio of {} sold stocks in {}s",

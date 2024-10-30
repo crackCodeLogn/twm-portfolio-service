@@ -4,7 +4,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
-import com.vv.personal.twm.portfolio.remote.feign.MarketDataEngineFeign;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
 import java.util.TreeSet;
@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 public class TickerDataWarehouse {
 
-  private final MarketDataEngineFeign marketDataEngineFeign;
+  private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final Table<LocalDate, String, Double> adjustedClosePriceTable;
   private final Table<LocalDate, String, Double> adjustedClosePriceTableForAnalysis;
   private final TreeSet<String> instruments;
@@ -31,12 +31,12 @@ public class TickerDataWarehouse {
   private PortfolioData portfolioData;
 
   public TickerDataWarehouse(
-      MarketDataEngineFeign marketDataEngineFeign,
+      MarketDataPythonEngineFeign marketDataPythonEngineFeign,
       TreeSet<String> instruments,
       LocalDate startDateOfInvestment,
       LocalDate endDate,
       LocalDate startDateForAnalysis) {
-    this.marketDataEngineFeign = marketDataEngineFeign;
+    this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
     this.instruments = instruments;
     this.startDateOfInvestment = startDateOfInvestment;
     this.endDate = endDate;
@@ -51,7 +51,7 @@ public class TickerDataWarehouse {
         imnt -> {
           log.info("Downloading data for {} from {} to {}", imnt, startDateOfInvestment, endDate);
           MarketDataProto.Ticker tickerData =
-              marketDataEngineFeign.getTickerDataWithoutCountryCode(
+              marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
                   imnt, startDateForAnalysis.toString(), endDate.toString());
 
           tickerData

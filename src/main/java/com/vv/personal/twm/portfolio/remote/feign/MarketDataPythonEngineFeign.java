@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @since 2023-11-24
  */
 @FeignClient(name = "market-data", url = "localhost:8083")
-public interface MarketDataEngineFeign {
+public interface MarketDataPythonEngineFeign {
 
   @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")
   String getTickerName(@PathVariable String countryCode, @PathVariable String symbol);
