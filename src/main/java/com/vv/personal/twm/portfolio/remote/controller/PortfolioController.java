@@ -1,10 +1,7 @@
 package com.vv.personal.twm.portfolio.remote.controller;
 
-import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,13 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 @AllArgsConstructor
 public class PortfolioController {
 
-  @Lazy
+  /*@Lazy
   @Qualifier("ticker-dwh-s")
   private final TickerDataWarehouse soldTickerDataWarehouse;
 
   @Lazy
   @Qualifier("ticker-dwh-b")
-  private final TickerDataWarehouse boughtTickerDataWarehouse;
+  private final TickerDataWarehouse boughtTickerDataWarehouse;*/
 
   @GetMapping("/")
   public String get() {
@@ -37,7 +34,7 @@ public class PortfolioController {
   @GetMapping("/data")
   public void getPortfolio() {
     log.info("Firing get portfolio request");
-    soldTickerDataWarehouse.generateData();
+    // soldTickerDataWarehouse.generateData();
     log.info("get portf request completed");
   }
 }

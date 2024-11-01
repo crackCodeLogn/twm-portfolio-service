@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.model.market;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
 
@@ -37,5 +38,9 @@ public class CompleteMarketData {
 
   public void computeAcb() {
     marketData.values().forEach(collection -> collection.values().forEach(DataList::computeAcb));
+  }
+
+  public Set<String> getInstruments() {
+    return marketData.keySet();
   }
 }

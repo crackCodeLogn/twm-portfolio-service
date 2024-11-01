@@ -15,4 +15,6 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "warehouse")
 public class TickerDataWarehouseConfig {
   private boolean load;
+  private int lookBackYears;
+  private String benchmarkTicker;
 }

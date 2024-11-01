@@ -6,6 +6,8 @@ server:
 
 warehouse:
   load: false
+  lookBackYears: 5
+  benchmarkTicker: CM.TO
 
 
 eureka:
@@ -22,4 +24,4 @@ feign:
 
 logging:
   level:
-    .: info
+    root: info
