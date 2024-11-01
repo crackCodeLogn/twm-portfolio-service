@@ -12,12 +12,14 @@ import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Vivek
  * @since 2024-09-13
  */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class TickerDataWarehouseService {
 
