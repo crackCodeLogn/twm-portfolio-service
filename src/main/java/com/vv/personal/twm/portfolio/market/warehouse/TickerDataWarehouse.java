@@ -17,21 +17,19 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 public class TickerDataWarehouse {
 
-  private final Table<LocalDate, String, Double> adjustedClosePriceTable;
   private final Table<LocalDate, String, Double> adjustedClosePriceTableForAnalysis;
   private final TreeSet<String> instruments;
 
   public TickerDataWarehouse() {
     this.instruments = new TreeSet<>();
-    adjustedClosePriceTable = HashBasedTable.create();
     adjustedClosePriceTableForAnalysis = HashBasedTable.create();
   }
 
   public void put(LocalDate date, String imnt, Double price) {
-    adjustedClosePriceTable.put(date, imnt, price);
+    adjustedClosePriceTableForAnalysis.put(date, imnt, price);
   }
 
-  public void analysisPut(LocalDate date, String imnt, Double price) {
-    adjustedClosePriceTableForAnalysis.put(date, imnt, price);
+  public Double get(LocalDate date, String imnt) {
+    return adjustedClosePriceTableForAnalysis.get(date, imnt);
   }
 }

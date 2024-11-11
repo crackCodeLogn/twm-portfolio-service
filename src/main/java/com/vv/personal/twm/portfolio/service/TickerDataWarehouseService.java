@@ -45,7 +45,7 @@ public class TickerDataWarehouseService {
   }
 
   public void loadAnalysisDataForInstruments(Set<String> instruments) {
-    instruments.forEach(
+    instruments.forEach( // don't parallelize just yet due to py flask
         instrument -> {
           log.info("Loading analysis data for {}", instrument);
           MarketDataProto.Ticker tickerDataFromDb =
@@ -74,6 +74,10 @@ public class TickerDataWarehouseService {
                 marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
               });
         });
+  }
+
+  public Double getMarketData(String imnt, int date) {
+    return tickerDataWarehouse.get(convertDate(date), imnt);
   }
 
   List<Pair<LocalDate, LocalDate>> identifyMissingDbDates(
@@ -123,7 +127,7 @@ public class TickerDataWarehouseService {
         .forEach(
             value -> {
               LocalDate date = DateFormatUtil.getLocalDate(value.getDate());
-              tickerDataWarehouse.analysisPut(date, ticker, value.getPrice());
+              tickerDataWarehouse.put(date, ticker, value.getPrice());
             });
   }
 
