@@ -13,10 +13,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface MarketDataPythonEngineFeign {
 
   @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")
-  String getTickerName(@PathVariable String countryCode, @PathVariable String symbol);
+  String getTickerNameWithoutCountryCode(
+      @PathVariable String countryCode, @PathVariable String symbol);
 
   @GetMapping("/mkt/{countryCode}/ticker/sector/{symbol}")
-  String getTickerSector(@PathVariable String countryCode, @PathVariable String symbol);
+  String getTickerSectorWithoutCountryCode(
+      @PathVariable String countryCode, @PathVariable String symbol);
+
+  @GetMapping("/mkt/{countryCode}/ticker/dividend/{symbol}")
+  String getTickerDividendWithoutCountryCode(
+      @PathVariable String countryCode, @PathVariable String symbol);
+
+  @GetMapping("/mkt/ticker/dividend/{symbol}")
+  String getTickerDividend(@PathVariable String symbol);
 
   @GetMapping("/proto/mkt?symbol={symbol}&start={start}&end={end}&country={countryCode}")
   MarketDataProto.Ticker getTickerData(

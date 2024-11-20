@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.service;
+package com.vv.personal.twm.portfolio.service.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -22,14 +22,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 2024-10-31
  */
 @ExtendWith(MockitoExtension.class)
-class TickerDataWarehouseServiceTest {
+class TickerDataWarehouseServiceImplTest {
 
   @Mock private TickerDataWarehouseConfig tickerDataWarehouseConfig;
   @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   @Mock private MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   @Mock private TickerDataWarehouse tickerDataWarehouse;
 
-  @InjectMocks private TickerDataWarehouseService tickerDataWarehouseService;
+  @InjectMocks private TickerDataWarehouseServiceImpl tickerDataWarehouseServiceImpl;
 
   @Test
   public void testIdentifyMissingDbDates() {
@@ -47,7 +47,7 @@ class TickerDataWarehouseServiceTest {
             .build();
 
     List<Pair<LocalDate, LocalDate>> missingDbDates =
-        tickerDataWarehouseService.identifyMissingDbDates(ticker, dates);
+        tickerDataWarehouseServiceImpl.identifyMissingDbDates(ticker, dates);
     System.out.println(missingDbDates);
     assertEquals(4, missingDbDates.size());
     assertEquals(
@@ -62,7 +62,7 @@ class TickerDataWarehouseServiceTest {
 
   @Test
   public void testConvertDate() {
-    LocalDate result = tickerDataWarehouseService.convertDate(20241031);
+    LocalDate result = tickerDataWarehouseServiceImpl.convertDate(20241031);
     assertEquals(result, LocalDate.of(2024, 10, 31));
   }
 }

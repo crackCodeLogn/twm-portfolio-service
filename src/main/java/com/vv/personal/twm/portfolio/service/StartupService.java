@@ -25,6 +25,7 @@ public class StartupService {
   private final BankCrdbServiceFeign crdbServiceFeign;
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final CompleteMarketData completeMarketData;
+  private final InvestmentDivWeightService investmentDivWeightService; // todo - remove post testing
 
   @EventListener(ApplicationReadyEvent.class)
   public void startup() {
@@ -38,5 +39,16 @@ public class StartupService {
     }
 
     log.info("Startup complete");
+
+    /*Optional<InvestmentDivWeight> optionalInvestmentDivWeight =
+        investmentDivWeightService.calcInvestmentBasedOnDivWeight(
+            Lists.newArrayList("VFV.TO", "VDY.TO", "VCE.TO", "CCO.TO"),
+            Lists.newArrayList(
+                "RY.TO", "BNS.TO", "CM.TO", "ENB.TO", "BCE.TO", "TRP.TO", "SU.TO", "CNQ.TO",
+                "CP.TO", "PZA.TO", "DBM.TO", "FTS.TO"),
+            5000.0,
+            20.0,
+            0.0);
+    System.out.println(optionalInvestmentDivWeight.get());*/
   }
 }

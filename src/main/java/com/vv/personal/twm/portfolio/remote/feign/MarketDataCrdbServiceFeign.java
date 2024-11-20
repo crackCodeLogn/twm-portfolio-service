@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.remote.feign;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.ping.remote.feign.PingFeign;
+import java.util.Optional;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,10 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
 
   @GetMapping("/crdb/mkt/data/")
   MarketDataProto.Ticker getEntireMarketData();
+
+  @GetMapping("/crdb/mkt/data/{ticker}/{limit}")
+  Optional<MarketDataProto.Portfolio> getLimitedDataByTicker(
+      @PathVariable("ticker") String ticker, @PathVariable("limit") int limit);
 
   @PostMapping("/crdb/mkt/data-single-ticker/")
   String addMarketDataForSingleTicker(@RequestBody MarketDataProto.Ticker ticker);

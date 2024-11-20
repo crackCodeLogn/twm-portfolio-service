@@ -8,6 +8,7 @@ import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
+import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +66,7 @@ public class DataConfig {
   @Bean
   public TickerDataWarehouseService tickerDataWarehouseService() {
     TickerDataWarehouseService tickerDataWarehouseService =
-        new TickerDataWarehouseService(
+        new TickerDataWarehouseServiceImpl(
             tickerDataWarehouseConfig,
             marketDataPythonEngineFeign,
             marketDataCrdbServiceFeign,
