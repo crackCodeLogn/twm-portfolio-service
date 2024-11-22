@@ -46,6 +46,7 @@ public class PortfolioController {
           String highDivImnts,
       @RequestParam(defaultValue = "5000.0") Double income,
       @RequestParam(defaultValue = "20.0") Double incomeSplitPercentage,
+      @RequestParam(defaultValue = "0.0") Double forceAbsoluteAmount,
       @RequestParam(defaultValue = "0.0") Double amountToConsiderForDistributionTfsa) {
 
     List<String> highValList = split(highValImnts);
@@ -58,6 +59,12 @@ public class PortfolioController {
         income,
         incomeSplitPercentage,
         amountToConsiderForDistributionTfsa);
+
+    if (forceAbsoluteAmount > 0.0) {
+      log.warn("Overriding income amount with the forced absolute amount!");
+      income = forceAbsoluteAmount;
+      incomeSplitPercentage = 100.0;
+    }
 
     Optional<InvestmentDivWeight> investmentDivWeight =
         investmentDivWeightService.calcInvestmentBasedOnDivWeight(
