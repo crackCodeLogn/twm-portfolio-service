@@ -61,6 +61,24 @@ class TickerDataWarehouseServiceImplTest {
   }
 
   @Test
+  public void testIdentifyMissingDbDates_NoMissingDates() {
+    List<Integer> dates = Lists.newArrayList(20241101, 20241102, 20241103, 20241104);
+    MarketDataProto.Ticker ticker =
+        MarketDataProto.Ticker.newBuilder()
+            .setSymbol("test-v2.to")
+            .addData(MarketDataProto.Value.newBuilder().setDate(20241103).build())
+            .addData(MarketDataProto.Value.newBuilder().setDate(20241104).build())
+            .addData(MarketDataProto.Value.newBuilder().setDate(20241102).build())
+            .addData(MarketDataProto.Value.newBuilder().setDate(20241101).build())
+            .build();
+
+    List<Pair<LocalDate, LocalDate>> missingDbDates =
+        tickerDataWarehouseServiceImpl.identifyMissingDbDates(ticker, dates);
+    System.out.println(missingDbDates);
+    assertTrue(missingDbDates.isEmpty());
+  }
+
+  @Test
   public void testConvertDate() {
     LocalDate result = tickerDataWarehouseServiceImpl.convertDate(20241031);
     assertEquals(result, LocalDate.of(2024, 10, 31));
