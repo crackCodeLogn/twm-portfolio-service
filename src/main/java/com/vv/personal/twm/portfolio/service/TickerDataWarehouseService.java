@@ -21,4 +21,6 @@ public interface TickerDataWarehouseService {
       MarketDataProto.Ticker benchmarkTickerDataFromDb, List<Integer> marketDates);
 
   LocalDate convertDate(int date);
+
+  List<LocalDate> getDates();
 }

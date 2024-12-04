@@ -116,11 +116,19 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
   @Override
   public LocalDate convertDate(int date) {
+    // return DateFormatUtil.getLocalDate(date); // can be used as an alternate as well, but may be
+    // less optimal? test it out
+
     int year = date / 10000;
     date %= 10000;
     int month = date / 100;
     date %= 100;
     return LocalDate.of(year, month, date);
+  }
+
+  @Override
+  public List<LocalDate> getDates() {
+    return tickerDataWarehouse.getDates();
   }
 
   private void fillAnalysisWarehouse(MarketDataProto.Ticker tickerData) {
