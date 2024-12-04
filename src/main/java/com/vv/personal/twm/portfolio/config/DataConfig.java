@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
+import com.vv.personal.twm.portfolio.market.warehouse.impl.TickerDataWarehouseImpl;
 import com.vv.personal.twm.portfolio.model.market.CompleteMarketData;
 import com.vv.personal.twm.portfolio.model.market.OrderDirection;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
@@ -32,7 +33,7 @@ public class DataConfig {
 
   @Bean
   public TickerDataWarehouse tickerDataWarehouse() {
-    return new TickerDataWarehouse();
+    return new TickerDataWarehouseImpl();
   }
 
   @Qualifier("portfolio-b")
