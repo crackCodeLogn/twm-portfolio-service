@@ -82,6 +82,6 @@ public class DataNode {
 
     double acbPerShare =
         runningQuantity > 0 ? totalAcb / runningQuantity : 0.0; // looks like position closure if 0
-    acb = ACB.builder().totalAcb(totalAcb).acbPerShare(acbPerShare).build();
+    acb = ACB.builder().totalAcb(totalAcb).acbPerUnit(acbPerShare).build();
   }
 }

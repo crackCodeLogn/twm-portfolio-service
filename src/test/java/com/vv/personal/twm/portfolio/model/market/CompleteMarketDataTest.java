@@ -56,14 +56,14 @@ class CompleteMarketDataTest {
     DataList cmNrList = result.get("CM.TO").get(MarketDataProto.AccountType.NR);
     assertNotNull(cmNrList);
     assertEquals(1, cmNrList.getBlocks());
-    assertEquals(15, cmNrList.getHead().getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(15, cmNrList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(150, cmNrList.getHead().getAcb().getTotalAcb(), DELTA_PRECISION);
 
     assertTrue(result.containsKey("BNS.TO"));
     DataList bnsTfsaList = result.get("BNS.TO").get(MarketDataProto.AccountType.TFSA);
     assertNotNull(bnsTfsaList);
     assertEquals(1, bnsTfsaList.getBlocks());
-    assertEquals(10, bnsTfsaList.getHead().getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(10, bnsTfsaList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(200, bnsTfsaList.getHead().getAcb().getTotalAcb(), DELTA_PRECISION);
   }
 

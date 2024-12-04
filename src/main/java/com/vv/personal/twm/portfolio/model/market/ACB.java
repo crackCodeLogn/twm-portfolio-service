@@ -10,5 +10,5 @@ import lombok.*;
 @Builder
 public class ACB {
   private double totalAcb;
-  private double acbPerShare;
+  private double acbPerUnit;
 }

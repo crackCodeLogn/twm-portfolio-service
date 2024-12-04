@@ -78,7 +78,7 @@ public class CompleteMarketData {
       String imnt, MarketDataProto.AccountType type, DataNode node, int date, Double marketPrice) {
     double sellQty = node.getInstrument().getQty();
 
-    double tickerPrice = node.getPrev().getAcb().getAcbPerShare();
+    double tickerPrice = node.getPrev().getAcb().getAcbPerUnit();
     double pnL = (marketPrice - tickerPrice) * sellQty;
 
     log.info(
@@ -109,7 +109,7 @@ public class CompleteMarketData {
       String imnt, MarketDataProto.AccountType type, DataNode node, int date, Double marketPrice) {
     double sellQty = node.getRunningQuantity();
 
-    double tickerPrice = node.getAcb().getAcbPerShare();
+    double tickerPrice = node.getAcb().getAcbPerUnit();
     double pnL = (marketPrice - tickerPrice) * sellQty;
 
     log.info(

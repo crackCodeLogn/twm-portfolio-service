@@ -23,7 +23,7 @@ class DataNodeTest {
     assertNull(dataNode.getNext());
     assertNotNull(dataNode.getInstrument());
     assertEquals(10, dataNode.getRunningQuantity(), DELTA_PRECISION);
-    assertEquals(5.1, dataNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(5.1, dataNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(51, dataNode.getAcb().getTotalAcb(), DELTA_PRECISION);
   }
 
@@ -46,11 +46,11 @@ class DataNodeTest {
     //    System.out.println(firstNode);
     assertEquals(10, firstNode.getRunningQuantity(), DELTA_PRECISION);
     assertEquals(51, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
-    assertEquals(5.1, firstNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(5.1, firstNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
 
     assertEquals(30, secondNode.getRunningQuantity(), DELTA_PRECISION);
     assertEquals(251, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
-    assertEquals(8.3666666, secondNode.getAcb().getAcbPerShare(), DELTA_PRECISION);
+    assertEquals(8.3666666, secondNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
   }
 
   @Test
