@@ -85,7 +85,7 @@ public class DownloadMarketTransactions {
               .setQty(qty)
               .setAccountType(accountType)
               .setDirection(direction)
-              .putMetaData("pricerPerShare", String.valueOf(pricerPerShare))
+              .putMetaData("pricePerShare", String.valueOf(pricerPerShare))
               .putMetaData("settlementDate", String.valueOf(settlementDate))
               .putMetaData("orderId", orderId)
               .putMetaData("cusip", cusip)
