@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.model.market;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.config.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
@@ -19,9 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 public class CompleteMarketData {
 
+  private static final OutdatedSymbol notFoundOutdatedSymbol =
+      new OutdatedSymbol("dummy", 29991231);
+
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
-
   // post processes, i.e. not filled during startup
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedDatePnLMap;
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedDatePnLMap;
@@ -33,6 +36,7 @@ public class CompleteMarketData {
   private final Map<LocalDate, Integer> localDateAndDateMap;
   private final Map<Integer, LocalDate> dateAndLocalDateMap;
   private TickerDataWarehouseService tickerDataWarehouseService;
+  private OutdatedSymbols outdatedSymbols;
 
   public CompleteMarketData() {
     marketData = new ConcurrentHashMap<>();
@@ -78,39 +82,63 @@ public class CompleteMarketData {
           dateAndLocalDateMap.put(intDate, date);
         });
 
-    marketData.forEach(
-        (imnt, typeDataMap) ->
-            typeDataMap.forEach(
-                (type, dataList) -> {
-                  DataNode node = dataList.getHead();
-                  int nodeDate = getDate(node);
-                  int dateIndex = 0;
+    boolean failed = false;
+    outer:
+    for (Map.Entry<String, Map<MarketDataProto.AccountType, DataList>> marketDataEntry :
+        marketData.entrySet()) {
+      String imnt = marketDataEntry.getKey();
+      Map<MarketDataProto.AccountType, DataList> typeDataMap = marketDataEntry.getValue();
+      for (Map.Entry<MarketDataProto.AccountType, DataList> entry : typeDataMap.entrySet()) {
+        MarketDataProto.AccountType type = entry.getKey();
+        DataList dataList = entry.getValue();
+        DataNode node = dataList.getHead();
+        int nodeDate = getDate(node);
+        int dateIndex = 0;
 
-                  while (dateIndex < dates.size()
-                      && localDateAndDateMap.get(dates.get(dateIndex)) != nodeDate) {
-                    dateIndex++;
-                  }
+        while (dateIndex < dates.size()
+            && localDateAndDateMap.get(dates.get(dateIndex)) != nodeDate) {
+          dateIndex++;
+        }
 
-                  log.info("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
-                  while (dateIndex < dates.size()) {
-                    int date = localDateAndDateMap.get(dates.get(dateIndex));
-                    if (node.getNext() != null && getDate(node.getNext()) == date) {
-                      node = node.getNext();
-                    }
-                    System.out.println(date + " " + node);
+        log.info("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
+        while (dateIndex < dates.size()) {
+          int date = localDateAndDateMap.get(dates.get(dateIndex));
+          if (node.getNext() != null && getDate(node.getNext()) == date) {
+            node = node.getNext();
+          }
+          // System.out.println(date + " " + node);
 
-                    Double marketPrice = tickerDataWarehouseService.getMarketData(imnt, date);
-                    computeUnrealizedPnL(imnt, type, node, date, marketPrice);
-                    if (node.getInstrument().getDirection() == MarketDataProto.Direction.BUY) {
-                      dateIndex++;
-                      continue;
-                    }
-                    computeRealizedPnL(imnt, type, node, date, marketPrice);
+          Double marketPrice = tickerDataWarehouseService.getMarketData(imnt, date);
+          if (marketPrice == null) {
+            if (outdatedSymbols != null
+                && outdatedSymbols.contains(imnt)
+                && date
+                    >= outdatedSymbols.get(imnt).orElse(notFoundOutdatedSymbol).lastListingDate()) {
+              log.debug("Allowing skip of market price for outdated {} x {}", imnt, date);
+            } else {
+              log.error("Did not find market price for {} x {}", imnt, date);
+              failed = true;
+              break outer;
+            }
+            dateIndex++;
+            continue;
+          }
+          computeUnrealizedPnL(imnt, type, node, date, marketPrice);
+          if (node.getInstrument().getDirection() == MarketDataProto.Direction.BUY) {
+            dateIndex++;
+            continue;
+          }
+          computeRealizedPnL(imnt, type, node, date, marketPrice);
 
-                    dateIndex++;
-                  }
-                }));
-    computeCombinedPnL(dates);
+          dateIndex++;
+        }
+      }
+    }
+    //    unrealizedDatePnLMap.forEach(
+    //        (k, v) -> System.out.printf("%d x %.6f\n", k, v.get(MarketDataProto.AccountType.NR)));
+
+    if (!failed) computeCombinedPnL(dates);
+    else log.error("Failed to compute pnL. Check logs for relevant error.");
   }
 
   private int getDate(DataNode node) {

@@ -29,9 +29,6 @@ public class StartupService {
 
   @EventListener(ApplicationReadyEvent.class)
   public void startup() {
-    // load analysis data for imnts which are bought
-    tickerDataWarehouseService.loadAnalysisDataForInstruments(completeMarketData.getInstruments());
-
     if (pingConfig.pinger().allEndPointsActive(crdbServiceFeign)) {
       FixedDepositProto.FixedDepositList fixedDepositList =
           crdbServiceFeign.getFixedDeposits(BANK.name(), "CIBC.*");
