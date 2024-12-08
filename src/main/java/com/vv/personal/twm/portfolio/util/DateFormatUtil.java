@@ -27,4 +27,8 @@ public final class DateFormatUtil {
   public static int getLocalDate(LocalDate date) {
     return date.getYear() * 10000 + date.getMonthValue() * 100 + date.getDayOfMonth();
   }
+
+  public static int getDate(String date) {
+    return getLocalDate(getLocalDate(date));
+  }
 }

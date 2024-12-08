@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class DataConfig {
 
+  private final FileLocationConfig fileLocationConfig;
   private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
@@ -117,7 +118,7 @@ public class DataConfig {
   @Bean
   public OutdatedSymbols outdatedSymbols() {
     OutdatedSymbols outdatedSymbols = new OutdatedSymbols();
-    outdatedSymbols.load("src/main/resources/outdated-symbols.csv");
+    outdatedSymbols.load(fileLocationConfig.getOutdatedSymbols());
     return outdatedSymbols;
   }
 }

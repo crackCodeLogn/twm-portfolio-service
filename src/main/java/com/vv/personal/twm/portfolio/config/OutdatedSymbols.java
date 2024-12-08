@@ -1,7 +1,9 @@
 package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
+import com.vv.personal.twm.portfolio.util.TextReaderUtil;
 import java.io.*;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,20 +26,16 @@ public class OutdatedSymbols {
           outdatedSymbolsFileLocation);
       return false;
     }
-    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        line = line.strip();
-        if (line.isBlank()) continue;
 
-        String[] parts = line.split(",");
-        String symbol = parts[0];
-        int lastListingDate = Integer.parseInt(parts[1]);
-        outdatedSymbols.computeIfAbsent(symbol, k -> new OutdatedSymbol(symbol, lastListingDate));
-      }
+    List<String> lines = TextReaderUtil.readLines(file.getAbsolutePath());
+    for (String line : lines) {
+      line = line.strip();
+      if (line.isBlank()) continue;
 
-    } catch (IOException e) {
-      log.error(e.getMessage(), e);
+      String[] parts = line.split(",");
+      String symbol = parts[0];
+      int lastListingDate = Integer.parseInt(parts[1]);
+      outdatedSymbols.computeIfAbsent(symbol, k -> new OutdatedSymbol(symbol, lastListingDate));
     }
 
     return true;
