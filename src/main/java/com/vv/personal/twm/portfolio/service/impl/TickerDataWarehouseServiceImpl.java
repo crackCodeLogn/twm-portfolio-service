@@ -106,10 +106,20 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
     }
     if (startDate != -1) targetRanges.add(Pair.of(convertDate(startDate), convertDate(date)));
 
-    for (int i = 0; i < targetRanges.size(); i++) { // handle any same left and right days
+    for (int i = 0;
+        i < targetRanges.size() - 1;
+        i++) { // handle any same left and right days, except last
       Pair<LocalDate, LocalDate> targetRange = targetRanges.get(i);
       if (targetRange.getRight().equals(targetRange.getLeft()))
         targetRanges.set(i, Pair.of(targetRange.getLeft(), targetRange.getRight().plusDays(1)));
+    }
+    if (!targetRanges.isEmpty() && !dates.contains(marketDates.get(marketDates.size() - 1))) {
+      int lastIndex = targetRanges.size() - 1;
+      targetRanges.set(
+          lastIndex,
+          Pair.of(
+              targetRanges.get(lastIndex).getLeft(),
+              targetRanges.get(lastIndex).getRight().plusDays(1)));
     }
     return targetRanges;
   }
