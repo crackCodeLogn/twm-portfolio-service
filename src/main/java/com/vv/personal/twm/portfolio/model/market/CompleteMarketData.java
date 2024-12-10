@@ -134,8 +134,8 @@ public class CompleteMarketData {
         }
       }
     }
-    //    unrealizedDatePnLMap.forEach(
-    //        (k, v) -> System.out.printf("%d x %.6f\n", k, v.get(MarketDataProto.AccountType.NR)));
+    unrealizedDatePnLMap.forEach(
+        (k, v) -> System.out.printf("%d x %.6f\n", k, v.get(MarketDataProto.AccountType.NR)));
 
     if (!failed) computeCombinedPnL(dates);
     else log.error("Failed to compute pnL. Check logs for relevant error.");

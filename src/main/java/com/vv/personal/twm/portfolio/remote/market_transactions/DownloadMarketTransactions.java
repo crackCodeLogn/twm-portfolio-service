@@ -1,10 +1,12 @@
 package com.vv.personal.twm.portfolio.remote.market_transactions;
 
+import com.google.common.collect.ImmutableMap;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.util.CsvDownloaderUtil;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TextReaderUtil;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -14,6 +16,16 @@ import org.apache.commons.lang3.StringUtils;
  */
 @Slf4j
 public class DownloadMarketTransactions {
+
+  private static final Map<String, String> countryCodeMap =
+      ImmutableMap.<String, String>builder()
+          .put("CA", "TO")
+          .put("US", "")
+          .put("IN", "NS") // nifty-50
+          .build();
+
+  private static final Map<String, String> stkExchangeMap =
+      ImmutableMap.<String, String>builder().put("ALV", "V").build();
 
   public static MarketDataProto.Portfolio downloadMarketTransactions(
       String fileLocation, MarketDataProto.Direction direction) {
@@ -41,6 +53,14 @@ public class DownloadMarketTransactions {
     return extractMarketTransactions(portfolio, transactionsLines, direction);
   }
 
+  private static String getSymbol(String imntCode, String countryCode) {
+    String tickerExtension =
+        stkExchangeMap.containsKey(imntCode)
+            ? stkExchangeMap.get(imntCode)
+            : countryCodeMap.getOrDefault(countryCode, "");
+    return String.format("%s.%s", imntCode, tickerExtension);
+  }
+
   private static MarketDataProto.Portfolio extractMarketTransactions(
       MarketDataProto.Portfolio.Builder portfolio,
       List<String> transactionsLines,
@@ -49,7 +69,7 @@ public class DownloadMarketTransactions {
     for (int i = 1; i < transactionsLines.size(); i++) { // skipping the first line as header
       String line = transactionsLines.get(i);
       String[] parts = line.split(",");
-      if (parts.length < 13) {
+      if (parts.length < 14) {
         log.warn("Failed to parse market transaction {}", line);
         continue;
       }
@@ -68,12 +88,14 @@ public class DownloadMarketTransactions {
       String accountNumber = parts[10];
       String transactionType = parts[11].toLowerCase();
       String imntName = parts[12];
+      String countryCode = parts[13];
+      String symbol = getSymbol(imntCode, countryCode);
 
       MarketDataProto.Value value =
           MarketDataProto.Value.newBuilder().setDate(tradeDate).setPrice(price).build();
       MarketDataProto.Ticker ticker =
           MarketDataProto.Ticker.newBuilder()
-              .setSymbol(imntCode)
+              .setSymbol(symbol)
               .setName(imntName)
               .setSector(sector)
               .setType(determineImntType(sector))
@@ -91,6 +113,7 @@ public class DownloadMarketTransactions {
               .putMetaData("cusip", cusip)
               .putMetaData("accountNumber", accountNumber)
               .putMetaData("transactionType", transactionType)
+              .putMetaData("countryCode", countryCode)
               .build();
       portfolio.addInstruments(instrument);
     }

@@ -55,7 +55,7 @@ public class DataConfig {
     Map<String, MarketDataProto.Instrument> actualTransactions =
         getTransactionsMap(actualPortfolio);
 
-    actualTransactions.keySet().forEach(dbTransactions::remove);
+    dbTransactions.keySet().forEach(actualTransactions::remove);
     MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
     actualTransactions.values().forEach(newTransactions::addInstruments);
     if (newTransactions.getInstrumentsCount() > 0) {
@@ -65,6 +65,8 @@ public class DataConfig {
           "Result of posting {} buy transactions to db: {}",
           newTransactions.getInstrumentsCount(),
           result);
+    } else {
+      log.info("No new buy transactions to push to db");
     }
 
     stopwatch.stop();
@@ -114,7 +116,7 @@ public class DataConfig {
     Map<String, MarketDataProto.Instrument> actualTransactions =
         getTransactionsMap(actualPortfolio);
 
-    actualTransactions.keySet().forEach(dbTransactions::remove);
+    dbTransactions.keySet().forEach(actualTransactions::remove);
     MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
     actualTransactions.values().forEach(newTransactions::addInstruments);
     if (newTransactions.getInstrumentsCount() > 0) {
@@ -124,6 +126,8 @@ public class DataConfig {
           "Result of posting {} sell transactions to db: {}",
           newTransactions.getInstrumentsCount(),
           result);
+    } else {
+      log.info("No new sell transactions to push to db");
     }
 
     stopwatch.stop();
