@@ -13,7 +13,6 @@ import com.vv.personal.twm.portfolio.util.TestInstrument;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -50,55 +49,26 @@ class CompleteMarketDataTest {
     DataList cibcTfsaList = result.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
     assertNotNull(cibcTfsaList);
     assertEquals(3, cibcTfsaList.getBlocks());
-    assertEquals(51, cibcTfsaList.getHead().getAcb().getTotalAcb());
-    // special because apparently the acb went negative due to test data
+    assertEquals(50.1, cibcTfsaList.getHead().getAcb().getTotalAcb());
     assertEquals(0, cibcTfsaList.getHead().getNext().getAcb().getTotalAcb());
     assertEquals(150, cibcTfsaList.getTail().getAcb().getTotalAcb());
 
     DataList cmNrList = result.get("CM.TO").get(MarketDataProto.AccountType.NR);
     assertNotNull(cmNrList);
     assertEquals(1, cmNrList.getBlocks());
-    assertEquals(15, cmNrList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(150, cmNrList.getHead().getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(15, cmNrList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
 
     assertTrue(result.containsKey("BNS.TO"));
     DataList bnsTfsaList = result.get("BNS.TO").get(MarketDataProto.AccountType.TFSA);
     assertNotNull(bnsTfsaList);
     assertEquals(1, bnsTfsaList.getBlocks());
-    assertEquals(10, bnsTfsaList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
-    assertEquals(200, bnsTfsaList.getHead().getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(100, bnsTfsaList.getHead().getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5, bnsTfsaList.getHead().getAcb().getAcbPerUnit(), DELTA_PRECISION);
   }
 
-  @Disabled
   @Test
   public void testComputePnL() {
-    MarketDataProto.Portfolio portfolio =
-        MarketDataProto.Portfolio.newBuilder()
-            .addAllInstruments(generateTestInstruments2())
-            .build();
-    System.out.println(portfolio);
-
-    marketData.populate(portfolio);
-    marketData.computeAcb();
-    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.2);
-    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240913)).thenReturn(7.0);
-    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240920)).thenReturn(9.0);
-    when(tickerDataWarehouseService.getMarketData("BNS.TO", 20240909)).thenReturn(10.1);
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-
-    marketData.computePnL();
-    Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
-        marketData.getRealizedDatePnLMap();
-    Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
-        marketData.getUnrealizedDatePnLMap();
-    assertFalse(realizedPnLMap.isEmpty());
-    assertFalse(unrealizedPnLMap.isEmpty());
-    System.out.println(realizedPnLMap);
-    System.out.println(unrealizedPnLMap);
-  }
-
-  @Test
-  public void testComputePnL2() {
     MarketDataProto.Portfolio portfolio =
         MarketDataProto.Portfolio.newBuilder()
             .addAllInstruments(generateTestInstruments3())
@@ -107,7 +77,7 @@ class CompleteMarketDataTest {
     marketData.populate(portfolio);
     marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
 
-    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.1);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240911)).thenReturn(5.5);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240912)).thenReturn(7.0);
@@ -136,19 +106,19 @@ class CompleteMarketDataTest {
     assertEquals(
         0.0, unrealizedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        2.0, unrealizedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        5.6, unrealizedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        6.0, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        36.0,
+        74.6,
         unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA),
-        DELTA_PRECISION);
+        DELTA_PRECISION); // should be 74.61 though
     assertEquals(
-        66.0,
+        104.6,
         unrealizedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
     assertEquals(
-        66.0,
+        104.6,
         unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
 
@@ -160,11 +130,11 @@ class CompleteMarketDataTest {
     Map<Integer, Double> unrealizedImntPnLCibcMap =
         unrealizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
     assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
-    assertEquals(2.0, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
-    assertEquals(6.0, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
-    assertEquals(36.0, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
-    assertEquals(66.0, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
-    assertEquals(66.0, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+    assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
+    assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
+    assertEquals(74.6, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
+    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
         marketData.getRealizedDatePnLMap();
@@ -176,7 +146,7 @@ class CompleteMarketDataTest {
     assertFalse(realizedPnLMap.containsKey(20240910));
     assertNull(realizedPnLMap.get(20240911));
     assertEquals(
-        9.0, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        9.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(realizedPnLMap.containsKey(20240913));
     assertFalse(realizedPnLMap.containsKey(20240916));
 
@@ -187,7 +157,7 @@ class CompleteMarketDataTest {
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
     Map<Integer, Double> realizedImntPnLCibcMap =
         realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
-    assertEquals(9.0, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(9.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
         marketData.getCombinedDatePnLMap();
@@ -198,15 +168,15 @@ class CompleteMarketDataTest {
     assertEquals(
         0.0, combinedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        2.0, combinedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        5.6, combinedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        6.0, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        45.0, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        84.5, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        66.0, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        104.6, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        66.0, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        104.6, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
   }
 
   private List<MarketDataProto.Instrument> generateTestInstruments() {
@@ -215,7 +185,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(5.1)
+            .price(50.1)
             .date(20240909)
             .build()
             .getInstrument(),
@@ -223,7 +193,7 @@ class CompleteMarketDataTest {
             .symbol("bns.to")
             .name("bank of nova scotia")
             .qty(20)
-            .price(10)
+            .price(100)
             .date(20240912)
             .build()
             .getInstrument(),
@@ -231,7 +201,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(15)
+            .price(150)
             .date(20240920)
             .build()
             .getInstrument(),
@@ -239,7 +209,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(5)
-            .price(12)
+            .price(120)
             .direction(SELL)
             .date(20240913) // forced fudging
             .build()
@@ -248,7 +218,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(15)
+            .price(150)
             .date(20240920)
             .accountType(MarketDataProto.AccountType.NR)
             .build()
@@ -261,7 +231,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(5.1)
+            .price(50.1)
             .date(20240909)
             .build()
             .getInstrument(),
@@ -269,7 +239,7 @@ class CompleteMarketDataTest {
             .symbol("bns.to")
             .name("bank of nova scotia")
             .qty(20)
-            .price(10)
+            .price(100)
             .date(20240909)
             .build()
             .getInstrument(),
@@ -277,7 +247,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(9)
+            .price(90)
             .date(20240920)
             .build()
             .getInstrument(),
@@ -285,7 +255,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(5)
-            .price(7)
+            .price(70)
             .direction(SELL)
             .date(20240913) // forced fudging
             .build()
@@ -294,7 +264,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(9)
+            .price(90)
             .date(20240920)
             .accountType(MarketDataProto.AccountType.NR)
             .build()
@@ -307,7 +277,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(5.1)
+            .price(50.1)
             .date(20240909)
             .build()
             .getInstrument(),
@@ -315,7 +285,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(5.3)
+            .price(50.3)
             .date(20240910)
             .build()
             .getInstrument(),
@@ -323,7 +293,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(10)
-            .price(9)
+            .price(90)
             .date(20240913)
             .build()
             .getInstrument(),
@@ -331,7 +301,7 @@ class CompleteMarketDataTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(5)
-            .price(7)
+            .price(70)
             .direction(SELL)
             .date(20240912) // forced fudging
             .build()

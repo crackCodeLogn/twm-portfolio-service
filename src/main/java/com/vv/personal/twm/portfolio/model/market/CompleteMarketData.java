@@ -103,7 +103,7 @@ public class CompleteMarketData {
         log.info("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
         while (dateIndex < dates.size()) {
           int date = localDateAndDateMap.get(dates.get(dateIndex));
-          if (node.getNext() != null && getDate(node.getNext()) == date) {
+          while (node.getNext() != null && getDate(node.getNext()) == date) {
             node = node.getNext();
           }
           // System.out.println(date + " " + node);

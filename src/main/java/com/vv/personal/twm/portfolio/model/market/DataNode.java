@@ -44,7 +44,7 @@ public class DataNode {
   public void computeAcb() {
     double totalAcb;
     if (prev == null) { // no short selling, so assuming first node will always have BUY direction
-      totalAcb = runningQuantity * instrument.getTicker().getData(0).getPrice();
+      totalAcb = instrument.getTicker().getData(0).getPrice();
 
     } else { // consider direction now
       if (instrument.getDirection() == MarketDataProto.Direction.BUY) {
@@ -57,22 +57,22 @@ public class DataNode {
               instrument.getTicker().getSymbol());
         }
 
-        totalAcb =
-            prev.getAcb().getTotalAcb()
-                + (instrument.getQty() * instrument.getTicker().getData(0).getPrice());
+        totalAcb = prev.getAcb().getTotalAcb() + instrument.getTicker().getData(0).getPrice();
       } else { // SELL direction
         if (!oneTimeProcessed) {
-          runningQuantity = prev.getRunningQuantity() - runningQuantity;
+          runningQuantity =
+              Math.max(0, prev.getRunningQuantity() - runningQuantity); // handle oversell, disallow
+          // short selling
           oneTimeProcessed = true;
         } else {
           log.warn(
               "Not updating SELL runningQuantity for {} as it has already been processed!",
               instrument.getTicker().getSymbol());
         }
-
         totalAcb =
-            prev.getAcb().getTotalAcb()
-                - (instrument.getQty() * instrument.getTicker().getData(0).getPrice());
+            runningQuantity == 0 // indicates position closure at this point in time
+                ? 0.0
+                : prev.getAcb().getTotalAcb() - instrument.getTicker().getData(0).getPrice();
       }
     }
 
