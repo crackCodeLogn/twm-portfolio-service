@@ -35,6 +35,9 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
   @GetMapping("/crdb/mkt/transactions/{direction}")
   Optional<MarketDataProto.Portfolio> getTransactions(@PathVariable("direction") String direction);
 
+  @GetMapping("/crdb/mkt/transactions/dividends/{accountType}")
+  Optional<MarketDataProto.Portfolio> getDividends(@PathVariable("accountType") String accountType);
+
   @PostMapping("/crdb/mkt/transactions/")
   String postTransactions(MarketDataProto.Portfolio portfolio);
 }

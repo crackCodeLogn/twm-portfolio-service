@@ -13,6 +13,8 @@ locations:
   outdated-symbols: src/main/resources/outdated-symbols.csv
   market-transactions-buy: /var/mkt-data-b.txt
   market-transactions-sell: /var/mkt-data-s.txt
+  market-transactions-div-tfsa: /var/mkt-data-div-t.txt
+  market-transactions-div-nr: /var/mkt-data-div-n.txt
 
 eureka:
   client:

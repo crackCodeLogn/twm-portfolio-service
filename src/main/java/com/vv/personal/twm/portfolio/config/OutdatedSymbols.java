@@ -27,7 +27,7 @@ public class OutdatedSymbols {
       return false;
     }
 
-    List<String> lines = TextReaderUtil.readLines(file.getAbsolutePath());
+    List<String> lines = TextReaderUtil.readTextLines(file.getAbsolutePath());
     for (String line : lines) {
       line = line.strip();
       if (line.isBlank()) continue;

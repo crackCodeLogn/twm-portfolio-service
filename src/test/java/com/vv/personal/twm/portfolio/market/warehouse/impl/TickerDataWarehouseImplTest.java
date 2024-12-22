@@ -58,8 +58,8 @@ class TickerDataWarehouseImplTest {
     List<LocalDate> dates = tickerDataWarehouse.getDates();
     assertNotNull(dates);
     assertEquals(3, dates.size());
-    assertEquals(20241202, DateFormatUtil.getLocalDate(dates.get(0)));
-    assertEquals(20241203, DateFormatUtil.getLocalDate(dates.get(1)));
-    assertEquals(20241204, DateFormatUtil.getLocalDate(dates.get(2)));
+    assertEquals(20241202, DateFormatUtil.getDate(dates.get(0)));
+    assertEquals(20241203, DateFormatUtil.getDate(dates.get(1)));
+    assertEquals(20241204, DateFormatUtil.getDate(dates.get(2)));
   }
 }

@@ -49,10 +49,10 @@ class DateFormatUtilTest {
   void testGetLocalDate_LocalDate_To_Int() {
     int result;
 
-    result = DateFormatUtil.getLocalDate(LocalDate.of(2024, 12, 3));
+    result = DateFormatUtil.getDate(LocalDate.of(2024, 12, 3));
     assertEquals(20241203, result);
 
-    result = DateFormatUtil.getLocalDate(LocalDate.of(2025, 2, 20));
+    result = DateFormatUtil.getDate(LocalDate.of(2025, 2, 20));
     assertEquals(20250220, result);
   }
 }

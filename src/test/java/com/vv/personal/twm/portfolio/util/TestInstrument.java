@@ -1,6 +1,8 @@
 package com.vv.personal.twm.portfolio.util;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.Builder;
 
 /**
@@ -24,10 +26,12 @@ public class TestInstrument {
   @Builder.Default private double price = 0.0;
   @Builder.Default private MarketDataProto.Direction direction = MarketDataProto.Direction.BUY;
   @Builder.Default private int date = 0;
+  @Builder.Default private Map<String, String> metadata = new HashMap<>();
 
   public MarketDataProto.Instrument getInstrument() {
     return MarketDataProto.Instrument.newBuilder()
         .setQty(qty)
+        .putAllMetaData(metadata)
         .setDirection(direction)
         .setAccountType(accountType)
         .setTicker(

@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.vv.personal</groupId>
     <artifactId>twm-portfolio-service</artifactId>
-    <version>1.1.9</version>
+    <version>1.1.10</version>
     <name>twm-portfolio-service</name>
     <description>TWM Portfolio service</description>
     <packaging>jar</packaging>
@@ -19,6 +19,7 @@
         <spring-starter.version>4.1.3</spring-starter.version>
         <spring-cloud.version>2023.0.3</spring-cloud.version>
         <openapi-webmvc.version>2.3.0</openapi-webmvc.version>
+        <opencsv.version>5.9</opencsv.version>
         <protobuf.version>4.28.3</protobuf.version>
         <guava.version>33.2.1-jre</guava.version>
         <mockito.version>5.12.0</mockito.version>
@@ -43,6 +44,11 @@
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${openapi-webmvc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>${opencsv.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

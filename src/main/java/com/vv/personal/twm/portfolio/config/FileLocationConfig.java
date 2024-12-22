@@ -17,4 +17,6 @@ public class FileLocationConfig {
   private String outdatedSymbols;
   private String marketTransactionsBuy;
   private String marketTransactionsSell;
+  private String marketTransactionsDivTfsa;
+  private String marketTransactionsDivNr;
 }

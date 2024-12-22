@@ -77,30 +77,6 @@ public class DataConfig {
     return new PortfolioData(actualPortfolio);
   }
 
-  private Map<String, MarketDataProto.Instrument> getTransactionsMap(
-      MarketDataProto.Portfolio portfolio) {
-    Map<String, MarketDataProto.Instrument> transactions = new HashMap<>();
-    portfolio
-        .getInstrumentsList()
-        .forEach(
-            instrument -> {
-              String orderId = instrument.getMetaDataOrDefault("orderId", "");
-              if (StringUtils.isEmpty(orderId)) {
-                log.warn("Did not find orderId for {}", instrument);
-              } else {
-                if (transactions.containsKey(orderId)) {
-                  log.error(
-                      "OrderId {} already present in transactions. This should not happen, check data source",
-                      orderId);
-                } else {
-                  transactions.put(orderId, instrument);
-                }
-              }
-            });
-
-    return transactions;
-  }
-
   @Qualifier("portfolio-s")
   @Bean
   public PortfolioData extractSoldPortfolioData() {
@@ -150,20 +126,77 @@ public class DataConfig {
     return tickerDataWarehouseService;
   }
 
-  /*
-  @Qualifier("ticker-dwh-b")
-  @Lazy
+  @Qualifier("dividends-tfsa")
   @Bean
-  public TickerDataWarehouse createBoughtTickerDataWarehouse() {
-    return tickerDataWarehouseService.getTickerDataWarehouse(extractBoughtPortfolioData());
+  public PortfolioData extractTfsaDividendsData() {
+    StopWatch stopwatch = StopWatch.createStarted();
+    MarketDataProto.Portfolio dbPortfolio =
+        marketDataCrdbServiceFeign
+            .getDividends(MarketDataProto.AccountType.TFSA.name())
+            .orElse(MarketDataProto.Portfolio.newBuilder().build());
+    MarketDataProto.Portfolio tfsaDividends =
+        DownloadMarketTransactions.downloadMarketDividendTransactions(
+            fileLocationConfig.getMarketTransactionsDivTfsa(), MarketDataProto.AccountType.TFSA);
+    Map<String, MarketDataProto.Instrument> dbTransactions = getTransactionsMap(dbPortfolio);
+    Map<String, MarketDataProto.Instrument> actualTransactions = getTransactionsMap(tfsaDividends);
+
+    dbTransactions.keySet().forEach(actualTransactions::remove);
+    MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
+    actualTransactions.values().forEach(newTransactions::addInstruments);
+    if (newTransactions.getInstrumentsCount() > 0) {
+      log.info("Pushing {} new tfsa dividends to db", newTransactions.getInstrumentsCount());
+      String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
+      log.info(
+          "Result of posting {} tfsa dividends to db: {}",
+          newTransactions.getInstrumentsCount(),
+          result);
+    } else {
+      log.info("No new tfsa dividends to push to db");
+    }
+
+    stopwatch.stop();
+    log.info(
+        "Loaded portfolio of {} tfsa dividends in {}s",
+        tfsaDividends.getInstrumentsCount(),
+        stopwatch.getTime(TimeUnit.SECONDS));
+    return new PortfolioData(tfsaDividends);
   }
 
-  @Qualifier("ticker-dwh-s")
-  @Lazy
+  @Qualifier("dividends-nr")
   @Bean
-  public TickerDataWarehouse createSoldTickerDataWarehouse() {
-    return tickerDataWarehouseService.getTickerDataWarehouse(extractSoldPortfolioData());
-  }*/
+  public PortfolioData extractNrDividendsData() {
+    StopWatch stopwatch = StopWatch.createStarted();
+    MarketDataProto.Portfolio dbPortfolio =
+        marketDataCrdbServiceFeign
+            .getDividends(MarketDataProto.AccountType.NR.name())
+            .orElse(MarketDataProto.Portfolio.newBuilder().build());
+    MarketDataProto.Portfolio nrDividends =
+        DownloadMarketTransactions.downloadMarketDividendTransactions(
+            fileLocationConfig.getMarketTransactionsDivNr(), MarketDataProto.AccountType.NR);
+    Map<String, MarketDataProto.Instrument> dbTransactions = getTransactionsMap(dbPortfolio);
+    Map<String, MarketDataProto.Instrument> actualTransactions = getTransactionsMap(nrDividends);
+
+    dbTransactions.keySet().forEach(actualTransactions::remove);
+    MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
+    actualTransactions.values().forEach(newTransactions::addInstruments);
+    if (newTransactions.getInstrumentsCount() > 0) {
+      log.info("Pushing {} new nr dividends to db", newTransactions.getInstrumentsCount());
+      String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
+      log.info(
+          "Result of posting {} nr dividends to db: {}",
+          newTransactions.getInstrumentsCount(),
+          result);
+    } else {
+      log.info("No new nr dividends to push to db");
+    }
+
+    stopwatch.stop();
+    log.info(
+        "Loaded portfolio of {} nr dividends in {}s",
+        nrDividends.getInstrumentsCount(),
+        stopwatch.getTime(TimeUnit.SECONDS));
+    return new PortfolioData(nrDividends);
+  }
 
   @Bean
   public CompleteMarketData completeMarketData() {
@@ -177,11 +210,17 @@ public class DataConfig {
     marketData.populate(extractSoldPortfolioData().getPortfolio()); // then populate the sell side
     marketData.computeAcb(); // compute the ACB once all the data has been populated
 
+    MarketDataProto.Portfolio tfsaDividends = extractTfsaDividendsData().getPortfolio();
+    MarketDataProto.Portfolio nrDividends = extractNrDividendsData().getPortfolio();
+    marketData.populateDividends(tfsaDividends);
+    marketData.populateDividends(nrDividends);
+
     TickerDataWarehouseService tickerDataWarehouseService = tickerDataWarehouseService();
     // load analysis data for imnts which are bought
     tickerDataWarehouseService.loadAnalysisDataForInstruments(marketData.getInstruments());
     marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-    marketData.computePnL(); // todo - uncomment to fire up pnl compute
+    marketData.computePnL();
+
     stopWatch.stop();
     log.info(
         "Completed market data load completed in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
@@ -193,5 +232,29 @@ public class DataConfig {
     OutdatedSymbols outdatedSymbols = new OutdatedSymbols();
     outdatedSymbols.load(fileLocationConfig.getOutdatedSymbols());
     return outdatedSymbols;
+  }
+
+  private Map<String, MarketDataProto.Instrument> getTransactionsMap(
+      MarketDataProto.Portfolio portfolio) {
+    Map<String, MarketDataProto.Instrument> transactions = new HashMap<>();
+    portfolio
+        .getInstrumentsList()
+        .forEach(
+            instrument -> {
+              String orderId = instrument.getMetaDataOrDefault("orderId", "");
+              if (StringUtils.isEmpty(orderId)) {
+                log.warn("Did not find orderId for {}", instrument);
+              } else {
+                if (transactions.containsKey(orderId)) {
+                  log.error(
+                      "OrderId {} already present in transactions. This should not happen, check data source",
+                      orderId);
+                } else {
+                  transactions.put(orderId, instrument);
+                }
+              }
+            });
+
+    return transactions;
   }
 }
