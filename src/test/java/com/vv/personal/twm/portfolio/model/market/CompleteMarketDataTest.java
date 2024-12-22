@@ -182,6 +182,228 @@ class CompleteMarketDataTest {
   }
 
   @Test
+  public void testComputePnLWithNoDividendsAndLastTransactionAsFullSellAndFurtherDates() {
+    MarketDataProto.Portfolio portfolio =
+        MarketDataProto.Portfolio.newBuilder()
+            .addAllInstruments(generateTestInstruments4WithLastBlockAsFullSellOff())
+            .build();
+    System.out.println(portfolio);
+    marketData.populate(portfolio);
+    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
+
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240911)).thenReturn(5.5);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240912)).thenReturn(7.0);
+    when(tickerDataWarehouseService.getDates())
+        .thenReturn(
+            Lists.newArrayList(
+                DateFormatUtil.getLocalDate(20240905),
+                DateFormatUtil.getLocalDate(20240906),
+                DateFormatUtil.getLocalDate(20240909),
+                DateFormatUtil.getLocalDate(20240910),
+                DateFormatUtil.getLocalDate(20240911),
+                DateFormatUtil.getLocalDate(20240912),
+                DateFormatUtil.getLocalDate(20240913),
+                DateFormatUtil.getLocalDate(20240916)));
+
+    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
+    marketData.computePnL();
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
+        marketData.getUnrealizedDatePnLMap();
+    System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
+    assertFalse(unrealizedPnLMap.isEmpty());
+    assertFalse(unrealizedPnLMap.containsKey(20240905));
+    assertFalse(unrealizedPnLMap.containsKey(20240906));
+    assertEquals(
+        0.0, unrealizedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        5.6, unrealizedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        0, unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    // one of the changed part
+    assertFalse(unrealizedPnLMap.containsKey(20240913));
+    assertFalse(unrealizedPnLMap.containsKey(20240916));
+
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+        marketData.getUnrealizedImntPnLMap();
+    System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
+    assertFalse(unrealizedImntPnLMap.isEmpty());
+    assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
+    Map<Integer, Double> unrealizedImntPnLCibcMap =
+        unrealizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
+    assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
+    assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
+    assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
+    assertEquals(0, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertNull(unrealizedImntPnLCibcMap.get(20240913));
+    assertNull(unrealizedImntPnLCibcMap.get(20240916));
+
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
+        marketData.getRealizedDatePnLMap();
+    System.out.println("realizedPnLMap => " + realizedPnLMap);
+    assertFalse(realizedPnLMap.isEmpty());
+    assertFalse(realizedPnLMap.containsKey(20240905));
+    assertFalse(realizedPnLMap.containsKey(20240906));
+    assertFalse(realizedPnLMap.containsKey(20240909));
+    assertFalse(realizedPnLMap.containsKey(20240910));
+    assertNull(realizedPnLMap.get(20240911));
+    assertEquals(
+        39.6, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(realizedPnLMap.containsKey(20240913));
+    assertFalse(realizedPnLMap.containsKey(20240916));
+
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
+        marketData.getRealizedImntPnLMap();
+    System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
+    assertFalse(realizedImntPnLMap.isEmpty());
+    assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
+    Map<Integer, Double> realizedImntPnLCibcMap =
+        realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
+    assertEquals(39.6, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
+        marketData.getCombinedDatePnLMap();
+    System.out.println("combinedPnLMap => " + combinedPnLMap);
+    assertFalse(combinedPnLMap.isEmpty());
+    assertFalse(combinedPnLMap.containsKey(20240905));
+    assertFalse(combinedPnLMap.containsKey(20240906));
+    assertEquals(
+        0.0, combinedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        5.6, combinedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        39.6, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(combinedPnLMap.containsKey(20240913));
+    assertFalse(combinedPnLMap.containsKey(20240916));
+  }
+
+  @Test
+  public void
+      testComputePnLWithNoDividendsAndIntermediateSellAndLastTransactionAsFullSellAndFurtherDates() {
+    MarketDataProto.Portfolio portfolio =
+        MarketDataProto.Portfolio.newBuilder()
+            .addAllInstruments(
+                generateTestInstruments5WithIntermediateSellAndLastBlockAsFullSellOff())
+            .build();
+    System.out.println(portfolio);
+    marketData.populate(portfolio);
+    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
+
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240911)).thenReturn(5.5);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240912)).thenReturn(14.0);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240913)).thenReturn(6.5);
+    when(tickerDataWarehouseService.getMarketData("CM.TO", 20240916)).thenReturn(9.0);
+    // when(tickerDataWarehouseService.getMarketData("CM.TO", 20240917)).thenReturn(9.5);
+    when(tickerDataWarehouseService.getDates())
+        .thenReturn(
+            Lists.newArrayList(
+                DateFormatUtil.getLocalDate(20240905),
+                DateFormatUtil.getLocalDate(20240906),
+                DateFormatUtil.getLocalDate(20240909),
+                DateFormatUtil.getLocalDate(20240910),
+                DateFormatUtil.getLocalDate(20240911),
+                DateFormatUtil.getLocalDate(20240912),
+                DateFormatUtil.getLocalDate(20240913),
+                DateFormatUtil.getLocalDate(20240916),
+                DateFormatUtil.getLocalDate(20240917)));
+
+    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
+    marketData.computePnL();
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
+        marketData.getUnrealizedDatePnLMap();
+    System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
+    assertFalse(unrealizedPnLMap.isEmpty());
+    assertFalse(unrealizedPnLMap.containsKey(20240905));
+    assertFalse(unrealizedPnLMap.containsKey(20240906));
+    assertEquals(
+        0.0, unrealizedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        5.6, unrealizedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        179.6, // should be 179.7 tbh, but fine
+        unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA),
+        DELTA_PRECISION);
+    assertEquals(
+        67.1,
+        unrealizedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA),
+        DELTA_PRECISION);
+    assertEquals(
+        0, unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(unrealizedPnLMap.containsKey(20240917));
+
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+        marketData.getUnrealizedImntPnLMap();
+    System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
+    assertFalse(unrealizedImntPnLMap.isEmpty());
+    assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
+    Map<Integer, Double> unrealizedImntPnLCibcMap =
+        unrealizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
+    assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
+    assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
+    assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
+    assertEquals(179.6, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(67.1, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
+    assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+    assertNull(unrealizedImntPnLCibcMap.get(20240917));
+
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
+        marketData.getRealizedDatePnLMap();
+    System.out.println("realizedPnLMap => " + realizedPnLMap);
+    assertFalse(realizedPnLMap.isEmpty());
+    assertFalse(realizedPnLMap.containsKey(20240905));
+    assertFalse(realizedPnLMap.containsKey(20240906));
+    assertFalse(realizedPnLMap.containsKey(20240909));
+    assertFalse(realizedPnLMap.containsKey(20240910));
+    assertNull(realizedPnLMap.get(20240911));
+    assertEquals(
+        44.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(realizedPnLMap.containsKey(20240913));
+    assertEquals(
+        129.6, realizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(realizedPnLMap.containsKey(20240917));
+
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
+        marketData.getRealizedImntPnLMap();
+    System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
+    assertFalse(realizedImntPnLMap.isEmpty());
+    assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
+    Map<Integer, Double> realizedImntPnLCibcMap =
+        realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
+    assertEquals(2, realizedImntPnLCibcMap.size());
+    assertEquals(44.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(129.6, realizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+
+    Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
+        marketData.getCombinedDatePnLMap();
+    System.out.println("combinedPnLMap => " + combinedPnLMap);
+    assertFalse(combinedPnLMap.isEmpty());
+    assertFalse(combinedPnLMap.containsKey(20240905));
+    assertFalse(combinedPnLMap.containsKey(20240906));
+    assertEquals(
+        0.0, combinedPnLMap.get(20240909).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        5.6, combinedPnLMap.get(20240910).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        224.5, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        67.1, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(
+        129.6, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertFalse(combinedPnLMap.containsKey(20240917));
+  }
+
+  @Test
   public void testComputePnLWithDividends() {
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
@@ -643,6 +865,82 @@ class CompleteMarketDataTest {
             .price(70)
             .direction(SELL)
             .date(20240912) // forced fudging
+            .build()
+            .getInstrument());
+  }
+
+  private List<MarketDataProto.Instrument> generateTestInstruments4WithLastBlockAsFullSellOff() {
+    return Lists.newArrayList(
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(10)
+            .price(50.1)
+            .date(20240909)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(10)
+            .price(50.3)
+            .date(20240910)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(20)
+            .price(70)
+            .direction(SELL)
+            .date(20240912)
+            .build()
+            .getInstrument());
+  }
+
+  private List<MarketDataProto.Instrument>
+      generateTestInstruments5WithIntermediateSellAndLastBlockAsFullSellOff() {
+    return Lists.newArrayList(
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(10)
+            .price(50.1)
+            .date(20240909)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(10)
+            .price(50.3)
+            .date(20240910)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(5)
+            .price(70)
+            .direction(SELL)
+            .date(20240912)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(10)
+            .price(65)
+            .date(20240913)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .qty(25)
+            .price(120)
+            .direction(SELL)
+            .date(20240916)
             .build()
             .getInstrument());
   }

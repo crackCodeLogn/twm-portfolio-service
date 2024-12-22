@@ -265,6 +265,14 @@ public class CompleteMarketData {
           }
           computeRealizedPnL(
               imnt, type, node, date, marketPrice); // realized pnl (w/o div) changes only on SELL
+          // fixed realized pnl mis-calc. rn, because of the last STLC sell node, the dates beyond
+          // keep on using the same node and keep showing unnecessary gains whereas the gain was
+          // only for 1 day
+          // realizedImntPnLMap.get("STLC.TO").get(MarketDataProto.AccountType.TFSA).values().stream().mapToDouble(Double::doubleValue).sum()
+          if (node.getNext() == null) {
+            log.info("Reached the end of position for {} x {} on {}", imnt, type, date);
+            break;
+          }
           dateIndex++;
         }
       }
