@@ -97,10 +97,7 @@ public class CompleteMarketData {
   public void populateDividends(MarketDataProto.Portfolio portfolio) {
     dateDividendsCumulativeMap.put(0, new HashMap<>());
     List<MarketDataProto.AccountType> accountTypes = getAccountTypes();
-    accountTypes.forEach(
-        type -> {
-          dateDividendsCumulativeMap.get(0).put(type, 0.0);
-        }); // base line
+    accountTypes.forEach(type -> dateDividendsCumulativeMap.get(0).put(type, 0.0)); // baseline
 
     log.info("Beginning dividends population.");
     StopWatch stopWatch = StopWatch.createStarted();
@@ -142,8 +139,7 @@ public class CompleteMarketData {
     Collections.sort(divDates);
     Map<MarketDataProto.AccountType, Double> cumulativeDivs = new HashMap<>();
     accountTypes.forEach(accountType -> cumulativeDivs.put(accountType, 0.0));
-    for (int i = 0; i < divDates.size(); i++) { // skip 0th as that is date = 0
-      int date = divDates.get(i);
+    for (int date : divDates) { // skip 0th as that is date = 0
       Map<MarketDataProto.AccountType, Double> typeDivBaseMap = dateDividendsMap.get(date);
       Map<MarketDataProto.AccountType, Double> typeDivTargetMap =
           dateDividendsCumulativeMap.computeIfAbsent(date, k -> new HashMap<>());
@@ -375,7 +371,7 @@ public class CompleteMarketData {
 
     // compute for adding to realizedWithDividendDatePnLMap
     realizedWithDividendDatePnLMap.put(0, new HashMap<>());
-    accountTypes.forEach(type -> realizedWithDividendDatePnLMap.get(0).put(type, 0.0)); // base line
+    accountTypes.forEach(type -> realizedWithDividendDatePnLMap.get(0).put(type, 0.0)); // baseline
     dates.forEach(
         localDate -> {
           int date = localDateAndDateMap.get(localDate);
@@ -532,25 +528,24 @@ public class CompleteMarketData {
         .forEach(accountType -> combinedDatePnLCumulativeMap.get(0).put(accountType, 0.0));
 
     combinedDatePnLMap.forEach(
-        (date, accountTypePnLMap) -> {
-          accountTypePnLMap.forEach(
-              ((accountType, combinedPnL) -> {
-                Double realizedImntWithDivPnL =
-                    realizedWithDividendDatePnLMap.floorEntry(date).getValue().get(accountType);
-                Double unrealizedPnL =
-                    unrealizedDatePnLMap.containsKey(date)
-                        ? unrealizedDatePnLMap.get(date).get(accountType)
-                        : null;
-                double cumulativeCombinedPnL =
-                    sanitizeDouble(realizedImntWithDivPnL) + sanitizeDouble(unrealizedPnL);
-                Map<MarketDataProto.AccountType, Double> typeDoubleMap =
-                    combinedDatePnLCumulativeMap.computeIfAbsent(date, k -> new HashMap<>());
-                typeDoubleMap.put(accountType, cumulativeCombinedPnL);
-              }));
-        });
+        (date, accountTypePnLMap) ->
+            accountTypePnLMap.forEach(
+                ((accountType, combinedPnL) -> {
+                  Double realizedImntWithDivPnL =
+                      realizedWithDividendDatePnLMap.floorEntry(date).getValue().get(accountType);
+                  Double unrealizedPnL =
+                      unrealizedDatePnLMap.containsKey(date)
+                          ? unrealizedDatePnLMap.get(date).get(accountType)
+                          : null;
+                  double cumulativeCombinedPnL =
+                      sanitizeDouble(realizedImntWithDivPnL) + sanitizeDouble(unrealizedPnL);
+                  Map<MarketDataProto.AccountType, Double> typeDoubleMap =
+                      combinedDatePnLCumulativeMap.computeIfAbsent(date, k -> new HashMap<>());
+                  typeDoubleMap.put(accountType, cumulativeCombinedPnL);
+                })));
   }
 
-  private int getNextMarketDate(int date) {
+  /*private int getNextMarketDate(int date) {
     LocalDate localDate = DateFormatUtil.getLocalDate(date);
     for (int i = 0; i <= 5; i++) {
       localDate = localDate.plusDays(1);
@@ -558,7 +553,7 @@ public class CompleteMarketData {
     }
     return -1; // what if div date is on a non trading date beyond last trading date of benchmark
     // ticker?
-  }
+  }*/
 
   private int getDate(DataNode node) {
     return node.getInstrument().getTicker().getData(0).getDate();
