@@ -1,8 +1,6 @@
 package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
-import com.vv.personal.twm.portfolio.market.warehouse.impl.TickerDataWarehouseImpl;
 import com.vv.personal.twm.portfolio.model.market.CompleteMarketData;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
@@ -10,6 +8,8 @@ import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market_transactions.DownloadMarketTransactions;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
+import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
+import com.vv.personal.twm.portfolio.warehouse.market.impl.TickerDataWarehouseImpl;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;

@@ -1,14 +1,13 @@
-package com.vv.personal.twm.portfolio.market.warehouse.impl;
+package com.vv.personal.twm.portfolio.warehouse.market.impl;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
+import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -17,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Getter
-@Setter
 public class TickerDataWarehouseImpl implements TickerDataWarehouse {
 
   private final Table<LocalDate, String, Double> adjustedClosePriceTableForAnalysis;

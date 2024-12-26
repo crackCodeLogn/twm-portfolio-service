@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.market.warehouse;
+package com.vv.personal.twm.portfolio.warehouse.market;
 
 import java.time.LocalDate;
 import java.util.List;

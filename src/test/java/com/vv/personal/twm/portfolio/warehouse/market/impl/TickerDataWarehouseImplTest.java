@@ -1,10 +1,10 @@
-package com.vv.personal.twm.portfolio.market.warehouse.impl;
+package com.vv.personal.twm.portfolio.warehouse.market.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.vv.personal.twm.portfolio.TestConstants;
-import com.vv.personal.twm.portfolio.market.warehouse.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
+import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
