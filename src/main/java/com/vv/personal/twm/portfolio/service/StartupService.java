@@ -4,7 +4,6 @@ import static com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProt
 
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.ping.config.PingConfig;
-import com.vv.personal.twm.portfolio.model.market.CompleteMarketData;
 import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +23,6 @@ public class StartupService {
   private final PingConfig pingConfig;
   private final BankCrdbServiceFeign crdbServiceFeign;
   private final TickerDataWarehouseService tickerDataWarehouseService;
-  private final CompleteMarketData completeMarketData;
-  private final InvestmentDivWeightService investmentDivWeightService; // todo - remove post testing
 
   @EventListener(ApplicationReadyEvent.class)
   public void startup() {

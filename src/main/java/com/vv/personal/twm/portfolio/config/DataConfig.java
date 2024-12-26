@@ -1,11 +1,11 @@
 package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.model.market.CompleteMarketData;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market_transactions.DownloadMarketTransactions;
+import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
 import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
@@ -199,32 +199,34 @@ public class DataConfig {
   }
 
   @Bean
-  public CompleteMarketData completeMarketData() {
+  public CompleteMarketDataService completeMarketDataService() {
     OutdatedSymbols outdatedSymbols = outdatedSymbols();
 
-    CompleteMarketData marketData = new CompleteMarketData();
-    marketData.setOutdatedSymbols(outdatedSymbols);
+    CompleteMarketDataService marketDataService = new CompleteMarketDataService();
+    marketDataService.setOutdatedSymbols(outdatedSymbols);
     log.info("Starting complete market data load");
     StopWatch stopWatch = StopWatch.createStarted();
-    marketData.populate(extractBoughtPortfolioData().getPortfolio()); // first populate the buy side
-    marketData.populate(extractSoldPortfolioData().getPortfolio()); // then populate the sell side
-    marketData.computeAcb(); // compute the ACB once all the data has been populated
+    marketDataService.populate(
+        extractBoughtPortfolioData().getPortfolio()); // first populate the buy side
+    marketDataService.populate(
+        extractSoldPortfolioData().getPortfolio()); // then populate the sell side
+    marketDataService.computeAcb(); // compute the ACB once all the data has been populated
 
     MarketDataProto.Portfolio tfsaDividends = extractTfsaDividendsData().getPortfolio();
     MarketDataProto.Portfolio nrDividends = extractNrDividendsData().getPortfolio();
-    marketData.populateDividends(tfsaDividends);
-    marketData.populateDividends(nrDividends);
+    marketDataService.populateDividends(tfsaDividends);
+    marketDataService.populateDividends(nrDividends);
 
     TickerDataWarehouseService tickerDataWarehouseService = tickerDataWarehouseService();
     // load analysis data for imnts which are bought
-    tickerDataWarehouseService.loadAnalysisDataForInstruments(marketData.getInstruments());
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-    marketData.computePnL();
+    tickerDataWarehouseService.loadAnalysisDataForInstruments(marketDataService.getInstruments());
+    marketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    marketDataService.computePnL();
 
     stopWatch.stop();
     log.info(
         "Completed market data load completed in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
-    return marketData;
+    return marketDataService;
   }
 
   @Bean

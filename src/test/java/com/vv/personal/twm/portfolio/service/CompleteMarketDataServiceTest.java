@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.model.market;
+package com.vv.personal.twm.portfolio.service;
 
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.Direction.SELL;
 import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION;
@@ -8,7 +8,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
+import com.vv.personal.twm.portfolio.model.market.DataList;
+import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TestInstrument;
 import java.util.List;
@@ -25,15 +26,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 2024-09-13
  */
 @ExtendWith(MockitoExtension.class)
-class CompleteMarketDataTest {
+class CompleteMarketDataServiceTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
 
-  private CompleteMarketData marketData;
+  private CompleteMarketDataService completeMarketDataService;
 
   @BeforeEach
   void setUp() {
-    marketData = new CompleteMarketData();
+    completeMarketDataService = new CompleteMarketDataService();
   }
 
   @Test
@@ -42,9 +43,10 @@ class CompleteMarketDataTest {
         MarketDataProto.Portfolio.newBuilder().addAllInstruments(generateTestInstruments()).build();
     System.out.println(portfolio);
 
-    marketData.populate(portfolio);
-    marketData.computeAcb();
-    Map<String, Map<MarketDataProto.AccountType, DataList>> result = marketData.getMarketData();
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService.computeAcb();
+    Map<String, Map<MarketDataProto.AccountType, DataList>> result =
+        completeMarketDataService.getMarketData();
 
     assertFalse(result.isEmpty());
     assertTrue(result.containsKey("CM.TO"));
@@ -76,8 +78,9 @@ class CompleteMarketDataTest {
             .addAllInstruments(generateTestInstruments3())
             .build();
     System.out.println(portfolio);
-    marketData.populate(portfolio);
-    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService
+        .computeAcb(); // at this point, assumption is that acb compute is accurate
 
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
@@ -97,10 +100,10 @@ class CompleteMarketDataTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-    marketData.computePnL();
+    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
-        marketData.getUnrealizedDatePnLMap();
+        completeMarketDataService.getUnrealizedDatePnLMap();
     System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
     assertFalse(unrealizedPnLMap.isEmpty());
     assertFalse(unrealizedPnLMap.containsKey(20240905));
@@ -125,7 +128,7 @@ class CompleteMarketDataTest {
         DELTA_PRECISION);
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
-        marketData.getUnrealizedImntPnLMap();
+        completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
     assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
@@ -139,7 +142,7 @@ class CompleteMarketDataTest {
     assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
-        marketData.getRealizedDatePnLMap();
+        completeMarketDataService.getRealizedDatePnLMap();
     System.out.println("realizedPnLMap => " + realizedPnLMap);
     assertFalse(realizedPnLMap.isEmpty());
     assertFalse(realizedPnLMap.containsKey(20240905));
@@ -153,7 +156,7 @@ class CompleteMarketDataTest {
     assertFalse(realizedPnLMap.containsKey(20240916));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
-        marketData.getRealizedImntPnLMap();
+        completeMarketDataService.getRealizedImntPnLMap();
     System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
     assertFalse(realizedImntPnLMap.isEmpty());
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
@@ -162,7 +165,7 @@ class CompleteMarketDataTest {
     assertEquals(9.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
-        marketData.getCombinedDatePnLMap();
+        completeMarketDataService.getCombinedDatePnLMap();
     System.out.println("combinedPnLMap => " + combinedPnLMap);
     assertFalse(combinedPnLMap.isEmpty());
     assertFalse(combinedPnLMap.containsKey(20240905));
@@ -188,8 +191,9 @@ class CompleteMarketDataTest {
             .addAllInstruments(generateTestInstruments4WithLastBlockAsFullSellOff())
             .build();
     System.out.println(portfolio);
-    marketData.populate(portfolio);
-    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService
+        .computeAcb(); // at this point, assumption is that acb compute is accurate
 
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
@@ -207,10 +211,10 @@ class CompleteMarketDataTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-    marketData.computePnL();
+    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
-        marketData.getUnrealizedDatePnLMap();
+        completeMarketDataService.getUnrealizedDatePnLMap();
     System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
     assertFalse(unrealizedPnLMap.isEmpty());
     assertFalse(unrealizedPnLMap.containsKey(20240905));
@@ -228,7 +232,7 @@ class CompleteMarketDataTest {
     assertFalse(unrealizedPnLMap.containsKey(20240916));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
-        marketData.getUnrealizedImntPnLMap();
+        completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
     assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
@@ -242,7 +246,7 @@ class CompleteMarketDataTest {
     assertNull(unrealizedImntPnLCibcMap.get(20240916));
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
-        marketData.getRealizedDatePnLMap();
+        completeMarketDataService.getRealizedDatePnLMap();
     System.out.println("realizedPnLMap => " + realizedPnLMap);
     assertFalse(realizedPnLMap.isEmpty());
     assertFalse(realizedPnLMap.containsKey(20240905));
@@ -256,7 +260,7 @@ class CompleteMarketDataTest {
     assertFalse(realizedPnLMap.containsKey(20240916));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
-        marketData.getRealizedImntPnLMap();
+        completeMarketDataService.getRealizedImntPnLMap();
     System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
     assertFalse(realizedImntPnLMap.isEmpty());
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
@@ -265,7 +269,7 @@ class CompleteMarketDataTest {
     assertEquals(39.6, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
-        marketData.getCombinedDatePnLMap();
+        completeMarketDataService.getCombinedDatePnLMap();
     System.out.println("combinedPnLMap => " + combinedPnLMap);
     assertFalse(combinedPnLMap.isEmpty());
     assertFalse(combinedPnLMap.containsKey(20240905));
@@ -291,8 +295,9 @@ class CompleteMarketDataTest {
                 generateTestInstruments5WithIntermediateSellAndLastBlockAsFullSellOff())
             .build();
     System.out.println(portfolio);
-    marketData.populate(portfolio);
-    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService
+        .computeAcb(); // at this point, assumption is that acb compute is accurate
 
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240909)).thenReturn(5.01);
     when(tickerDataWarehouseService.getMarketData("CM.TO", 20240910)).thenReturn(5.3);
@@ -314,10 +319,10 @@ class CompleteMarketDataTest {
                 DateFormatUtil.getLocalDate(20240916),
                 DateFormatUtil.getLocalDate(20240917)));
 
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
-    marketData.computePnL();
+    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
-        marketData.getUnrealizedDatePnLMap();
+        completeMarketDataService.getUnrealizedDatePnLMap();
     System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
     assertFalse(unrealizedPnLMap.isEmpty());
     assertFalse(unrealizedPnLMap.containsKey(20240905));
@@ -341,7 +346,7 @@ class CompleteMarketDataTest {
     assertFalse(unrealizedPnLMap.containsKey(20240917));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
-        marketData.getUnrealizedImntPnLMap();
+        completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
     assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
@@ -356,7 +361,7 @@ class CompleteMarketDataTest {
     assertNull(unrealizedImntPnLCibcMap.get(20240917));
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
-        marketData.getRealizedDatePnLMap();
+        completeMarketDataService.getRealizedDatePnLMap();
     System.out.println("realizedPnLMap => " + realizedPnLMap);
     assertFalse(realizedPnLMap.isEmpty());
     assertFalse(realizedPnLMap.containsKey(20240905));
@@ -372,7 +377,7 @@ class CompleteMarketDataTest {
     assertFalse(realizedPnLMap.containsKey(20240917));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
-        marketData.getRealizedImntPnLMap();
+        completeMarketDataService.getRealizedImntPnLMap();
     System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
     assertFalse(realizedImntPnLMap.isEmpty());
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
@@ -383,7 +388,7 @@ class CompleteMarketDataTest {
     assertEquals(129.6, realizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
-        marketData.getCombinedDatePnLMap();
+        completeMarketDataService.getCombinedDatePnLMap();
     System.out.println("combinedPnLMap => " + combinedPnLMap);
     assertFalse(combinedPnLMap.isEmpty());
     assertFalse(combinedPnLMap.containsKey(20240905));
@@ -424,22 +429,23 @@ class CompleteMarketDataTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    marketData.setTickerDataWarehouseService(tickerDataWarehouseService);
+    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
     MarketDataProto.Portfolio portfolio =
         MarketDataProto.Portfolio.newBuilder()
             .addAllInstruments(generateTestInstruments3())
             .build();
     System.out.println(portfolio);
-    marketData.populate(portfolio);
-    marketData.computeAcb(); // at this point, assumption is that acb compute is accurate
-    marketData.populateDividends(
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService
+        .computeAcb(); // at this point, assumption is that acb compute is accurate
+    completeMarketDataService.populateDividends(
         MarketDataProto.Portfolio.newBuilder()
             .addAllInstruments(generateTestDividendInstruments())
             .build());
-    marketData.computePnL();
+    completeMarketDataService.computePnL();
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, CompleteMarketData.DividendRecord>>>
-        dividendsMap = marketData.getImntDividendsMap();
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, DividendRecord>>> dividendsMap =
+        completeMarketDataService.getImntDividendsMap();
     assertEquals(1, dividendsMap.size());
     assertEquals(
         10.0,
@@ -460,7 +466,7 @@ class CompleteMarketDataTest {
     assertEquals(1, dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.NR).size());
 
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> dateDividendsCumulativeMap =
-        marketData.getDateDividendsCumulativeMap();
+        completeMarketDataService.getDateDividendsCumulativeMap();
     System.out.println("dateDividendsCumulativeMap => " + dateDividendsCumulativeMap);
     assertEquals(3, dateDividendsCumulativeMap.size());
     assertEquals(
@@ -501,7 +507,7 @@ class CompleteMarketDataTest {
         DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> dividendsDateDivMap =
-        marketData.getDateDividendsMap();
+        completeMarketDataService.getDateDividendsMap();
     System.out.println("dividendsDateDivMap => " + dividendsDateDivMap);
     assertFalse(dividendsDateDivMap.isEmpty());
     assertFalse(dividendsDateDivMap.containsKey(20240905));
@@ -527,7 +533,7 @@ class CompleteMarketDataTest {
 
     Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>>
         realizedImntWithDividendPnLMap =
-            marketData.getRealizedImntWithDividendPnLMap(); // cumulative
+            completeMarketDataService.getRealizedImntWithDividendPnLMap(); // cumulative
     System.out.println("realizedImntWithDividendPnLMap => " + realizedImntWithDividendPnLMap);
     assertFalse(realizedImntWithDividendPnLMap.isEmpty());
     assertEquals(1, realizedImntWithDividendPnLMap.size());
@@ -559,7 +565,7 @@ class CompleteMarketDataTest {
     assertEquals(20.0, datePriceNrMap.floorEntry(20240916).getValue(), DELTA_PRECISION);
 
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> realizedWithDividendDatePnLMap =
-        marketData.getRealizedWithDividendDatePnLMap();
+        completeMarketDataService.getRealizedWithDividendDatePnLMap();
     System.out.println("realizedWithDividendDatePnLMap => " + realizedWithDividendDatePnLMap);
     assertEquals(10, realizedWithDividendDatePnLMap.size());
     Map<MarketDataProto.AccountType, Double> typeDividendMap;
@@ -597,7 +603,7 @@ class CompleteMarketDataTest {
 
     // todo - work
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =
-        marketData.getCombinedDatePnLCumulativeMap();
+        completeMarketDataService.getCombinedDatePnLCumulativeMap();
     System.out.println("combinedDatePnLCumulativeMap => " + combinedDatePnLCumulativeMap);
     assertFalse(combinedDatePnLCumulativeMap.isEmpty());
     typeDividendMap = combinedDatePnLCumulativeMap.get(0);
@@ -646,7 +652,7 @@ class CompleteMarketDataTest {
     // SECTION START - SANITY checks on the non dividend impacted data structures
     // unrealized calc should not be impacted due to divs, thus this is just for sanity
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
-        marketData.getUnrealizedDatePnLMap();
+        completeMarketDataService.getUnrealizedDatePnLMap();
     System.out.println("unrealizedPnLMap => " + unrealizedPnLMap);
     assertFalse(unrealizedPnLMap.isEmpty());
     assertFalse(unrealizedPnLMap.containsKey(20240905));
@@ -672,7 +678,7 @@ class CompleteMarketDataTest {
 
     // unrealized calc should not be impacted due to divs, thus this is just for sanity
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
-        marketData.getUnrealizedImntPnLMap();
+        completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
     assertTrue(unrealizedImntPnLMap.containsKey("CM.TO"));
@@ -687,7 +693,7 @@ class CompleteMarketDataTest {
 
     // pure realized calc should not be impacted due to divs, thus this is just for sanity
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
-        marketData.getRealizedDatePnLMap();
+        completeMarketDataService.getRealizedDatePnLMap();
     System.out.println("realizedPnLMap => " + realizedPnLMap);
     assertFalse(realizedPnLMap.isEmpty());
     assertFalse(realizedPnLMap.containsKey(20240905));
@@ -706,7 +712,7 @@ class CompleteMarketDataTest {
 
     // pure realized calc should not be impacted due to divs, thus this is just for sanity
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
-        marketData.getRealizedImntPnLMap();
+        completeMarketDataService.getRealizedImntPnLMap();
     System.out.println("realizedImntPnLMap = " + realizedImntPnLMap);
     assertFalse(realizedImntPnLMap.isEmpty());
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
@@ -716,7 +722,7 @@ class CompleteMarketDataTest {
 
     // pure combined calc should not be impacted due to divs, thus this is just for sanity
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
-        marketData.getCombinedDatePnLMap();
+        completeMarketDataService.getCombinedDatePnLMap();
     System.out.println("combinedPnLMap => " + combinedPnLMap);
     assertFalse(combinedPnLMap.isEmpty());
     assertFalse(combinedPnLMap.containsKey(20240905));

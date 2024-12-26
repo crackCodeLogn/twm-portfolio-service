@@ -1,10 +1,13 @@
-package com.vv.personal.twm.portfolio.model.market;
+package com.vv.personal.twm.portfolio.service;
 
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.config.OutdatedSymbols;
-import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
+import com.vv.personal.twm.portfolio.model.market.DataList;
+import com.vv.personal.twm.portfolio.model.market.DataNode;
+import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
 import java.util.*;
@@ -14,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Vivek
@@ -22,7 +26,8 @@ import org.apache.commons.lang3.time.StopWatch;
 @Slf4j
 @Getter
 @Setter
-public class CompleteMarketData {
+@Service
+public class CompleteMarketDataService {
 
   private static final OutdatedSymbol notFoundOutdatedSymbol =
       new OutdatedSymbol("dummy", 29991231);
@@ -60,7 +65,7 @@ public class CompleteMarketData {
   private TickerDataWarehouseService tickerDataWarehouseService;
   private OutdatedSymbols outdatedSymbols;
 
-  public CompleteMarketData() {
+  public CompleteMarketDataService() {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
@@ -568,6 +573,4 @@ public class CompleteMarketData {
         .filter(t -> t != MarketDataProto.AccountType.UNRECOGNIZED)
         .toList();
   }
-
-  record DividendRecord(String symbol, int date, double dividend, String orderId) {}
 }
