@@ -5,12 +5,14 @@ import com.vv.personal.twm.portfolio.warehouse.bank.BankAccountWarehouse;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * @author Vivek
  * @since 2024-12-25
  */
 @Slf4j
+@Component
 public class BankAccountWarehouseImpl implements BankAccountWarehouse {
 
   private final Map<String, BankProto.BankAccount>

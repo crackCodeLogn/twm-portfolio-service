@@ -16,9 +16,7 @@ public interface BankCrdbServiceFeign extends PingFeign {
 
   @GetMapping("/crdb/bank/fixed-deposits?field={field}&value={value}")
   FixedDepositProto.FixedDepositList getFixedDeposits(
-      @PathVariable("field")
-          String field, // BANK, USER, ORIGINAL_USER, KEY, EMPTY - return all if EMPTY
-      @PathVariable("value") String value);
+      @PathVariable("field") String field, @PathVariable("value") String value);
 
   @GetMapping("/crdb/bank/bank-accounts?field={field}&value={value}")
   BankProto.BankAccounts getBankAccounts(
