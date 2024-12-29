@@ -1,13 +1,21 @@
 package com.vv.personal.twm.portfolio.config;
 
+import com.vv.personal.twm.artifactory.generated.bank.BankProto;
+import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
+import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market_transactions.DownloadMarketTransactions;
+import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
+import com.vv.personal.twm.portfolio.warehouse.bank.BankAccountWarehouse;
+import com.vv.personal.twm.portfolio.warehouse.bank.BankFixedDepositsWarehouse;
+import com.vv.personal.twm.portfolio.warehouse.bank.impl.BankAccountWarehouseImpl;
+import com.vv.personal.twm.portfolio.warehouse.bank.impl.BankFixedDepositsWarehouseImpl;
 import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.warehouse.market.impl.TickerDataWarehouseImpl;
 import java.util.HashMap;
@@ -34,10 +42,21 @@ public class DataConfig {
   private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
+  private final BankCrdbServiceFeign bankCrdbServiceFeign;
 
   @Bean
   public TickerDataWarehouse tickerDataWarehouse() {
     return new TickerDataWarehouseImpl();
+  }
+
+  @Bean
+  public BankAccountWarehouse bankAccountWarehouse() {
+    return new BankAccountWarehouseImpl();
+  }
+
+  @Bean
+  public BankFixedDepositsWarehouse bankFixedDepositsWarehouse() {
+    return new BankFixedDepositsWarehouseImpl();
   }
 
   @Qualifier("portfolio-b")
@@ -199,12 +218,37 @@ public class DataConfig {
   }
 
   @Bean
+  public CompleteBankDataService completeBankDataService() {
+    CompleteBankDataService completeBankDataService =
+        new CompleteBankDataService(bankAccountWarehouse(), bankFixedDepositsWarehouse());
+
+    log.info("Initiating complete bank data load");
+    StopWatch stopWatch = StopWatch.createStarted();
+    // get CAD based bank accounts only, for now
+    FixedDepositProto.FilterBy filterByCcyField = FixedDepositProto.FilterBy.CCY;
+    BankProto.CurrencyCode currencyCodeCad = BankProto.CurrencyCode.CAD;
+
+    BankProto.BankAccounts cadBankAccounts =
+        bankCrdbServiceFeign.getBankAccounts(filterByCcyField.name(), currencyCodeCad.name());
+    if (cadBankAccounts != null) completeBankDataService.populateBankAccounts(cadBankAccounts);
+
+    FixedDepositProto.FixedDepositList fixedDepositList =
+        bankCrdbServiceFeign.getFixedDeposits(filterByCcyField.name(), currencyCodeCad.name());
+    if (fixedDepositList != null)
+      completeBankDataService.populateFixedDeposits(fixedDepositList, currencyCodeCad);
+
+    stopWatch.stop();
+    log.info("Complete bank data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
+    return completeBankDataService;
+  }
+
+  @Bean
   public CompleteMarketDataService completeMarketDataService() {
     OutdatedSymbols outdatedSymbols = outdatedSymbols();
 
     CompleteMarketDataService marketDataService = new CompleteMarketDataService();
     marketDataService.setOutdatedSymbols(outdatedSymbols);
-    log.info("Starting complete market data load");
+    log.info("Initiating complete market data load");
     StopWatch stopWatch = StopWatch.createStarted();
     marketDataService.populate(
         extractBoughtPortfolioData().getPortfolio()); // first populate the buy side
@@ -225,7 +269,7 @@ public class DataConfig {
 
     stopWatch.stop();
     log.info(
-        "Completed market data load completed in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
+        "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
     return marketDataService;
   }
 
