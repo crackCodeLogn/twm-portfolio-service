@@ -15,6 +15,7 @@ locations:
   market-transactions-sell: /var/mkt-data-s.txt
   market-transactions-div-tfsa: /var/mkt-data-div-t.txt
   market-transactions-div-nr: /var/mkt-data-div-n.txt
+  market-transactions-div-fhsa: /var/mkt-data-div-f.txt
 
 eureka:
   client:

@@ -148,73 +148,22 @@ public class DataConfig {
   @Qualifier("dividends-tfsa")
   @Bean
   public PortfolioData extractTfsaDividendsData() {
-    StopWatch stopwatch = StopWatch.createStarted();
-    MarketDataProto.Portfolio dbPortfolio =
-        marketDataCrdbServiceFeign
-            .getDividends(MarketDataProto.AccountType.TFSA.name())
-            .orElse(MarketDataProto.Portfolio.newBuilder().build());
-    MarketDataProto.Portfolio tfsaDividends =
-        DownloadMarketTransactions.downloadMarketDividendTransactions(
-            fileLocationConfig.getMarketTransactionsDivTfsa(), MarketDataProto.AccountType.TFSA);
-    Map<String, MarketDataProto.Instrument> dbTransactions = getTransactionsMap(dbPortfolio);
-    Map<String, MarketDataProto.Instrument> actualTransactions = getTransactionsMap(tfsaDividends);
-
-    dbTransactions.keySet().forEach(actualTransactions::remove);
-    MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
-    actualTransactions.values().forEach(newTransactions::addInstruments);
-    if (newTransactions.getInstrumentsCount() > 0) {
-      log.info("Pushing {} new tfsa dividends to db", newTransactions.getInstrumentsCount());
-      String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
-      log.info(
-          "Result of posting {} tfsa dividends to db: {}",
-          newTransactions.getInstrumentsCount(),
-          result);
-    } else {
-      log.info("No new tfsa dividends to push to db");
-    }
-
-    stopwatch.stop();
-    log.info(
-        "Loaded portfolio of {} tfsa dividends in {}s",
-        tfsaDividends.getInstrumentsCount(),
-        stopwatch.getTime(TimeUnit.SECONDS));
-    return new PortfolioData(tfsaDividends);
+    return extractPortfolioData(
+        MarketDataProto.AccountType.TFSA, fileLocationConfig.getMarketTransactionsDivTfsa());
   }
 
   @Qualifier("dividends-nr")
   @Bean
   public PortfolioData extractNrDividendsData() {
-    StopWatch stopwatch = StopWatch.createStarted();
-    MarketDataProto.Portfolio dbPortfolio =
-        marketDataCrdbServiceFeign
-            .getDividends(MarketDataProto.AccountType.NR.name())
-            .orElse(MarketDataProto.Portfolio.newBuilder().build());
-    MarketDataProto.Portfolio nrDividends =
-        DownloadMarketTransactions.downloadMarketDividendTransactions(
-            fileLocationConfig.getMarketTransactionsDivNr(), MarketDataProto.AccountType.NR);
-    Map<String, MarketDataProto.Instrument> dbTransactions = getTransactionsMap(dbPortfolio);
-    Map<String, MarketDataProto.Instrument> actualTransactions = getTransactionsMap(nrDividends);
+    return extractPortfolioData(
+        MarketDataProto.AccountType.NR, fileLocationConfig.getMarketTransactionsDivNr());
+  }
 
-    dbTransactions.keySet().forEach(actualTransactions::remove);
-    MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
-    actualTransactions.values().forEach(newTransactions::addInstruments);
-    if (newTransactions.getInstrumentsCount() > 0) {
-      log.info("Pushing {} new nr dividends to db", newTransactions.getInstrumentsCount());
-      String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
-      log.info(
-          "Result of posting {} nr dividends to db: {}",
-          newTransactions.getInstrumentsCount(),
-          result);
-    } else {
-      log.info("No new nr dividends to push to db");
-    }
-
-    stopwatch.stop();
-    log.info(
-        "Loaded portfolio of {} nr dividends in {}s",
-        nrDividends.getInstrumentsCount(),
-        stopwatch.getTime(TimeUnit.SECONDS));
-    return new PortfolioData(nrDividends);
+  @Qualifier("dividends-fhsa")
+  @Bean
+  public PortfolioData extractFhsaDividendsData() {
+    return extractPortfolioData(
+        MarketDataProto.AccountType.FHSA, fileLocationConfig.getMarketTransactionsDivFhsa());
   }
 
   @Bean
@@ -258,8 +207,10 @@ public class DataConfig {
 
     MarketDataProto.Portfolio tfsaDividends = extractTfsaDividendsData().getPortfolio();
     MarketDataProto.Portfolio nrDividends = extractNrDividendsData().getPortfolio();
+    MarketDataProto.Portfolio fhsaDividends = extractFhsaDividendsData().getPortfolio();
     marketDataService.populateDividends(tfsaDividends);
     marketDataService.populateDividends(nrDividends);
+    marketDataService.populateDividends(fhsaDividends);
 
     TickerDataWarehouseService tickerDataWarehouseService = tickerDataWarehouseService();
     // load analysis data for imnts which are bought
@@ -302,5 +253,45 @@ public class DataConfig {
             });
 
     return transactions;
+  }
+
+  private PortfolioData extractPortfolioData(
+      MarketDataProto.AccountType accountType, String fileLocation) {
+    String accountTypeStr = accountType.name();
+    StopWatch stopwatch = StopWatch.createStarted();
+    MarketDataProto.Portfolio dbPortfolio =
+        marketDataCrdbServiceFeign
+            .getDividends(accountTypeStr)
+            .orElse(MarketDataProto.Portfolio.newBuilder().build());
+    MarketDataProto.Portfolio dividends =
+        DownloadMarketTransactions.downloadMarketDividendTransactions(fileLocation, accountType);
+    Map<String, MarketDataProto.Instrument> dbTransactions = getTransactionsMap(dbPortfolio);
+    Map<String, MarketDataProto.Instrument> actualTransactions = getTransactionsMap(dividends);
+
+    dbTransactions.keySet().forEach(actualTransactions::remove);
+    MarketDataProto.Portfolio.Builder newTransactions = MarketDataProto.Portfolio.newBuilder();
+    actualTransactions.values().forEach(newTransactions::addInstruments);
+    if (newTransactions.getInstrumentsCount() > 0) {
+      log.info(
+          "Pushing {} new {} dividends to db",
+          newTransactions.getInstrumentsCount(),
+          accountTypeStr);
+      String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
+      log.info(
+          "Result of posting {} {} dividends to db: {}",
+          newTransactions.getInstrumentsCount(),
+          accountTypeStr,
+          result);
+    } else {
+      log.info("No new {} dividends to push to db", accountTypeStr);
+    }
+
+    stopwatch.stop();
+    log.info(
+        "Loaded portfolio of {} {} dividends in {}s",
+        dividends.getInstrumentsCount(),
+        accountTypeStr,
+        stopwatch.getTime(TimeUnit.SECONDS));
+    return new PortfolioData(dividends);
   }
 }

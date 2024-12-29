@@ -153,6 +153,8 @@ public class DownloadMarketTransactions {
       return extractNrDividends(portfolio, transactionsLines);
     else if (accountType == MarketDataProto.AccountType.TFSA)
       return extractTfsaDividends(portfolio, transactionsLines);
+    else if (accountType == MarketDataProto.AccountType.FHSA)
+      log.warn("Not yet implemented"); // todo
 
     return portfolio.build();
   }

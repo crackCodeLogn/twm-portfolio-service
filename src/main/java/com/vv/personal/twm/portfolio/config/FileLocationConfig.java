@@ -19,4 +19,5 @@ public class FileLocationConfig {
   private String marketTransactionsSell;
   private String marketTransactionsDivTfsa;
   private String marketTransactionsDivNr;
+  private String marketTransactionsDivFhsa;
 }

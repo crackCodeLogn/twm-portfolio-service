@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 @Setter
 @Service
 public class CompleteMarketDataService {
+  private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
 
   private static final OutdatedSymbol notFoundOutdatedSymbol =
       new OutdatedSymbol("dummy", 29991231);
@@ -305,13 +306,13 @@ public class CompleteMarketDataService {
       System.out.println(
           "Combined PnL of TFSA: "
               + combinedDatePnLCumulativeMap
-                  .floorEntry(20241220)
+                  .floorEntry(TODAY_DATE)
                   .getValue()
                   .get(MarketDataProto.AccountType.TFSA));
       System.out.println(
           "Combined PnL of NR: "
               + combinedDatePnLCumulativeMap
-                  .floorEntry(20241220)
+                  .floorEntry(TODAY_DATE)
                   .getValue()
                   .get(MarketDataProto.AccountType.NR));
 
@@ -429,7 +430,7 @@ public class CompleteMarketDataService {
     double tickerPrice = node.getPrev().getAcb().getAcbPerUnit();
     double pnL = (marketPrice - tickerPrice) * sellQty;
 
-    if (date == 20241220)
+    if (date == TODAY_DATE)
       log.info(
           "realized pnL {} x {} x {} x {} => mkt price '{}', qty '{}', ticker price '{}' => pnl= {}",
           imnt,
@@ -467,7 +468,7 @@ public class CompleteMarketDataService {
     double tickerPrice = node.getAcb().getAcbPerUnit();
     double pnL = (marketPrice - tickerPrice) * sellQty;
 
-    if (date == 20241220)
+    if (date == TODAY_DATE)
       log.info(
           "unrealized pnL {} x {} x {} x {} => mkt price '{}', qty '{}', ticker price '{}' => pnl= {}",
           imnt,
@@ -518,7 +519,7 @@ public class CompleteMarketDataService {
             }
             double combinedPnL = sanitizeDouble(unrealizedPnL) + sanitizeDouble(realizedPnL);
 
-            if (date == 20241220)
+            if (date == TODAY_DATE)
               log.info("combined pnL {} x {} => pnl= {}", date, type.name(), combinedPnL);
 
             combinedDatePnLMap.computeIfAbsent(date, k -> new HashMap<>());
