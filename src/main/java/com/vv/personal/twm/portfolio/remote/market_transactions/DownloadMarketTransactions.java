@@ -154,7 +154,7 @@ public class DownloadMarketTransactions {
     else if (accountType == MarketDataProto.AccountType.TFSA)
       return extractTfsaDividends(portfolio, transactionsLines);
     else if (accountType == MarketDataProto.AccountType.FHSA)
-      log.warn("Not yet implemented"); // todo
+      return extractFhsaDividends(portfolio, transactionsLines);
 
     return portfolio.build();
   }
@@ -211,6 +211,34 @@ public class DownloadMarketTransactions {
       MarketDataProto.Instrument instrument =
           generateDividendInstrument(
               symbol, divDate, dividend, MarketDataProto.AccountType.TFSA, isManufactured);
+      portfolio.addInstruments(instrument);
+    }
+    return portfolio.build();
+  }
+
+  private static MarketDataProto.Portfolio extractFhsaDividends(
+      MarketDataProto.Portfolio.Builder portfolio, List<List<String>> transactionsLines) {
+    for (int i = 1; i < transactionsLines.size(); i++) { // skipping the first line as header
+      List<String> parts = transactionsLines.get(i);
+      if (parts.size() < 7) {
+        log.warn("Failed to parse fhsa dividend transaction {}", parts);
+        continue;
+      }
+
+      String date = sanitizeString(parts.get(0));
+      double dividend = sanitizeDouble(parts.get(1));
+      String purposeTicker = sanitizeString(parts.get(5));
+      String type = sanitizeString(parts.get(6)).toLowerCase();
+      boolean isManufactured = purposeTicker.endsWith("-m");
+      if (!"div".equals(type)) continue;
+      if (isManufactured) purposeTicker = purposeTicker.substring(0, purposeTicker.length() - 2);
+
+      String symbol = getSymbol(purposeTicker, "CA"); // nr is strictly canadian at this point
+      int divDate = DateFormatUtil.getDate(date);
+
+      MarketDataProto.Instrument instrument =
+          generateDividendInstrument(
+              symbol, divDate, dividend, MarketDataProto.AccountType.FHSA, isManufactured);
       portfolio.addInstruments(instrument);
     }
     return portfolio.build();
