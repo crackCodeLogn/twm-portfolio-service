@@ -3,8 +3,10 @@ package com.vv.personal.twm.portfolio.config;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.warehouse.PortfolioData;
 import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
+import com.vv.personal.twm.portfolio.remote.feign.CalcServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market_transactions.DownloadMarketTransactions;
@@ -43,6 +45,7 @@ public class DataConfig {
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   private final BankCrdbServiceFeign bankCrdbServiceFeign;
+  private final CalcServiceFeign calcServiceFeign;
 
   @Bean
   public TickerDataWarehouse tickerDataWarehouse() {
@@ -57,6 +60,11 @@ public class DataConfig {
   @Bean
   public BankFixedDepositsWarehouse bankFixedDepositsWarehouse() {
     return new BankFixedDepositsWarehouseImpl();
+  }
+
+  @Bean
+  public DateLocalDateCache dateLocalDateCache() {
+    return new DateLocalDateCache();
   }
 
   @Qualifier("portfolio-b")
@@ -169,7 +177,11 @@ public class DataConfig {
   @Bean
   public CompleteBankDataService completeBankDataService() {
     CompleteBankDataService completeBankDataService =
-        new CompleteBankDataService(bankAccountWarehouse(), bankFixedDepositsWarehouse());
+        new CompleteBankDataService(
+            bankAccountWarehouse(),
+            bankFixedDepositsWarehouse(),
+            calcServiceFeign,
+            dateLocalDateCache());
 
     log.info("Initiating complete bank data load");
     StopWatch stopWatch = StopWatch.createStarted();
@@ -183,8 +195,10 @@ public class DataConfig {
 
     FixedDepositProto.FixedDepositList fixedDepositList =
         bankCrdbServiceFeign.getFixedDeposits(filterByCcyField.name(), currencyCodeCad.name());
-    if (fixedDepositList != null)
+    if (fixedDepositList != null) {
       completeBankDataService.populateFixedDeposits(fixedDepositList, currencyCodeCad);
+      completeBankDataService.calcGicMaps();
+    }
 
     stopWatch.stop();
     log.info("Complete bank data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
@@ -195,7 +209,8 @@ public class DataConfig {
   public CompleteMarketDataService completeMarketDataService() {
     OutdatedSymbols outdatedSymbols = outdatedSymbols();
 
-    CompleteMarketDataService marketDataService = new CompleteMarketDataService();
+    CompleteMarketDataService marketDataService =
+        new CompleteMarketDataService(dateLocalDateCache());
     marketDataService.setOutdatedSymbols(outdatedSymbols);
     log.info("Initiating complete market data load");
     StopWatch stopWatch = StopWatch.createStarted();

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
@@ -34,7 +35,7 @@ class CompleteMarketDataServiceTest {
 
   @BeforeEach
   void setUp() {
-    completeMarketDataService = new CompleteMarketDataService();
+    completeMarketDataService = new CompleteMarketDataService(new DateLocalDateCache());
   }
 
   @Test

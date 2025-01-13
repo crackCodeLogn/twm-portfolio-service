@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.config.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
@@ -61,12 +62,11 @@ public class CompleteMarketDataService {
   private final TreeMap<Integer, Map<MarketDataProto.AccountType, Double>>
       combinedDatePnLCumulativeMap; // cumulative date x account type x (unrealized + sells + divs)
   // SPECIAL NOTE: combinedDatePnLCumulativeMap does not include div-only non-market dates
-  private final Map<LocalDate, Integer> localDateAndDateMap;
-  private final Map<Integer, LocalDate> dateAndLocalDateMap;
+  private final DateLocalDateCache dateLocalDateCache;
   private TickerDataWarehouseService tickerDataWarehouseService;
   private OutdatedSymbols outdatedSymbols;
 
-  public CompleteMarketDataService() {
+  public CompleteMarketDataService(DateLocalDateCache dateLocalDateCache) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
@@ -81,8 +81,7 @@ public class CompleteMarketDataService {
     combinedDatePnLCumulativeMap = new TreeMap<>();
 
     tickerDataWarehouseService = null;
-    localDateAndDateMap = new ConcurrentHashMap<>();
-    dateAndLocalDateMap = new ConcurrentHashMap<>();
+    this.dateLocalDateCache = dateLocalDateCache;
   }
 
   public void populate(MarketDataProto.Portfolio portfolio) {
@@ -192,21 +191,19 @@ public class CompleteMarketDataService {
       log.error("Cannot compute PnL without tickerDataWarehouseService");
     }
     List<LocalDate> dates = tickerDataWarehouseService.getDates();
+    Set<Integer> localDates = new HashSet<>();
     dates.forEach(
         date -> {
-          int intDate = DateFormatUtil.getDate(date);
-          localDateAndDateMap.putIfAbsent(date, intDate);
-          dateAndLocalDateMap.putIfAbsent(intDate, date);
+          dateLocalDateCache.add(date);
+          localDates.add(dateLocalDateCache.get(date).getAsInt());
         });
     Set<Integer> dividendDates = getDividendDates();
     boolean toSort = false;
     for (Integer dividendDate : dividendDates) {
-      if (!dateAndLocalDateMap.containsKey(dividendDate)) {
+      if (!localDates.contains(dividendDate)) {
         log.info("Found a non-market dividend date: {}", dividendDate);
-        LocalDate localDate = DateFormatUtil.getLocalDate(dividendDate);
-        dateAndLocalDateMap.putIfAbsent(dividendDate, localDate);
-        localDateAndDateMap.putIfAbsent(localDate, dividendDate);
-        dates.add(localDate);
+        dateLocalDateCache.add(dividendDate);
+        dates.add(dateLocalDateCache.get(dividendDate).get());
         toSort = true;
       }
     }
@@ -227,13 +224,13 @@ public class CompleteMarketDataService {
 
         // find the initial date index for the nodeDate
         while (dateIndex < dates.size()
-            && localDateAndDateMap.get(dates.get(dateIndex)) != nodeDate) {
+            && dateLocalDateCache.get(dates.get(dateIndex)).getAsInt() != nodeDate) {
           dateIndex++;
         }
 
         log.info("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
         while (dateIndex < dates.size()) {
-          int date = localDateAndDateMap.get(dates.get(dateIndex));
+          int date = dateLocalDateCache.get(dates.get(dateIndex)).getAsInt();
           // find and point to the correct node for the date
           while (node.getNext() != null && getDate(node.getNext()) == date) {
             node = node.getNext();
@@ -360,7 +357,7 @@ public class CompleteMarketDataService {
                     typeMapMap.get(accountType).putIfAbsent(0, 0.0); // baseline
 
                     int dateTMinus1 =
-                        DateFormatUtil.getDate(dateAndLocalDateMap.get(date).minusDays(1));
+                        DateFormatUtil.getDate(dateLocalDateCache.get(date).get().minusDays(1));
                     Double realizedPnLTMinus1 =
                         typeMapMap.get(accountType).floorEntry(dateTMinus1).getValue();
 
@@ -380,7 +377,7 @@ public class CompleteMarketDataService {
     accountTypes.forEach(type -> realizedWithDividendDatePnLMap.get(0).put(type, 0.0)); // baseline
     dates.forEach(
         localDate -> {
-          int date = localDateAndDateMap.get(localDate);
+          int date = dateLocalDateCache.get(localDate).getAsInt();
           realizedWithDividendDatePnLMap.putIfAbsent(date, new HashMap<>());
           Map<MarketDataProto.AccountType, Double> typePnLRealizedWithDivDatePnLMap =
               realizedWithDividendDatePnLMap.get(date);
@@ -393,7 +390,7 @@ public class CompleteMarketDataService {
                 //                System.out.println(accountType);
 
                 int dateTMinus1 =
-                    DateFormatUtil.getDate(dateAndLocalDateMap.get(date).minusDays(1));
+                    DateFormatUtil.getDate(dateLocalDateCache.get(date).get().minusDays(1));
                 Double realizedTMinus1 =
                     realizedWithDividendDatePnLMap
                         .floorEntry(dateTMinus1)
@@ -504,7 +501,7 @@ public class CompleteMarketDataService {
 
     dates.forEach(
         localDate -> {
-          int date = localDateAndDateMap.get(localDate);
+          int date = dateLocalDateCache.get(localDate).getAsInt();
           for (MarketDataProto.AccountType type : accountTypes) {
             Double unrealizedPnL = null;
             Double realizedPnL = null;
