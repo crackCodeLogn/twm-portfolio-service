@@ -2,7 +2,9 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.config.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
+import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
@@ -27,6 +29,7 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   private final TickerDataWarehouse tickerDataWarehouse;
+  private final OutdatedSymbols outdatedSymbols;
 
   private final List<Integer> marketDates = new ArrayList<>(100000);
   private final LocalDate endDate = LocalDate.now().plusDays(1);
@@ -58,22 +61,32 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
               identifyMissingDbDates(tickerDataFromDb, marketDates);
           missingDbDataDates.forEach(
               dates -> {
-                log.info(
-                    "Downloading missing data for {} from {} -> {}",
-                    instrument,
-                    dates.getLeft(),
-                    dates.getRight());
-                MarketDataProto.Ticker missingTickerDataRange =
-                    marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
-                        instrument, dates.getLeft().toString(), dates.getRight().toString());
+                Optional<OutdatedSymbol> outdatedSymbol = outdatedSymbols.get(instrument);
+                if (outdatedSymbol.isEmpty()
+                    || outdatedSymbol.get().lastListingDate()
+                        >= DateFormatUtil.getDate(dates.getRight())) {
+                  log.info(
+                      "Downloading missing data for {} from {} -> {}",
+                      instrument,
+                      dates.getLeft(),
+                      dates.getRight());
+                  MarketDataProto.Ticker missingTickerDataRange =
+                      marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
+                          instrument, dates.getLeft().toString(), dates.getRight().toString());
 
-                fillAnalysisWarehouse(missingTickerDataRange);
-                log.info(
-                    "Adding market data to db for {} from {} -> {}",
-                    instrument,
-                    dates.getLeft(),
-                    dates.getRight());
-                marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
+                  fillAnalysisWarehouse(missingTickerDataRange);
+                  log.info(
+                      "Adding market data to db for {} from {} -> {}",
+                      instrument,
+                      dates.getLeft(),
+                      dates.getRight());
+                  marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
+                } else {
+                  log.info(
+                      "Skipping outdated symbol {} from {}",
+                      instrument,
+                      outdatedSymbol.get().lastListingDate());
+                }
               });
         });
   }

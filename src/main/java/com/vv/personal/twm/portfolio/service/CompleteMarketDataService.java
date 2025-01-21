@@ -312,7 +312,12 @@ public class CompleteMarketDataService {
                   .floorEntry(TODAY_DATE)
                   .getValue()
                   .get(MarketDataProto.AccountType.NR));
-
+      System.out.println(
+          "Combined PnL of FHSA: "
+              + combinedDatePnLCumulativeMap
+                  .floorEntry(TODAY_DATE)
+                  .getValue()
+                  .get(MarketDataProto.AccountType.FHSA));
     } else log.error("Failed to compute pnL. Check logs for relevant error.");
   }
 

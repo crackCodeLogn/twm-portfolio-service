@@ -148,7 +148,8 @@ public class DataConfig {
             tickerDataWarehouseConfig,
             marketDataPythonEngineFeign,
             marketDataCrdbServiceFeign,
-            tickerDataWarehouse());
+            tickerDataWarehouse(),
+            outdatedSymbols());
     tickerDataWarehouseService.loadBenchmarkData();
     return tickerDataWarehouseService;
   }
