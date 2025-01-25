@@ -1,6 +1,8 @@
 package com.vv.personal.twm.portfolio.remote.controller;
 
+import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
+import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
 import java.util.Arrays;
 import java.util.List;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,10 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController("portfolio")
 @Controller
 @RequestMapping("/portfolio/")
+@CrossOrigin(origins = "http://localhost:5173") // Allow React app
 @RequiredArgsConstructor
 public class PortfolioController {
 
   private final InvestmentDivWeightService investmentDivWeightService;
+  private final CompleteBankDataService completeBankDataService;
 
   /*
   @Lazy
@@ -81,6 +86,12 @@ public class PortfolioController {
     log.info("Found investment break down on div weight");
     log.debug(investmentDivWeight.get().toString());
     return investmentDivWeight.get().toString();
+  }
+
+  @GetMapping("/gic/expiries")
+  public FixedDepositProto.FixedDepositList getGicExpiries(@RequestParam("ccy") String ccy) {
+    log.info("getGicExpiries invoked");
+    return completeBankDataService.getGicExpiries(ccy);
   }
 
   @GetMapping("/")

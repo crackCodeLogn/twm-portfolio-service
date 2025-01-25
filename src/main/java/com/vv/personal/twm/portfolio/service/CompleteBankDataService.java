@@ -122,4 +122,23 @@ public class CompleteBankDataService {
       cumulativeDateAmountGicMap.put(dateLocalDateCache.get(date).getAsInt(), dateCumulativeAmount);
     }
   }
+
+  public FixedDepositProto.FixedDepositList getGicExpiries(String currencyCode) {
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(currencyCode);
+    if (code == BankProto.CurrencyCode.UNRECOGNIZED) {
+      log.error("Unrecognized currency code: {}", code);
+      return FixedDepositProto.FixedDepositList.newBuilder().build();
+    }
+
+    Optional<FixedDepositProto.FixedDepositList> activeFixedDeposits =
+        bankFixedDepositsWarehouse.getActiveFixedDeposits(code);
+    if (activeFixedDeposits.isEmpty()) {
+      log.warn("No fixed deposits found for code: {}", code);
+      return FixedDepositProto.FixedDepositList.newBuilder().build();
+    }
+    List<FixedDepositProto.FixedDeposit> gicList =
+        new ArrayList<>(activeFixedDeposits.get().getFixedDepositList());
+    gicList.sort(Comparator.comparing(FixedDepositProto.FixedDeposit::getEndDate));
+    return FixedDepositProto.FixedDepositList.newBuilder().addAllFixedDeposit(gicList).build();
+  }
 }
