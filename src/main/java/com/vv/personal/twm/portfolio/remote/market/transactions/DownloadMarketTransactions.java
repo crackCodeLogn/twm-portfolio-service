@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.remote.market_transactions;
+package com.vv.personal.twm.portfolio.remote.market.transactions;
 
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.*;
 

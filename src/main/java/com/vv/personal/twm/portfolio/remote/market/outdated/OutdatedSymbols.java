@@ -1,6 +1,7 @@
-package com.vv.personal.twm.portfolio.config;
+package com.vv.personal.twm.portfolio.remote.market.outdated;
 
 import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
+import com.vv.personal.twm.portfolio.util.CsvDownloaderUtil;
 import com.vv.personal.twm.portfolio.util.TextReaderUtil;
 import java.io.*;
 import java.util.List;
@@ -19,7 +20,11 @@ public class OutdatedSymbols {
   private final Map<String, OutdatedSymbol> outdatedSymbols = new ConcurrentHashMap<>();
 
   public boolean load(String outdatedSymbolsFileLocation) {
-    File file = new File(outdatedSymbolsFileLocation);
+    String outdatedSymbolCsvLocation =
+        TextReaderUtil.readTextLines(outdatedSymbolsFileLocation).get(0);
+    String downloadedLocation = CsvDownloaderUtil.downloadCsv(outdatedSymbolCsvLocation);
+
+    File file = new File(downloadedLocation);
     if (!file.exists()) {
       log.error(
           "Did not find outdated symbols file: {}, cannot load outdated symbols.",

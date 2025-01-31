@@ -2,11 +2,11 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
-import com.vv.personal.twm.portfolio.config.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
 import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
