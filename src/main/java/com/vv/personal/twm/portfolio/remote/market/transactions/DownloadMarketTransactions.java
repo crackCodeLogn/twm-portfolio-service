@@ -30,7 +30,7 @@ public class DownloadMarketTransactions {
       ImmutableMap.<String, String>builder().put("CRT.UN", "CRT-UN").build();
 
   private static final Map<String, String> stkExchangeMap =
-      ImmutableMap.<String, String>builder().put("ALV", "V").build();
+      ImmutableMap.<String, String>builder().put("ALV", "V").put("AFM", "V").build();
 
   public static MarketDataProto.Portfolio downloadMarketTransactions(
       String fileLocation, MarketDataProto.Direction direction) {

@@ -44,10 +44,10 @@ public class PortfolioController {
 
   @GetMapping("/manual/investment/div-weights")
   public String getInvestmentDivWeights(
-      @RequestParam(defaultValue = "VFV.TO, VDY.TO, VCE.TO, CCO.TO") String highValImnts,
+      @RequestParam(defaultValue = "VFV.TO, VCE.TO, XEQT.TO, ZDB.TO") String highValImnts,
       @RequestParam(
               defaultValue =
-                  "RY.TO, BNS.TO, CM.TO, ENB.TO, BCE.TO, TRP.TO, SU.TO, CNQ.TO, CP.TO, PZA.TO, DBM.TO, FTS.TO")
+                  "RY.TO, BNS.TO, CM.TO, ENB.TO, AFM.V, SU.TO, CNQ.TO, BEP-UN.TO, DBM.TO, FTS.TO")
           String highDivImnts,
       @RequestParam(defaultValue = "5000.0") Double income,
       @RequestParam(defaultValue = "20.0") Double incomeSplitPercentage,
