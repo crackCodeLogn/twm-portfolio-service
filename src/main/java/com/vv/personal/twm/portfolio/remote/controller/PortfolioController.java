@@ -1,8 +1,10 @@
 package com.vv.personal.twm.portfolio.remote.controller;
 
+import com.vv.personal.twm.artifactory.generated.bank.BankProto;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
-import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
+import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PortfolioController {
 
   private final InvestmentDivWeightService investmentDivWeightService;
-  private final CompleteBankDataService completeBankDataService;
+  private final CentralDataPointService centralDataPointService;
 
   /*
   @Lazy
@@ -91,7 +93,26 @@ public class PortfolioController {
   @GetMapping("/gic/expiries")
   public FixedDepositProto.FixedDepositList getGicExpiries(@RequestParam("ccy") String ccy) {
     log.info("getGicExpiries invoked");
-    return completeBankDataService.getGicExpiries(ccy);
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
+    return centralDataPointService.getGicExpiries(code);
+  }
+
+  @GetMapping("/gic/valuations")
+  public DataPacketProto.DataPacket getGicValuations(@RequestParam("ccy") String ccy) {
+    log.info("getGicValuations invoked");
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getGicValuations(code))
+        .build();
+  }
+
+  @GetMapping("/net-worth")
+  public DataPacketProto.DataPacket getNetWorth(@RequestParam("ccy") String ccy) {
+    log.info("getNetWorth invoked");
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(centralDataPointService.getLatestTotalNetWorthBreakDown(code))
+        .build();
   }
 
   @GetMapping("/")

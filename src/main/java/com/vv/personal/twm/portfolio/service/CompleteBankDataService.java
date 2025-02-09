@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service;
 
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
+import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
@@ -123,22 +124,38 @@ public class CompleteBankDataService {
     }
   }
 
-  public FixedDepositProto.FixedDepositList getGicExpiries(String currencyCode) {
-    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(currencyCode);
-    if (code == BankProto.CurrencyCode.UNRECOGNIZED) {
-      log.error("Unrecognized currency code: {}", code);
+  public FixedDepositProto.FixedDepositList getGicExpiries(BankProto.CurrencyCode currencyCode) {
+    if (currencyCode == BankProto.CurrencyCode.UNRECOGNIZED) {
+      log.error("Unrecognized currency code: {}", currencyCode);
       return FixedDepositProto.FixedDepositList.newBuilder().build();
     }
 
     Optional<FixedDepositProto.FixedDepositList> activeFixedDeposits =
-        bankFixedDepositsWarehouse.getActiveFixedDeposits(code);
+        bankFixedDepositsWarehouse.getActiveFixedDeposits(currencyCode);
     if (activeFixedDeposits.isEmpty()) {
-      log.warn("No fixed deposits found for code: {}", code);
+      log.warn("No fixed deposits found for code: {}", currencyCode);
       return FixedDepositProto.FixedDepositList.newBuilder().build();
     }
     List<FixedDepositProto.FixedDeposit> gicList =
         new ArrayList<>(activeFixedDeposits.get().getFixedDepositList());
     gicList.sort(Comparator.comparing(FixedDepositProto.FixedDeposit::getEndDate));
     return FixedDepositProto.FixedDepositList.newBuilder().addAllFixedDeposit(gicList).build();
+  }
+
+  public OptionalDouble getNetBankAccountBalanceForCurrency(BankProto.CurrencyCode currencyCode) {
+    return bankAccountWarehouse.getNetBankAccountBalanceForCurrency(
+        currencyCode,
+        Sets.newHashSet(
+            BankProto.BankAccountType.GIC,
+            BankProto.BankAccountType.MKT,
+            BankProto.BankAccountType.CASH_R),
+        false); // get all bank accounts sans GIC and sans MKT type
+  }
+
+  public OptionalDouble getOtherNetBalanceForCurrency(BankProto.CurrencyCode currencyCode) {
+    return bankAccountWarehouse.getNetBankAccountBalanceForCurrency(
+        currencyCode,
+        Sets.newHashSet(BankProto.BankAccountType.CASH_R),
+        true); // get all bank accounts with CASH_R type
   }
 }

@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.vv.personal</groupId>
     <artifactId>twm-portfolio-service</artifactId>
-    <version>1.1.20</version>
+    <version>1.1.21</version>
     <name>twm-portfolio-service</name>
     <description>TWM Portfolio service</description>
     <packaging>jar</packaging>
@@ -20,11 +20,11 @@
         <spring-cloud.version>2023.0.3</spring-cloud.version>
         <openapi-webmvc.version>2.3.0</openapi-webmvc.version>
         <opencsv.version>5.9</opencsv.version>
-        <protobuf.version>4.28.3</protobuf.version>
+        <protobuf.version>4.29.2</protobuf.version>
         <guava.version>33.2.1-jre</guava.version>
         <mockito.version>5.12.0</mockito.version>
         <ping-client.version>1.0.4</ping-client.version>
-        <artifactory.version>1.1.14</artifactory.version>
+        <artifactory.version>1.1.16</artifactory.version>
     </properties>
 
     <dependencies>

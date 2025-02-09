@@ -79,6 +79,27 @@ public class BankAccountWarehouseImpl implements BankAccountWarehouse {
   }
 
   @Override
+  public OptionalDouble getNetBankAccountBalanceForCurrency(
+      BankProto.CurrencyCode currencyCode,
+      Set<BankProto.BankAccountType> includeFilters,
+      boolean normalFilter) {
+    double sumTotal = 0.0;
+    for (String bankId : ccyBankAccountIdsMap.get(currencyCode)) {
+      BankProto.BankAccount bankAccount = bankAccountsMap.get(bankId);
+      if (bankAccount != null) {
+        boolean skip = normalFilter;
+        for (BankProto.BankAccountType bankAccountType : bankAccount.getBankAccountTypesList())
+          if (includeFilters.contains(bankAccountType)) {
+            skip = !skip;
+            break;
+          }
+        if (!skip) sumTotal += bankAccount.getBalance();
+      }
+    }
+    return OptionalDouble.of(sumTotal);
+  }
+
+  @Override
   public void clear() {
     bankAccountsMap.clear();
     ccyBankAccountIdsMap.clear();

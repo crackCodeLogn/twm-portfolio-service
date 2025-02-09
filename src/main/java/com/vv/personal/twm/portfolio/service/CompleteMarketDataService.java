@@ -321,6 +321,31 @@ public class CompleteMarketDataService {
     } else log.error("Failed to compute pnL. Check logs for relevant error.");
   }
 
+  public double getLatestCombinedCumulativePnL() {
+    double pnl = 0.0;
+    Map<MarketDataProto.AccountType, Double> values =
+        combinedDatePnLCumulativeMap.floorEntry(TODAY_DATE).getValue();
+    for (Double value : values.values()) pnl += value;
+    return pnl;
+  }
+
+  public double getLatestTotalInvestmentAmount() {
+    double investment = 0.0;
+    for (Map<MarketDataProto.AccountType, DataList> entry : marketData.values()) {
+      for (DataList dataList : entry.values()) {
+        DataNode node = dataList.getHead();
+        while (node != null) {
+          int multiplier =
+              node.getInstrument().getDirection() == MarketDataProto.Direction.SELL ? -1 : 1;
+          investment += multiplier * node.getInstrument().getTicker().getData(0).getPrice();
+          node = node.getNext();
+        }
+      }
+    }
+    System.out.println("total investment: " + investment);
+    return investment;
+  }
+
   // inflate realized pnl with dividend data
   private void computeRealizedPnLFromDividends(List<LocalDate> dates) {
     List<MarketDataProto.AccountType> accountTypes = getAccountTypes();
