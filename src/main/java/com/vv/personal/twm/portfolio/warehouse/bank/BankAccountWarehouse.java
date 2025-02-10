@@ -19,8 +19,6 @@ public interface BankAccountWarehouse {
 
   OptionalDouble getBankAccountBalance(String id);
 
-  OptionalDouble getNetBankAccountBalanceForCurrency(BankProto.CurrencyCode currencyCode);
-
   OptionalDouble getNetBankAccountBalanceForCurrency(
       BankProto.CurrencyCode currencyCode,
       Set<BankProto.BankAccountType> includeFilters,

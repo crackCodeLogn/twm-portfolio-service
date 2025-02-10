@@ -71,14 +71,6 @@ public class BankAccountWarehouseImpl implements BankAccountWarehouse {
   }
 
   @Override
-  public OptionalDouble getNetBankAccountBalanceForCurrency(BankProto.CurrencyCode currencyCode) {
-    return OptionalDouble.of(
-        ccyBankAccountIdsMap.get(currencyCode).stream()
-            .mapToDouble(id -> bankAccountsMap.get(id).getBalance())
-            .sum());
-  }
-
-  @Override
   public OptionalDouble getNetBankAccountBalanceForCurrency(
       BankProto.CurrencyCode currencyCode,
       Set<BankProto.BankAccountType> includeFilters,

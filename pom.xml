@@ -24,7 +24,7 @@
         <guava.version>33.2.1-jre</guava.version>
         <mockito.version>5.12.0</mockito.version>
         <ping-client.version>1.0.4</ping-client.version>
-        <artifactory.version>1.1.16</artifactory.version>
+        <artifactory.version>1.1.17</artifactory.version>
     </properties>
 
     <dependencies>
