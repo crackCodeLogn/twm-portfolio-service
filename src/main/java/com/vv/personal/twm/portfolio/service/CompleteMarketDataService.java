@@ -292,8 +292,9 @@ public class CompleteMarketDataService {
           vfvNrNode.getAcb().getTotalAcb());
       vfvNrNode = vfvNrNode.getNext();
     }*/
-    unrealizedDatePnLMap.forEach(
-        (k, v) -> System.out.printf("%d x %.6f\n", k, v.get(MarketDataProto.AccountType.NR)));
+
+    //    unrealizedDatePnLMap.forEach(
+    //        (k, v) -> System.out.printf("%d x %.6f\n", k, v.get(MarketDataProto.AccountType.NR)));
 
     if (!failed) {
       computeCombinedPnL(dates);
