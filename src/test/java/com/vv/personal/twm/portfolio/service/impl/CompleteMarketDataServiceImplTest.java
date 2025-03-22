@@ -1,4 +1,4 @@
-package com.vv.personal.twm.portfolio.service;
+package com.vv.personal.twm.portfolio.service.impl;
 
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.Direction.SELL;
 import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION;
@@ -11,6 +11,7 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TestInstrument;
 import java.util.List;
@@ -27,15 +28,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 2024-09-13
  */
 @ExtendWith(MockitoExtension.class)
-class CompleteMarketDataServiceTest {
+class CompleteMarketDataServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
 
-  private CompleteMarketDataService completeMarketDataService;
+  private CompleteMarketDataServiceImpl completeMarketDataService;
 
   @BeforeEach
   void setUp() {
-    completeMarketDataService = new CompleteMarketDataService(new DateLocalDateCache());
+    completeMarketDataService =
+        new CompleteMarketDataServiceImpl(
+            new DateLocalDateCache(), null, tickerDataWarehouseService);
   }
 
   @Test
@@ -101,7 +104,7 @@ class CompleteMarketDataServiceTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    // completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
     completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
         completeMarketDataService.getUnrealizedDatePnLMap();
@@ -212,7 +215,7 @@ class CompleteMarketDataServiceTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    // completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
     completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
         completeMarketDataService.getUnrealizedDatePnLMap();
@@ -320,7 +323,7 @@ class CompleteMarketDataServiceTest {
                 DateFormatUtil.getLocalDate(20240916),
                 DateFormatUtil.getLocalDate(20240917)));
 
-    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    // completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
     completeMarketDataService.computePnL();
     Map<Integer, Map<MarketDataProto.AccountType, Double>> unrealizedPnLMap =
         completeMarketDataService.getUnrealizedDatePnLMap();
@@ -430,7 +433,7 @@ class CompleteMarketDataServiceTest {
                 DateFormatUtil.getLocalDate(20240913),
                 DateFormatUtil.getLocalDate(20240916)));
 
-    completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
+    // completeMarketDataService.setTickerDataWarehouseService(tickerDataWarehouseService);
     MarketDataProto.Portfolio portfolio =
         MarketDataProto.Portfolio.newBuilder()
             .addAllInstruments(generateTestInstruments3())

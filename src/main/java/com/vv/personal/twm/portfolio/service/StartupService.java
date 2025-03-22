@@ -22,7 +22,7 @@ public class StartupService {
 
   private final PingConfig pingConfig;
   private final BankCrdbServiceFeign crdbServiceFeign;
-  private final TickerDataWarehouseService tickerDataWarehouseService;
+  private final ReloadService reloadService;
 
   @EventListener(ApplicationReadyEvent.class)
   public void startup() {
@@ -32,6 +32,7 @@ public class StartupService {
       System.out.println(fixedDepositList);
     }
 
+    // reloadService.initialFullLoad();
     log.info("Startup complete");
 
     /*Optional<InvestmentDivWeight> optionalInvestmentDivWeight =

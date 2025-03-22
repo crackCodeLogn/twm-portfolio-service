@@ -63,6 +63,7 @@ public class BankAccountWarehouseImpl implements BankAccountWarehouse {
         : Optional.empty();
   }
 
+  // todo - write test
   @Override
   public OptionalDouble getBankAccountBalance(String id) {
     return getBankAccount(id)

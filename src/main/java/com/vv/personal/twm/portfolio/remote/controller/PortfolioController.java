@@ -6,6 +6,7 @@ import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
+import com.vv.personal.twm.portfolio.service.ReloadService;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,7 @@ public class PortfolioController {
 
   private final InvestmentDivWeightService investmentDivWeightService;
   private final CentralDataPointService centralDataPointService;
+  private final ReloadService reloadService;
 
   /*
   @Lazy
@@ -43,6 +45,12 @@ public class PortfolioController {
   @Lazy
   @Qualifier("ticker-dwh-b")
   private final TickerDataWarehouse boughtTickerDataWarehouse;*/
+
+  @GetMapping("/reload/v2k")
+  public String reloadV2kData() {
+    if (reloadService.reload()) return "OK";
+    else return "ERROR";
+  }
 
   @GetMapping("/manual/investment/div-weights")
   public String getInvestmentDivWeights(
