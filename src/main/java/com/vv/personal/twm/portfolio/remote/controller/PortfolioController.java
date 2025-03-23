@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.remote.controller;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
+import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
@@ -111,6 +112,24 @@ public class PortfolioController {
     BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
     return DataPacketProto.DataPacket.newBuilder()
         .putAllIntDoubleMap(centralDataPointService.getGicValuations(code))
+        .build();
+  }
+
+  @GetMapping("/market/valuations/account")
+  public DataPacketProto.DataPacket getMarketAccountValuations(
+      @RequestParam("accountType") String accountType) {
+    log.info("getMarketAccountValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getMarketValuations(accountTypeEnum))
+        .build();
+  }
+
+  @GetMapping("/market/valuations")
+  public DataPacketProto.DataPacket getMarketValuations() {
+    log.info("getMarketValuations invoked");
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getMarketValuations())
         .build();
   }
 

@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 import com.google.common.collect.ImmutableMap;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
+import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.NetWorthBreakDownKey;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
@@ -78,5 +79,29 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   @Override
   public TreeMap<Integer, Double> getGicValuations(BankProto.CurrencyCode currency) {
     return completeBankDataService.getCumulativeDateAmountGicMap();
+  }
+
+  @Override
+  public TreeMap<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType) {
+    TreeMap<Integer, Double> marketValuations = new TreeMap<>();
+    TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =
+        completeMarketDataService.getCombinedDatePnLCumulativeMap();
+    combinedDatePnLCumulativeMap.forEach(
+        (date, accountValueMap) -> marketValuations.put(date, accountValueMap.get(accountType)));
+    return marketValuations;
+  }
+
+  @Override
+  public TreeMap<Integer, Double> getMarketValuations() {
+    TreeMap<Integer, Double> marketValuations = new TreeMap<>();
+    TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =
+        completeMarketDataService.getCombinedDatePnLCumulativeMap();
+    combinedDatePnLCumulativeMap.forEach(
+        (date, accountValueMap) -> {
+          double value = 0.0;
+          for (Double accountValue : accountValueMap.values()) value += accountValue;
+          marketValuations.put(date, value);
+        });
+    return marketValuations;
   }
 }

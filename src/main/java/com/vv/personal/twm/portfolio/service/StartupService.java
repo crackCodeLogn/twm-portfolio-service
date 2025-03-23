@@ -32,7 +32,7 @@ public class StartupService {
       System.out.println(fixedDepositList);
     }
 
-    // reloadService.initialFullLoad();
+    reloadService.initialFullLoad();
     log.info("Startup complete");
 
     /*Optional<InvestmentDivWeight> optionalInvestmentDivWeight =

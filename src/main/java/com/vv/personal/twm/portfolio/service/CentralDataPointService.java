@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
+import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import java.util.Map;
 import java.util.OptionalDouble;
 
@@ -30,4 +31,8 @@ public interface CentralDataPointService {
   FixedDepositProto.FixedDepositList getGicExpiries(BankProto.CurrencyCode currency);
 
   Map<Integer, Double> getGicValuations(BankProto.CurrencyCode currency);
+
+  Map<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType);
+
+  Map<Integer, Double> getMarketValuations();
 }
