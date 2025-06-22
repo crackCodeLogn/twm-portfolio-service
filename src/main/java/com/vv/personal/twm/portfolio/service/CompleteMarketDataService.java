@@ -19,4 +19,6 @@ public interface CompleteMarketDataService {
   double getLatestTotalInvestmentAmount();
 
   TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> getCombinedDatePnLCumulativeMap();
+
+  Map<String, Map<MarketDataProto.AccountType, Double>> getCumulativeImntAccountTypeDividendMap();
 }

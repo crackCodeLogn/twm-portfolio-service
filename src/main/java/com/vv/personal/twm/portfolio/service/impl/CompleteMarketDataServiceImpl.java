@@ -65,6 +65,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final TreeMap<Integer, Map<MarketDataProto.AccountType, Double>>
       combinedDatePnLCumulativeMap; // cumulative date x account type x (unrealized + sells + divs)
   // SPECIAL NOTE: combinedDatePnLCumulativeMap does not include div-only non-market dates
+  private final Map<String, Map<MarketDataProto.AccountType, Double>> cumulativeImntDividendsMap;
   private final DateLocalDateCache dateLocalDateCache;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
@@ -86,6 +87,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     realizedImntWithDividendPnLMap = new ConcurrentHashMap<>();
     dateDividendsCumulativeMap = new TreeMap<>();
     combinedDatePnLCumulativeMap = new TreeMap<>();
+    cumulativeImntDividendsMap = new ConcurrentHashMap<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -126,9 +128,27 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments());
     computePnL();
 
+    computeCumulativeDividend();
+
     stopWatch.stop();
     log.info(
         "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
+  }
+
+  private void computeCumulativeDividend() {
+    imntDividendsMap.forEach(
+        (imnt, accountTypeMap) ->
+            accountTypeMap.forEach(
+                (accountType, dateDividendMap) -> {
+                  double sum = 0;
+                  for (DividendRecord dividendRecord : dateDividendMap.values()) {
+                    sum += dividendRecord.dividend();
+                  }
+                  cumulativeImntDividendsMap
+                      .compute(imnt, (k, v) -> v == null ? new HashMap<>() : v)
+                      .put(accountType, sum);
+                }));
+    log.info("Completed calculating sum of dividends per imnt and account type");
   }
 
   @Override
@@ -175,6 +195,12 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     }
     System.out.println("total investment: " + investment);
     return investment;
+  }
+
+  @Override
+  public Map<String, Map<MarketDataProto.AccountType, Double>>
+      getCumulativeImntAccountTypeDividendMap() {
+    return cumulativeImntDividendsMap;
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {

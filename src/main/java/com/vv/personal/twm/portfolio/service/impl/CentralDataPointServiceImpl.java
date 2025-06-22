@@ -8,6 +8,7 @@ import com.vv.personal.twm.portfolio.model.market.NetWorthBreakDownKey;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.TreeMap;
@@ -103,5 +104,18 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
           marketValuations.put(date, value);
         });
     return marketValuations;
+  }
+
+  @Override
+  public Map<String, Double> getCumulativeImntDividendValuations(
+      MarketDataProto.AccountType accountType) {
+    Map<String, Double> cumulativeImntDividendValuations = new HashMap<>();
+
+    Map<String, Map<MarketDataProto.AccountType, Double>> cumulativeImntAccountTypeDividendMap =
+        completeMarketDataService.getCumulativeImntAccountTypeDividendMap();
+    cumulativeImntAccountTypeDividendMap.forEach(
+        (imnt, accountValueMap) ->
+            cumulativeImntDividendValuations.put(imnt, accountValueMap.get(accountType)));
+    return cumulativeImntDividendValuations;
   }
 }

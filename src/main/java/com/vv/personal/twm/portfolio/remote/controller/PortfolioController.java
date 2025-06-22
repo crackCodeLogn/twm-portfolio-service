@@ -125,6 +125,17 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/valuations/dividends")
+  public DataPacketProto.DataPacket getCumulativeImntDividendValuations(
+      @RequestParam("accountType") String accountType) {
+    log.info("getCumulativeImntDividendValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(
+            centralDataPointService.getCumulativeImntDividendValuations(accountTypeEnum))
+        .build();
+  }
+
   @GetMapping("/market/valuations")
   public DataPacketProto.DataPacket getMarketValuations() {
     log.info("getMarketValuations invoked");
