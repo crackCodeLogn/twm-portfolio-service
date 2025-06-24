@@ -39,7 +39,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
-  private final Map<String, Map<MarketDataProto.AccountType, Map<Integer, DividendRecord>>>
+  private final Map<String, Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>>>
       imntDividendsMap;
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>>
       dateDividendsMap; // date x account type x divs for that date
@@ -141,8 +141,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             accountTypeMap.forEach(
                 (accountType, dateDividendMap) -> {
                   double sum = 0;
-                  for (DividendRecord dividendRecord : dateDividendMap.values()) {
-                    sum += dividendRecord.dividend();
+                  for (List<DividendRecord> dividendRecords : dateDividendMap.values()) {
+                    for (DividendRecord dividendRecord : dividendRecords) {
+                      sum += dividendRecord.dividend();
+                    }
                   }
                   cumulativeImntDividendsMap
                       .compute(imnt, (k, v) -> v == null ? new HashMap<>() : v)
@@ -240,14 +242,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       // record dividend data in imntDividendsMap as the data structure holding translated data from
       // the div list
       imntDividendsMap.computeIfAbsent(instrument.getTicker().getSymbol(), k -> new HashMap<>());
-      Map<MarketDataProto.AccountType, Map<Integer, DividendRecord>> divDateValueMap =
+      Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>> divDateValueMap =
           imntDividendsMap.get(instrument.getTicker().getSymbol());
       divDateValueMap.computeIfAbsent(accountType, k -> new HashMap<>());
       divDateValueMap
           .get(accountType)
-          .put(
-              divDate,
-              new DividendRecord(instrument.getTicker().getSymbol(), divDate, dividend, orderId));
+          .compute(divDate, (k, v) -> v == null ? new ArrayList<>() : v)
+          .add(new DividendRecord(instrument.getTicker().getSymbol(), divDate, dividend, orderId));
 
       // equivalent of above structure but an agg based on date and irrespective of imnt
       Map<MarketDataProto.AccountType, Double> dateDivAccountTypeDivMap =
@@ -463,13 +464,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     // populate realizedImntWithDividendPnLMap
     for (String dividendTicker : imntDividendsMap.keySet()) {
-      Map<MarketDataProto.AccountType, Map<Integer, DividendRecord>> accountTypeMapMap =
+      Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>> accountTypeMapMap =
           imntDividendsMap.get(dividendTicker);
 
       accountTypeMapMap.forEach(
           (accountType, dateRecordMap) ->
               dateRecordMap.forEach(
-                  (date, record) -> {
+                  (date, records) -> {
                     // init
                     Map<MarketDataProto.AccountType, TreeMap<Integer, Double>> typeMapMap =
                         realizedImntWithDividendPnLMap.computeIfAbsent(
@@ -487,10 +488,14 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                         .get(accountType)
                         .compute(
                             date,
-                            (k1, v1) ->
-                                sanitizeDouble(v1)
-                                    + record.dividend()
-                                    + sanitizeDouble(realizedPnLTMinus1));
+                            (k1, v1) -> {
+                              double dividendSum = 0.0;
+                              for (DividendRecord record : records)
+                                dividendSum += record.dividend();
+                              return sanitizeDouble(v1)
+                                  + dividendSum
+                                  + sanitizeDouble(realizedPnLTMinus1);
+                            });
                   }));
     }
 

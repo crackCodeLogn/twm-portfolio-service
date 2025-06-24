@@ -448,23 +448,43 @@ class CompleteMarketDataServiceImplTest {
             .build());
     completeMarketDataService.computePnL();
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, DividendRecord>>> dividendsMap =
+    Map<String, Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>>> dividendsMap =
         completeMarketDataService.getImntDividendsMap();
     assertEquals(1, dividendsMap.size());
     assertEquals(
         10.0,
-        dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA).get(20240912).dividend(),
+        dividendsMap
+            .get("CM.TO")
+            .get(MarketDataProto.AccountType.TFSA)
+            .get(20240912)
+            .get(0)
+            .dividend(),
         DELTA_PRECISION);
     assertEquals(
         "DIVIDEND_20240912-TFSA-0-CM.TO",
-        dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA).get(20240912).orderId());
+        dividendsMap
+            .get("CM.TO")
+            .get(MarketDataProto.AccountType.TFSA)
+            .get(20240912)
+            .get(0)
+            .orderId());
     assertEquals(
         20.0,
-        dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.NR).get(20240912).dividend(),
+        dividendsMap
+            .get("CM.TO")
+            .get(MarketDataProto.AccountType.NR)
+            .get(20240912)
+            .get(0)
+            .dividend(),
         DELTA_PRECISION);
     assertEquals(
         5.0,
-        dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA).get(20240914).dividend(),
+        dividendsMap
+            .get("CM.TO")
+            .get(MarketDataProto.AccountType.TFSA)
+            .get(20240914)
+            .get(0)
+            .dividend(),
         DELTA_PRECISION);
     assertEquals(2, dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA).size());
     assertEquals(1, dividendsMap.get("CM.TO").get(MarketDataProto.AccountType.NR).size());
