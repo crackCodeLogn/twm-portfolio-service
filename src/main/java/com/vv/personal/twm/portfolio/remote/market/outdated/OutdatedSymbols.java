@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class OutdatedSymbols {
+  private static final int START_DAY_OF_2XXX = 20000101;
+  private static final int LAST_DAY_OF_2XXX = 29991231;
 
   private final Map<String, OutdatedSymbol> outdatedSymbols = new ConcurrentHashMap<>();
 
@@ -39,8 +41,15 @@ public class OutdatedSymbols {
 
       String[] parts = line.split(",");
       String symbol = parts[0];
-      int lastListingDate = Integer.parseInt(parts[1]);
-      outdatedSymbols.computeIfAbsent(symbol, k -> new OutdatedSymbol(symbol, lastListingDate));
+      int outdateStartDate = Integer.parseInt(parts[1]);
+      int outdateEndDate = Integer.parseInt(parts[2]);
+      outdatedSymbols.computeIfAbsent(
+          symbol,
+          k ->
+              new OutdatedSymbol(
+                  symbol,
+                  outdateStartDate == -1 ? START_DAY_OF_2XXX : outdateStartDate,
+                  outdateEndDate == -1 ? LAST_DAY_OF_2XXX : outdateEndDate));
     }
 
     return true;
@@ -56,5 +65,15 @@ public class OutdatedSymbols {
 
   public boolean isEmpty() {
     return outdatedSymbols.isEmpty();
+  }
+
+  public boolean isCurrentDateOutdated(String imnt, int date) {
+    if (contains(imnt)) {
+      Optional<OutdatedSymbol> outdatedSymbol = get(imnt);
+      return outdatedSymbol
+          .filter(symbol -> date >= symbol.outdateStartDate() && date <= symbol.outdateEndDate())
+          .isPresent();
+    }
+    return false;
   }
 }

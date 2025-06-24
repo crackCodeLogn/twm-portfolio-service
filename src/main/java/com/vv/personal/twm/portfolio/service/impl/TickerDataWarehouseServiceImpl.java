@@ -59,12 +59,24 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
           List<Pair<LocalDate, LocalDate>> missingDbDataDates =
               identifyMissingDbDates(tickerDataFromDb, marketDates);
+          Optional<OutdatedSymbol> outdatedSymbol = outdatedSymbols.get(instrument);
           missingDbDataDates.forEach(
-              dates -> {
-                Optional<OutdatedSymbol> outdatedSymbol = outdatedSymbols.get(instrument);
-                if (outdatedSymbol.isEmpty()
-                    || outdatedSymbol.get().lastListingDate()
-                        >= DateFormatUtil.getDate(dates.getRight())) {
+              inputDates -> {
+                List<Pair<LocalDate, LocalDate>> dateList = new ArrayList<>();
+                if (outdatedSymbol.isPresent()) {
+                  dateList = identifyMissingDatesDueToOutdated(outdatedSymbol.get(), inputDates);
+
+                  if (dateList.isEmpty()) {
+                    log.info(
+                        "Skipping outdated symbol {} from {} to {}",
+                        instrument,
+                        outdatedSymbol.get().outdateStartDate(),
+                        outdatedSymbol.get().outdateEndDate());
+                  }
+                } else { // imnt not in outdated list
+                  dateList.add(inputDates);
+                }
+                for (Pair<LocalDate, LocalDate> dates : dateList) {
                   log.info(
                       "Downloading missing data for {} from {} -> {}",
                       instrument,
@@ -81,14 +93,35 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
                       dates.getLeft(),
                       dates.getRight());
                   marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
-                } else {
-                  log.info(
-                      "Skipping outdated symbol {} from {}",
-                      instrument,
-                      outdatedSymbol.get().lastListingDate());
                 }
               });
         });
+  }
+
+  List<Pair<LocalDate, LocalDate>> identifyMissingDatesDueToOutdated(
+      OutdatedSymbol outdatedSymbol, Pair<LocalDate, LocalDate> inputDates) {
+    List<Pair<LocalDate, LocalDate>> missingDateList = new ArrayList<>();
+    int odStart = outdatedSymbol.outdateStartDate(), odEnd = outdatedSymbol.outdateEndDate();
+    int start = DateFormatUtil.getDate(inputDates.getLeft()),
+        end = DateFormatUtil.getDate(inputDates.getRight());
+
+    // 11 cases handled
+    if (start >= odStart && end <= odEnd) { // date range lies in complete outdate range
+      return missingDateList;
+    } else if (start < odStart && end > odEnd) {
+      missingDateList.add(Pair.of(inputDates.getLeft(), DateFormatUtil.getLocalDate(odStart)));
+      missingDateList.add(
+          Pair.of(DateFormatUtil.getLocalDate(odEnd).plusDays(1), inputDates.getRight()));
+    } else if (start == odEnd) {
+      missingDateList.add(
+          Pair.of(DateFormatUtil.getLocalDate(odEnd).plusDays(1), inputDates.getRight()));
+    } else if (end <= odStart || start >= odEnd) { // current date range outside outdate range
+      missingDateList.add(inputDates);
+    } else if (start < odStart) {
+      missingDateList.add(Pair.of(inputDates.getLeft(), DateFormatUtil.getLocalDate(odStart)));
+    }
+
+    return missingDateList;
   }
 
   @Override

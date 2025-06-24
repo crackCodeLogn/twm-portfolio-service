@@ -7,7 +7,6 @@ import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
-import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
@@ -33,9 +32,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CompleteMarketDataServiceImpl implements CompleteMarketDataService {
   private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
-
-  private static final OutdatedSymbol notFoundOutdatedSymbol =
-      new OutdatedSymbol("dummy", 29991231);
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -356,11 +352,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
           Double marketPrice = tickerDataWarehouseService.getMarketData(imnt, date);
           if (marketPrice == null) {
-            if (outdatedSymbols != null
-                && outdatedSymbols.contains(imnt)
-                && date
-                    >= outdatedSymbols.get(imnt).orElse(notFoundOutdatedSymbol).lastListingDate()) {
-              log.debug("Allowing skip of market price for outdated {} x {}", imnt, date);
+            if (outdatedSymbols != null && outdatedSymbols.isCurrentDateOutdated(imnt, date)) {
+              log.info("Allowing skip of market price for outdated {} x {}", imnt, date);
             } else if (dividendDates.contains(date)) {
               log.info("Allowed to miss off-market dividend date: {}", date);
               dateIndex++;
