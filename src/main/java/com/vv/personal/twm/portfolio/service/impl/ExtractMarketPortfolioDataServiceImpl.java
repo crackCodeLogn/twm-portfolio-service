@@ -50,11 +50,18 @@ public class ExtractMarketPortfolioDataServiceImpl implements ExtractMarketPortf
       log.info(
           "Pushing {} new {} transactions to db", newTransactions.getInstrumentsCount(), direction);
       String result = marketDataCrdbServiceFeign.postTransactions(newTransactions.build());
-      log.info(
-          "Result of posting {} {} transactions to db: {}",
-          newTransactions.getInstrumentsCount(),
-          direction,
-          result);
+      if (result.equals("Done")) {
+        log.info(
+            "Result of posting {} {} transactions to db: {}",
+            newTransactions.getInstrumentsCount(),
+            direction,
+            result);
+      } else {
+        log.error(
+            "Failed to post {} {} transactions to db",
+            newTransactions.getInstrumentsCount(),
+            direction);
+      }
     } else {
       log.info("No new {} transactions to push to db", direction);
     }
