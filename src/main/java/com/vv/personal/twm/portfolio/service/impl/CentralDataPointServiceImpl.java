@@ -114,8 +114,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
     Map<String, Map<MarketDataProto.AccountType, Double>> cumulativeImntAccountTypeDividendMap =
         completeMarketDataService.getCumulativeImntAccountTypeDividendMap();
     cumulativeImntAccountTypeDividendMap.forEach(
-        (imnt, accountValueMap) ->
-            cumulativeImntDividendValuations.put(imnt, accountValueMap.get(accountType)));
+        (imnt, accountValueMap) -> {
+          if (accountValueMap != null && accountValueMap.get(accountType) != null) {
+            cumulativeImntDividendValuations.put(imnt, accountValueMap.get(accountType));
+          }
+        });
     return cumulativeImntDividendValuations;
   }
 }
