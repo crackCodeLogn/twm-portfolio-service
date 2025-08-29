@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
 /**
@@ -351,6 +352,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           // System.out.println(date + " " + node);
 
           Double marketPrice = tickerDataWarehouseService.getMarketData(imnt, date);
+          Optional<Pair<Double, Integer>> fallbackPriceDate;
+          boolean overrideDateIndexIncrementAndContinue = false;
           if (marketPrice == null) {
             if (outdatedSymbols != null && outdatedSymbols.isCurrentDateOutdated(imnt, date)) {
               log.info("Allowing skip of market price for outdated {} x {}", imnt, date);
@@ -358,14 +361,27 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
               log.info("Allowed to miss off-market dividend date: {}", date);
               dateIndex++;
               continue;
+            } else if ((fallbackPriceDate =
+                    fetchTMinusPrice(
+                        imnt, dateIndex, 7, tickerDataWarehouseService, dates, dateLocalDateCache))
+                .isPresent()) {
+              log.warn(
+                  "Found a backdated price for imnt '{}' at {}: {}",
+                  imnt,
+                  fallbackPriceDate.get().getRight(),
+                  fallbackPriceDate.get().getLeft());
+              marketPrice = fallbackPriceDate.get().getLeft();
+              overrideDateIndexIncrementAndContinue = true;
             } else {
               log.error(
                   "Did not find market price for {} x {}, CANNOT compute any further!", imnt, date);
               failed = true;
               break outer;
             }
-            dateIndex++;
-            continue;
+            if (!overrideDateIndexIncrementAndContinue) {
+              dateIndex++;
+              continue;
+            }
           }
           computeUnrealizedPnL(imnt, type, node, date, marketPrice);
           if (node.getInstrument().getDirection() == MarketDataProto.Direction.BUY) {
@@ -430,6 +446,23 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                   .getValue()
                   .get(MarketDataProto.AccountType.FHSA));
     } else log.error("Failed to compute pnL. Check logs for relevant error.");
+  }
+
+  private Optional<Pair<Double, Integer>> fetchTMinusPrice(
+      String imnt,
+      int dateIndex,
+      int fallBackDaysLimit,
+      TickerDataWarehouseService tickerDataWarehouseService,
+      List<LocalDate> dates,
+      DateLocalDateCache dateLocalDateCache) {
+    for (int tMinusDay = 1; tMinusDay <= fallBackDaysLimit && dateIndex-- > 0; tMinusDay++) {
+      int date = dateLocalDateCache.get(dates.get(dateIndex)).getAsInt();
+      Double marketPrice = tickerDataWarehouseService.getMarketData(imnt, date);
+      if (marketPrice != null) {
+        return Optional.ofNullable(Pair.of(marketPrice, date));
+      }
+    }
+    return Optional.empty();
   }
 
   // inflate realized pnl with dividend data
