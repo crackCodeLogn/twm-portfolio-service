@@ -21,4 +21,8 @@ public interface CompleteMarketDataService {
   TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> getCombinedDatePnLCumulativeMap();
 
   Map<String, Map<MarketDataProto.AccountType, Double>> getCumulativeImntAccountTypeDividendMap();
+
+  Map<String, Double> getSectorLevelAggrDataMap(MarketDataProto.AccountType accountType);
+
+  Map<String, String> getSectorLevelImntAggrDataMap(MarketDataProto.AccountType accountType);
 }

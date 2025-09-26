@@ -144,6 +144,27 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/valuations/sector/account")
+  public DataPacketProto.DataPacket getMarketAccountSectorValuations(
+      @RequestParam("accountType") String accountType) {
+    log.info("getMarketAccountSectorValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(centralDataPointService.getSectorLevelAggrDataMap(accountTypeEnum))
+        .build();
+  }
+
+  @GetMapping("/market/valuations/sector-imnt/account")
+  public DataPacketProto.DataPacket getMarketAccountSectorImntValuations(
+      @RequestParam("accountType") String accountType) {
+    log.info("getMarketAccountSectorImntValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringStringMap(
+            centralDataPointService.getSectorLevelImntAggrDataMap(accountTypeEnum))
+        .build();
+  }
+
   @GetMapping("/net-worth")
   public DataPacketProto.DataPacket getNetWorth(@RequestParam("ccy") String ccy) {
     log.info("getNetWorth invoked");

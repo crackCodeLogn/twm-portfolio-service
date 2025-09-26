@@ -27,4 +27,8 @@ public final class SanitizerUtil {
   public static String sanitizeString(String input) {
     return input.replaceAll(" [Mm]anufactured", "-m").strip();
   }
+
+  public static String sanitizeSector(String input) {
+    return input.toLowerCase().strip().replaceAll("\\s+", "");
+  }
 }

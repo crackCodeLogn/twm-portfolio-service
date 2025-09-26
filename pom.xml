@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.vv.personal</groupId>
     <artifactId>twm-portfolio-service</artifactId>
-    <version>1.2.3</version>
+    <version>1.3.1</version>
     <name>twm-portfolio-service</name>
     <description>TWM Portfolio service</description>
     <packaging>jar</packaging>

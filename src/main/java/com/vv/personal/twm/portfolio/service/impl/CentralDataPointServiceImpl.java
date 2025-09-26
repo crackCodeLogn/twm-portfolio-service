@@ -121,4 +121,15 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
         });
     return cumulativeImntDividendValuations;
   }
+
+  @Override
+  public Map<String, Double> getSectorLevelAggrDataMap(MarketDataProto.AccountType accountType) {
+    return completeMarketDataService.getSectorLevelAggrDataMap(accountType);
+  }
+
+  @Override
+  public Map<String, String> getSectorLevelImntAggrDataMap(
+      MarketDataProto.AccountType accountType) {
+    return completeMarketDataService.getSectorLevelImntAggrDataMap(accountType);
+  }
 }

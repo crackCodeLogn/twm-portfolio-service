@@ -12,6 +12,7 @@ import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
+import com.vv.personal.twm.portfolio.util.SanitizerUtil;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +64,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       combinedDatePnLCumulativeMap; // cumulative date x account type x (unrealized + sells + divs)
   // SPECIAL NOTE: combinedDatePnLCumulativeMap does not include div-only non-market dates
   private final Map<String, Map<MarketDataProto.AccountType, Double>> cumulativeImntDividendsMap;
+  private final Map<String, Map<MarketDataProto.AccountType, Map<String, Double>>>
+      sectorLevelImntAggrMap; // sector level x account type x (imnt x investment-imnt)
+
   private final DateLocalDateCache dateLocalDateCache;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
@@ -85,6 +89,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     dateDividendsCumulativeMap = new TreeMap<>();
     combinedDatePnLCumulativeMap = new TreeMap<>();
     cumulativeImntDividendsMap = new ConcurrentHashMap<>();
+    sectorLevelImntAggrMap = new ConcurrentHashMap<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -127,9 +132,46 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     computeCumulativeDividend();
 
+    computeSectorLevelImntAggregationData();
+
     stopWatch.stop();
     log.info(
         "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
+  }
+
+  void computeSectorLevelImntAggregationData() {
+    for (Map.Entry<String, Map<MarketDataProto.AccountType, DataList>> entry :
+        marketData.entrySet()) {
+      String imnt = entry.getKey();
+      Map<MarketDataProto.AccountType, DataList> accountTypeDataListMap = entry.getValue();
+
+      accountTypeDataListMap.forEach(
+          (accountType, dataList) -> {
+            DataNode node = dataList.getTail();
+            if (node == null) {
+              log.error("Found a null node in the datalist of {} x {}", imnt, accountType);
+            } else if (node.getInstrument() == null || node.getInstrument().getTicker() == null) {
+              log.error(
+                  "Found a null node instrument in the datalist of {} x {}", imnt, accountType);
+            } else {
+              String sector =
+                  SanitizerUtil.sanitizeSector(node.getInstrument().getTicker().getSector());
+
+              // create placeholder for sector x account type x imnt
+              sectorLevelImntAggrMap
+                  .computeIfAbsent(sector, k -> new ConcurrentHashMap<>())
+                  .computeIfAbsent(accountType, k -> new ConcurrentHashMap<>())
+                  .computeIfAbsent(imnt, k -> 0.0);
+
+              double investment = node.getAcb().getTotalAcb();
+              sectorLevelImntAggrMap.get(sector).get(accountType).put(imnt, investment);
+            }
+          });
+    }
+
+    log.info(
+        "Completed calculation of sector level instrument aggregation data, with a total of {} sectors",
+        sectorLevelImntAggrMap.size());
   }
 
   private void computeCumulativeDividend() {
@@ -200,6 +242,54 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   public Map<String, Map<MarketDataProto.AccountType, Double>>
       getCumulativeImntAccountTypeDividendMap() {
     return cumulativeImntDividendsMap;
+  }
+
+  @Override
+  public Map<String, Double> getSectorLevelAggrDataMap(MarketDataProto.AccountType accountType) {
+    Map<String, Double> sectorAggrMap = new HashMap<>();
+    sectorLevelImntAggrMap.forEach(
+        (sector, accountTypeMap) -> {
+          Map<String, Double> imntSumMap = accountTypeMap.get(accountType);
+          if (imntSumMap == null) {
+            log.debug(
+                "Did not find imnt sum map for account type {} sector {}", accountType, sector);
+          } else {
+            sectorAggrMap.computeIfAbsent(sector, k -> 0.0);
+            double sum = 0.0;
+            for (Double value : imntSumMap.values()) sum += value;
+            sectorAggrMap.put(sector, sectorAggrMap.get(sector) + sum);
+          }
+        });
+    return sectorAggrMap;
+  }
+
+  @Override
+  public Map<String, String> getSectorLevelImntAggrDataMap(
+      MarketDataProto.AccountType accountType) {
+    Map<String, StringBuilder> sectorImntAggrMap = new HashMap<>();
+    sectorLevelImntAggrMap.forEach(
+        (sector, accountTypeMap) -> {
+          Map<String, Double> imntSumMap = accountTypeMap.get(accountType);
+          if (imntSumMap == null) {
+            log.debug(
+                "Did not find imnt sum map for account type {} sector {} for getSectorLevelImntAggrDataMap",
+                accountType,
+                sector);
+          } else {
+            sectorImntAggrMap.computeIfAbsent(sector, k -> new StringBuilder());
+            imntSumMap.forEach(
+                (imnt, val) -> {
+                  String outputVal = String.format("%s=%.02f|", imnt, val);
+                  sectorImntAggrMap.get(sector).append(outputVal);
+                });
+          }
+        });
+
+    Map<String, String> outputMap = new HashMap<>();
+    sectorImntAggrMap.forEach(
+        (sector, value) -> outputMap.put(sector, value.substring(0, value.length() - 1)));
+    sectorImntAggrMap.clear();
+    return outputMap;
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {

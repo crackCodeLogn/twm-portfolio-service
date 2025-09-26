@@ -37,4 +37,8 @@ public interface CentralDataPointService {
   Map<Integer, Double> getMarketValuations();
 
   Map<String, Double> getCumulativeImntDividendValuations(MarketDataProto.AccountType accountType);
+
+  Map<String, Double> getSectorLevelAggrDataMap(MarketDataProto.AccountType accountType);
+
+  Map<String, String> getSectorLevelImntAggrDataMap(MarketDataProto.AccountType accountType);
 }

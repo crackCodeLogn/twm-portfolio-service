@@ -770,6 +770,54 @@ class CompleteMarketDataServiceImplTest {
     // SECTION END - SANITY checks
   }
 
+  @Test
+  public void testComputeSectorLevelImntAggregationData() {
+    MarketDataProto.Portfolio portfolio =
+        MarketDataProto.Portfolio.newBuilder()
+            .addAllInstruments(generateTestInstrumentsWithSectorLevelInfo())
+            .build();
+    System.out.println(portfolio);
+
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService.computeAcb();
+
+    completeMarketDataService.computeSectorLevelImntAggregationData();
+
+    Map<String, Double> sectorLevelTfsaAggrMap =
+        completeMarketDataService.getSectorLevelAggrDataMap(MarketDataProto.AccountType.TFSA);
+    assertEquals(2, sectorLevelTfsaAggrMap.size());
+    assertTrue(sectorLevelTfsaAggrMap.containsKey("energy"));
+    assertEquals(500.0, sectorLevelTfsaAggrMap.get("energy"), DELTA_PRECISION);
+    assertTrue(sectorLevelTfsaAggrMap.containsKey("fin"));
+    assertEquals(189.0, sectorLevelTfsaAggrMap.get("fin"), DELTA_PRECISION);
+
+    Map<String, Double> sectorLevelNrAggrMap =
+        completeMarketDataService.getSectorLevelAggrDataMap(MarketDataProto.AccountType.NR);
+    assertEquals(1, sectorLevelNrAggrMap.size());
+    assertTrue(sectorLevelNrAggrMap.containsKey("fin"));
+    assertEquals(50.0, sectorLevelNrAggrMap.get("fin"), DELTA_PRECISION);
+
+    Map<String, Double> sectorLevelIndAggrMap =
+        completeMarketDataService.getSectorLevelAggrDataMap(MarketDataProto.AccountType.IND);
+    assertTrue(sectorLevelIndAggrMap.isEmpty());
+
+    Map<String, String> sectorLevelTfsaImntAggrMap =
+        completeMarketDataService.getSectorLevelImntAggrDataMap(MarketDataProto.AccountType.TFSA);
+    assertEquals(2, sectorLevelTfsaImntAggrMap.size());
+    assertTrue(sectorLevelTfsaImntAggrMap.containsKey("fin"));
+    assertEquals("BNS.TO=100.00|CM.TO=89.00", sectorLevelTfsaImntAggrMap.get("fin"));
+    assertTrue(sectorLevelTfsaImntAggrMap.containsKey("energy"));
+    assertEquals("SU.TO=500.00", sectorLevelTfsaImntAggrMap.get("energy"));
+    Map<String, String> sectorLevelNrImntAggrMap =
+        completeMarketDataService.getSectorLevelImntAggrDataMap(MarketDataProto.AccountType.NR);
+    assertEquals(1, sectorLevelNrImntAggrMap.size());
+    assertTrue(sectorLevelNrImntAggrMap.containsKey("fin"));
+    assertEquals("CM.TO=50.00", sectorLevelNrImntAggrMap.get("fin"));
+    Map<String, String> sectorLevelIndImntAggrMap =
+        completeMarketDataService.getSectorLevelImntAggrDataMap(MarketDataProto.AccountType.IND);
+    assertTrue(sectorLevelIndImntAggrMap.isEmpty());
+  }
+
   private List<MarketDataProto.Instrument> generateTestInstruments() {
     return Lists.newArrayList(
         TestInstrument.builder()
@@ -1006,5 +1054,74 @@ class CompleteMarketDataServiceImplTest {
             .build()
             .getInstrument() // out of mkt date
         );
+  }
+
+  private List<MarketDataProto.Instrument> generateTestInstrumentsWithSectorLevelInfo() {
+    return Lists.newArrayList(
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .sector("fin")
+            .qty(10)
+            .price(50)
+            .date(20250926)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .sector("fin")
+            .qty(10)
+            .accountType(MarketDataProto.AccountType.NR)
+            .price(50)
+            .date(20250927)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .sector("fin")
+            .qty(5)
+            .price(26)
+            .direction(SELL)
+            .date(20250929)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("cm.to")
+            .name("cibc")
+            .sector("fin")
+            .qty(10)
+            .price(65)
+            .date(20240930)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("bns.to")
+            .name("bns")
+            .sector("fin")
+            .qty(10)
+            .price(50)
+            .date(20250925)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("bns.to")
+            .name("bns")
+            .sector("fin")
+            .qty(10)
+            .price(50)
+            .date(20250926)
+            .build()
+            .getInstrument(),
+        TestInstrument.builder()
+            .symbol("su.to")
+            .name("suncor")
+            .sector("energy")
+            .qty(10)
+            .price(500)
+            .date(20250926)
+            .build()
+            .getInstrument());
   }
 }
