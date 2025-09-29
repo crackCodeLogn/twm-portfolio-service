@@ -131,7 +131,7 @@ class CompleteMarketDataServiceImplTest {
         unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+    Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>> unrealizedImntPnLMap =
         completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
@@ -235,7 +235,7 @@ class CompleteMarketDataServiceImplTest {
     assertFalse(unrealizedPnLMap.containsKey(20240913));
     assertFalse(unrealizedPnLMap.containsKey(20240916));
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+    Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>> unrealizedImntPnLMap =
         completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
@@ -349,7 +349,7 @@ class CompleteMarketDataServiceImplTest {
         0, unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(unrealizedPnLMap.containsKey(20240917));
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+    Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>> unrealizedImntPnLMap =
         completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());
@@ -701,7 +701,7 @@ class CompleteMarketDataServiceImplTest {
         DELTA_PRECISION);
 
     // unrealized calc should not be impacted due to divs, thus this is just for sanity
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> unrealizedImntPnLMap =
+    Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>> unrealizedImntPnLMap =
         completeMarketDataService.getUnrealizedImntPnLMap();
     System.out.println("unrealizedImntPnLMap = " + unrealizedImntPnLMap);
     assertFalse(unrealizedImntPnLMap.isEmpty());

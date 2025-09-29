@@ -165,6 +165,19 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/valuations/best-worst/account")
+  public DataPacketProto.DataPacket getMarketAccountBestAndWorstValuations(
+      @RequestParam("accountType") String accountType,
+      @RequestParam("n") int n,
+      @RequestParam("divs") boolean includeDividends) {
+    log.info("getMarketAccountBestAndWorstValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringStringMap(
+            centralDataPointService.getBestAndWorstPerformers(accountTypeEnum, n, includeDividends))
+        .build();
+  }
+
   @GetMapping("/net-worth")
   public DataPacketProto.DataPacket getNetWorth(@RequestParam("ccy") String ccy) {
     log.info("getNetWorth invoked");

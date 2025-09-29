@@ -50,7 +50,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       unrealizedDatePnLMap; // pure date x account type x unrealized
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>>
       combinedDatePnLMap; // combined pure date x account type x (realized + unrealized)
-  private final Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>>
+  private final Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, Double>>>
       unrealizedImntPnLMap; // pure imnt x account type x date x unrealized
   private final Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>>
       realizedImntPnLMap; // pure imnt sells
@@ -290,6 +290,100 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         (sector, value) -> outputMap.put(sector, value.substring(0, value.length() - 1)));
     sectorImntAggrMap.clear();
     return outputMap;
+  }
+
+  @Override
+  public Map<String, String> getBestAndWorstPerformers(
+      MarketDataProto.AccountType accountType, int n, boolean includeDividends) {
+    Map<String, String> bestAndWorstPerformerMap = new HashMap<>();
+    Map<String, Pair<Double, Double>> imntPairMap = new HashMap<>();
+
+    unrealizedImntPnLMap.forEach(
+        (imnt, accountTypeMap) -> {
+          if (accountTypeMap.containsKey(accountType)) {
+            Map.Entry<Integer, Double> dateValueEntry =
+                accountTypeMap.get(accountType).floorEntry(TODAY_DATE);
+            if (dateValueEntry != null) {
+              double currentValuationPnL = dateValueEntry.getValue();
+
+              DataNode lastImntNode = marketData.get(imnt).get(accountType).getTail();
+              double investmentActual =
+                  lastImntNode.getAcb().getAcbPerUnit() * lastImntNode.getRunningQuantity();
+
+              Pair<Double, Double> pair = Pair.of(currentValuationPnL, investmentActual);
+              imntPairMap.put(imnt, pair);
+            }
+          }
+        });
+
+    if (includeDividends) {
+      log.info("Including dividend and sells in the best and worst performers calculation");
+      imntPairMap.forEach(
+          (imnt, pair) -> {
+            if (realizedImntWithDividendPnLMap.containsKey(imnt)
+                && realizedImntWithDividendPnLMap.get(imnt).containsKey(accountType)) {
+              double combinedValuation =
+                  pair.getRight()
+                      + realizedImntWithDividendPnLMap
+                          .get(imnt)
+                          .get(accountType)
+                          .floorEntry(TODAY_DATE)
+                          .getValue();
+              imntPairMap.put(imnt, Pair.of(combinedValuation, pair.getLeft()));
+            }
+          });
+    }
+
+    List<ImntValuationCurrentPnLAndActual> collectionData = new ArrayList<>(imntPairMap.size());
+    for (Map.Entry<String, Pair<Double, Double>> entry : imntPairMap.entrySet()) {
+      Double pnlPercentage = (entry.getValue().getLeft() * 100.0 / entry.getValue().getRight());
+      if (pnlPercentage != Double.NaN) {
+        collectionData.add(
+            new ImntValuationCurrentPnLAndActual(
+                entry.getKey(),
+                entry.getValue().getLeft(),
+                entry.getValue().getRight(),
+                pnlPercentage));
+      } else {
+        log.info("Found NaN pnl percentage for {} x {}", entry.getKey(), accountType);
+      }
+    }
+
+    collectionData.sort(
+        Comparator.comparingDouble(ImntValuationCurrentPnLAndActual::pnlPercentage).reversed());
+
+    log.info(
+        "Computed {} records for {}, attempting pruning to best {} and worst {} performers",
+        collectionData.size(),
+        accountType,
+        n,
+        n);
+
+    if (collectionData.size() > 2 * n) { // prune
+      List<ImntValuationCurrentPnLAndActual> tmpList = collectionData.subList(0, n);
+      tmpList.addAll(collectionData.subList(collectionData.size() - n, collectionData.size()));
+      collectionData = tmpList;
+    }
+
+    collectionData.forEach(
+        imntValuationCurrentPnLAndActual -> {
+          log.info(
+              "[{}] {} => {}, {}, {}",
+              accountType,
+              imntValuationCurrentPnLAndActual.imnt(),
+              imntValuationCurrentPnLAndActual.currentValuationPnL(),
+              imntValuationCurrentPnLAndActual.investmentActual(),
+              imntValuationCurrentPnLAndActual.pnlPercentage());
+
+          bestAndWorstPerformerMap.put(
+              imntValuationCurrentPnLAndActual.imnt(),
+              String.format(
+                  "%.02f|%.02f",
+                  imntValuationCurrentPnLAndActual.currentValuationPnL(),
+                  imntValuationCurrentPnLAndActual.investmentActual()));
+        });
+
+    return bestAndWorstPerformerMap;
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
@@ -729,9 +823,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     unrealizedImntPnLMap.computeIfAbsent(
         imnt,
         k -> {
-          Map<MarketDataProto.AccountType, Map<Integer, Double>> typeDatePriceMap = new HashMap<>();
+          Map<MarketDataProto.AccountType, TreeMap<Integer, Double>> typeDatePriceMap =
+              new HashMap<>();
           getAccountTypes()
-              .forEach(accountType -> typeDatePriceMap.put(accountType, new HashMap<>()));
+              .forEach(accountType -> typeDatePriceMap.put(accountType, new TreeMap<>()));
           return typeDatePriceMap;
         });
 
@@ -791,6 +886,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                 })));
   }
 
+  private int getDate(DataNode node) {
+    return node.getInstrument().getTicker().getData(0).getDate();
+  }
+
   /*private int getNextMarketDate(int date) {
     LocalDate localDate = DateFormatUtil.getLocalDate(date);
     for (int i = 0; i <= 5; i++) {
@@ -801,10 +900,6 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     // ticker?
   }*/
 
-  private int getDate(DataNode node) {
-    return node.getInstrument().getTicker().getData(0).getDate();
-  }
-
   public Set<String> getInstruments() {
     return marketData.keySet();
   }
@@ -814,4 +909,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .filter(t -> t != MarketDataProto.AccountType.UNRECOGNIZED)
         .toList();
   }
+
+  private record ImntValuationCurrentPnLAndActual(
+      String imnt, Double currentValuationPnL, Double investmentActual, Double pnlPercentage) {}
 }

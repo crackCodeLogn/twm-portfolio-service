@@ -132,4 +132,10 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
       MarketDataProto.AccountType accountType) {
     return completeMarketDataService.getSectorLevelImntAggrDataMap(accountType);
   }
+
+  @Override
+  public Map<String, String> getBestAndWorstPerformers(
+      MarketDataProto.AccountType accountType, int n, boolean includeDividends) {
+    return completeMarketDataService.getBestAndWorstPerformers(accountType, n, includeDividends);
+  }
 }

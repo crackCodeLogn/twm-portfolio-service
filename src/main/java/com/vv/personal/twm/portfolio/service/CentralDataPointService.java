@@ -41,4 +41,7 @@ public interface CentralDataPointService {
   Map<String, Double> getSectorLevelAggrDataMap(MarketDataProto.AccountType accountType);
 
   Map<String, String> getSectorLevelImntAggrDataMap(MarketDataProto.AccountType accountType);
+
+  Map<String, String> getBestAndWorstPerformers(
+      MarketDataProto.AccountType accountType, int n, boolean includeDividends);
 }
