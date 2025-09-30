@@ -106,6 +106,15 @@ public class PortfolioController {
     return centralDataPointService.getGicExpiries(code);
   }
 
+  @GetMapping("/gic/valuations")
+  public DataPacketProto.DataPacket getGicValuations(@RequestParam("ccy") String ccy) {
+    log.info("getGicValuations invoked");
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getGicValuations(code))
+        .build();
+  }
+
   @GetMapping("/market/valuation/account")
   public DataPacketProto.DataPacket getMarketAccountValuation(
       @RequestParam("imnt") String imnt, @RequestParam("accountType") String accountType) {
@@ -113,15 +122,6 @@ public class PortfolioController {
     MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
     return DataPacketProto.DataPacket.newBuilder()
         .putAllStringStringMap(centralDataPointService.getMarketValuation(imnt, accountTypeEnum))
-        .build();
-  }
-
-  @GetMapping("/gic/valuations")
-  public DataPacketProto.DataPacket getGicValuations(@RequestParam("ccy") String ccy) {
-    log.info("getGicValuations invoked");
-    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
-    return DataPacketProto.DataPacket.newBuilder()
-        .putAllIntDoubleMap(centralDataPointService.getGicValuations(code))
         .build();
   }
 
@@ -186,6 +186,13 @@ public class PortfolioController {
         .putAllStringStringMap(
             centralDataPointService.getBestAndWorstPerformers(accountTypeEnum, n, includeDividends))
         .build();
+  }
+
+  @GetMapping("/market/info/imnts/dividend-yield-sector")
+  public DataPacketProto.DataPacket getDividendYieldAndSectorForAllImnts() {
+    log.info("getDividendYieldAndSectorForAllImnts invoked");
+
+    return centralDataPointService.getDividendYieldAndSectorForAllImnts();
   }
 
   @GetMapping("/net-worth")

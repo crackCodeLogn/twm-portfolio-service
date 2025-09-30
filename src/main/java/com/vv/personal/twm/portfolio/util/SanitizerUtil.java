@@ -1,5 +1,6 @@
 package com.vv.personal.twm.portfolio.util;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
 /**
@@ -33,6 +34,6 @@ public final class SanitizerUtil {
   }
 
   public static String sanitizeSector(String input) {
-    return input.toLowerCase().strip().replaceAll("\\s+", "");
+    return StringUtils.isEmpty(input) ? "" : input.toLowerCase().strip().replaceAll("\\s+", "");
   }
 }

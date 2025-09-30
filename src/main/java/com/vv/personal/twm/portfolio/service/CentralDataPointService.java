@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import java.util.Map;
@@ -46,4 +47,6 @@ public interface CentralDataPointService {
 
   Map<String, String> getBestAndWorstPerformers(
       MarketDataProto.AccountType accountType, int n, boolean includeDividends);
+
+  DataPacketProto.DataPacket getDividendYieldAndSectorForAllImnts();
 }

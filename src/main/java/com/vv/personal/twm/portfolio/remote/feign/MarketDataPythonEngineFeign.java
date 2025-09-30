@@ -20,6 +20,9 @@ public interface MarketDataPythonEngineFeign {
   String getTickerSectorWithoutCountryCode(
       @PathVariable String countryCode, @PathVariable String symbol);
 
+  @GetMapping("/mkt/ticker/sector/{symbol}")
+  String getTickerSector(@PathVariable String symbol);
+
   @GetMapping("/mkt/{countryCode}/ticker/dividend/{symbol}")
   String getTickerDividendWithoutCountryCode(
       @PathVariable String countryCode, @PathVariable String symbol);

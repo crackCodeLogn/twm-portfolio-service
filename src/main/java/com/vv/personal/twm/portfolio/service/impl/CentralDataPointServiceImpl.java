@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import com.google.common.collect.ImmutableMap;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.NetWorthBreakDownKey;
@@ -143,5 +144,17 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public Map<String, String> getBestAndWorstPerformers(
       MarketDataProto.AccountType accountType, int n, boolean includeDividends) {
     return completeMarketDataService.getBestAndWorstPerformers(accountType, n, includeDividends);
+  }
+
+  @Override
+  public DataPacketProto.DataPacket getDividendYieldAndSectorForAllImnts() {
+    Map<String, Double> imntDividendMap =
+        completeMarketDataService.getAllImntsDividendYieldPercentage();
+    Map<String, String> imntSectorMap = completeMarketDataService.getAllImntsSector();
+
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringStringMap(imntSectorMap)
+        .putAllStringDoubleMap(imntDividendMap)
+        .build();
   }
 }

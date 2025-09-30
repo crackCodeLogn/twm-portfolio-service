@@ -30,4 +30,8 @@ public interface CompleteMarketDataService {
       MarketDataProto.AccountType accountType, int n, boolean includeDividends);
 
   Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
+
+  Map<String, Double> getAllImntsDividendYieldPercentage();
+
+  Map<String, String> getAllImntsSector();
 }

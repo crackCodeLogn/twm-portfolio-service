@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CompleteMarketDataServiceImpl implements CompleteMarketDataService {
   private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
+  private static final String UNKNOWN_SECTOR = "UNKNOWN";
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -68,6 +71,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final Map<String, Map<MarketDataProto.AccountType, Double>> cumulativeImntDividendsMap;
   private final Map<String, Map<MarketDataProto.AccountType, Map<String, Double>>>
       sectorLevelImntAggrMap; // sector level x account type x (imnt x investment-imnt)
+  private final Map<String, String> imntSectorMap; // imnt x sector
+  private final Map<String, Double> imntDivYieldMap; // imnt x div yield %
 
   private final DateLocalDateCache dateLocalDateCache;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
@@ -94,6 +99,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     combinedDatePnLCumulativeMap = new TreeMap<>();
     cumulativeImntDividendsMap = new ConcurrentHashMap<>();
     sectorLevelImntAggrMap = new ConcurrentHashMap<>();
+    imntSectorMap = new ConcurrentHashMap<>();
+    imntDivYieldMap = new ConcurrentHashMap<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -139,16 +146,52 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     computeSectorLevelImntAggregationData();
 
+    populateDividendYields();
+
     stopWatch.stop();
     log.info(
         "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
   }
 
+  private void populateDividendYields() {
+    log.info("Populating dividend yield data for all imnts");
+    marketData
+        .keySet()
+        .forEach(
+            imnt -> {
+              log.info("Querying dividend yield for imnt {}", imnt);
+              String divYield = marketDataPythonEngineFeign.getTickerDividend(imnt);
+
+              if (StringUtils.isEmpty(divYield)) {
+                log.warn("No dividend yield data found for {}", imnt);
+              } else if (NumberUtils.isParsable(divYield)) {
+                imntDivYieldMap.put(imnt, Double.parseDouble(divYield));
+              } else {
+                log.warn("Unable to parse div yield data for {} => {}", imnt, divYield);
+              }
+            });
+  }
+
   void computeSectorLevelImntAggregationData() {
+    log.info(
+        "Initiating compute of sector level imnt aggregation data, using live sector check calls");
+
     for (Map.Entry<String, Map<MarketDataProto.AccountType, DataList>> entry :
         marketData.entrySet()) {
       String imnt = entry.getKey();
       Map<MarketDataProto.AccountType, DataList> accountTypeDataListMap = entry.getValue();
+      log.info("Computing live sector and imnt aggr compute for {}", imnt);
+
+      // commented for now, as yfinance sector info is diff from codes i am using
+      /*String sectorResponse =
+          imntSectorMap.getOrDefault(
+              imnt,
+              SanitizerUtil.sanitizeSector(marketDataPythonEngineFeign.getTickerSector(imnt)));
+      if (StringUtils.isEmpty(sectorResponse) || "unknown".equals(sectorResponse)) {
+        log.warn("Could not determine sector for imnt {}", imnt);
+        sectorResponse = UNKNOWN_SECTOR;
+      }
+      imntSectorMap.putIfAbsent(imnt, sectorResponse);*/
 
       accountTypeDataListMap.forEach(
           (accountType, dataList) -> {
@@ -159,8 +202,17 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
               log.error(
                   "Found a null node instrument in the datalist of {} x {}", imnt, accountType);
             } else {
+              // commented for now, as yfinance sector info is diff from codes i am using
+              /*if (imntSectorMap.get(imnt).equals(UNKNOWN_SECTOR)) {
+                String overrideSector =
+                    SanitizerUtil.sanitizeSector(node.getInstrument().getTicker().getSector());
+                log.warn("Overriding imnt {} sector to {}", imnt, overrideSector);
+                imntSectorMap.put(imnt, overrideSector);
+              }
+              String sector = imntSectorMap.get(imnt);*/
               String sector =
                   SanitizerUtil.sanitizeSector(node.getInstrument().getTicker().getSector());
+              imntSectorMap.put(imnt, sector);
 
               // create placeholder for sector x account type x imnt
               sectorLevelImntAggrMap
@@ -212,6 +264,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     realizedImntWithDividendPnLMap.clear();
     dateDividendsCumulativeMap.clear();
     combinedDatePnLCumulativeMap.clear();
+    cumulativeImntDividendsMap.clear();
+    sectorLevelImntAggrMap.clear();
+    imntSectorMap.clear();
+    imntDivYieldMap.clear();
     log.info("Completed market data clearing");
   }
 
@@ -416,12 +472,12 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                 ? cumulativeImntDividendsMap.get(imnt).get(accountType)
                 : 0.0)
             : 0.0;
-    String divYieldPercent = marketDataPythonEngineFeign.getTickerDividend(imnt);
+    double divYieldPercent = imntDivYieldMap.get(imnt);
 
     marketValuation.put("imnt", imnt);
     marketValuation.put("accountType", accountType.name());
     marketValuation.put("sector", node.getInstrument().getTicker().getSector());
-    marketValuation.put("divYieldPercent", divYieldPercent);
+    marketValuation.put("divYieldPercent", sanitizeAndFormat2Double(divYieldPercent));
     marketValuation.put("bookVal", sanitizeAndFormat2Double(bookVal));
     marketValuation.put("currentVal", sanitizeAndFormat2Double(currentVal));
     marketValuation.put("pnl", sanitizeAndFormat2Double(pnl));
@@ -429,6 +485,16 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     log.info("Computed market valuation for {} x {}", imnt, accountType);
     return marketValuation;
+  }
+
+  @Override
+  public Map<String, Double> getAllImntsDividendYieldPercentage() {
+    return imntDivYieldMap;
+  }
+
+  @Override
+  public Map<String, String> getAllImntsSector() {
+    return imntSectorMap;
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
