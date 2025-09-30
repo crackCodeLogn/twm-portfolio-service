@@ -418,6 +418,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             : 0.0;
     String divYieldPercent = marketDataPythonEngineFeign.getTickerDividend(imnt);
 
+    marketValuation.put("imnt", imnt);
+    marketValuation.put("accountType", accountType.name());
     marketValuation.put("sector", node.getInstrument().getTicker().getSector());
     marketValuation.put("divYieldPercent", divYieldPercent);
     marketValuation.put("bookVal", sanitizeAndFormat2Double(bookVal));
