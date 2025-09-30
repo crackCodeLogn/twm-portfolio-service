@@ -1,5 +1,6 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
+import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeAndFormat2Double;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
@@ -7,6 +8,7 @@ import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
@@ -70,12 +72,14 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final DateLocalDateCache dateLocalDateCache;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
+  private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private OutdatedSymbols outdatedSymbols;
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
-      TickerDataWarehouseService tickerDataWarehouseService) {
+      TickerDataWarehouseService tickerDataWarehouseService,
+      MarketDataPythonEngineFeign marketDataPythonEngineFeign) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
@@ -94,6 +98,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
     this.extractMarketPortfolioDataService = extractMarketPortfolioDataService;
+    this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
   }
 
   @Override
@@ -384,6 +389,39 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         });
 
     return bestAndWorstPerformerMap;
+  }
+
+  @Override
+  public Map<String, String> getMarketValuation(
+      String imnt, MarketDataProto.AccountType accountType) {
+    Map<String, String> marketValuation = new HashMap<>();
+
+    if (!marketData.containsKey(imnt)) {
+      log.warn("No data found in Portfolio for {}", imnt);
+      return marketValuation;
+    }
+
+    if (marketData.containsKey(imnt) && !marketData.get(imnt).containsKey(accountType)) {
+      log.warn("No data found in Portfolio for {} x {}", imnt, accountType);
+      return marketValuation;
+    }
+
+    DataNode node = marketData.get(imnt).get(accountType).getTail();
+    double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
+    double pnl = unrealizedImntPnLMap.get(imnt).get(accountType).floorEntry(TODAY_DATE).getValue();
+    double currentVal = bookVal + pnl;
+    double totalDiv = cumulativeImntDividendsMap.get(imnt).get(accountType);
+    String divYieldPercent = marketDataPythonEngineFeign.getTickerDividend(imnt);
+
+    marketValuation.put("sector", node.getInstrument().getTicker().getSector());
+    marketValuation.put("divYieldPercent", divYieldPercent);
+    marketValuation.put("bookVal", sanitizeAndFormat2Double(bookVal));
+    marketValuation.put("currentVal", sanitizeAndFormat2Double(currentVal));
+    marketValuation.put("pnl", sanitizeAndFormat2Double(pnl));
+    marketValuation.put("totalDiv", sanitizeAndFormat2Double(totalDiv));
+
+    log.info("Computed market valuation for {} x {}", imnt, accountType);
+    return marketValuation;
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {

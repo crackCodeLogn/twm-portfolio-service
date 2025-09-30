@@ -11,6 +11,7 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TestInstrument;
@@ -31,6 +32,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CompleteMarketDataServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
+  @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
 
   private CompleteMarketDataServiceImpl completeMarketDataService;
 
@@ -38,7 +40,10 @@ class CompleteMarketDataServiceImplTest {
   void setUp() {
     completeMarketDataService =
         new CompleteMarketDataServiceImpl(
-            new DateLocalDateCache(), null, tickerDataWarehouseService);
+            new DateLocalDateCache(),
+            null,
+            tickerDataWarehouseService,
+            marketDataPythonEngineFeign);
   }
 
   @Test

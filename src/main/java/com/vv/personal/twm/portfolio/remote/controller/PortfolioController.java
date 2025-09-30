@@ -106,6 +106,16 @@ public class PortfolioController {
     return centralDataPointService.getGicExpiries(code);
   }
 
+  @GetMapping("/market/valuation/account")
+  public DataPacketProto.DataPacket getMarketAccountValuation(
+      @RequestParam("imnt") String imnt, @RequestParam("accountType") String accountType) {
+    log.info("getMarketAccountValuation {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringStringMap(centralDataPointService.getMarketValuation(imnt, accountTypeEnum))
+        .build();
+  }
+
   @GetMapping("/gic/valuations")
   public DataPacketProto.DataPacket getGicValuations(@RequestParam("ccy") String ccy) {
     log.info("getGicValuations invoked");

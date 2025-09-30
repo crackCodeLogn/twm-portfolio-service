@@ -28,4 +28,6 @@ public interface CompleteMarketDataService {
 
   Map<String, String> getBestAndWorstPerformers(
       MarketDataProto.AccountType accountType, int n, boolean includeDividends);
+
+  Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
 }

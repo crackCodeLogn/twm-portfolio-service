@@ -98,7 +98,8 @@ public class DataConfig {
         new CompleteMarketDataServiceImpl(
             dateLocalDateCache(),
             extractMarketPortfolioDataService(),
-            tickerDataWarehouseService());
+            tickerDataWarehouseService(),
+            marketDataPythonEngineFeign);
     marketDataService.setOutdatedSymbols(outdatedSymbols());
     return marketDataService;
   }

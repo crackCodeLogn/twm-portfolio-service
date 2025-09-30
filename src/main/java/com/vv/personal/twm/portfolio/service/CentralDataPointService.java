@@ -32,6 +32,8 @@ public interface CentralDataPointService {
 
   Map<Integer, Double> getGicValuations(BankProto.CurrencyCode currency);
 
+  Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
+
   Map<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType);
 
   Map<Integer, Double> getMarketValuations();

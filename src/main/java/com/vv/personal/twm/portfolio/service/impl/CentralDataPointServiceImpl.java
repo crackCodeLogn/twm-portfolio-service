@@ -83,6 +83,12 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public Map<String, String> getMarketValuation(
+      String imnt, MarketDataProto.AccountType accountType) {
+    return completeMarketDataService.getMarketValuation(imnt, accountType);
+  }
+
+  @Override
   public TreeMap<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType) {
     TreeMap<Integer, Double> marketValuations = new TreeMap<>();
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =

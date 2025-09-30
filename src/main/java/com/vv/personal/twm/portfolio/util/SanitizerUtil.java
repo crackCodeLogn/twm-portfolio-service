@@ -24,6 +24,10 @@ public final class SanitizerUtil {
     return input == null ? 0.0 : input;
   }
 
+  public static String sanitizeAndFormat2Double(Double input) {
+    return input == null ? "0.0" : String.format("%.02f", input);
+  }
+
   public static String sanitizeString(String input) {
     return input.replaceAll(" [Mm]anufactured", "-m").strip();
   }
