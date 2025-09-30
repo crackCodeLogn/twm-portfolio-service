@@ -410,7 +410,12 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
     double pnl = unrealizedImntPnLMap.get(imnt).get(accountType).floorEntry(TODAY_DATE).getValue();
     double currentVal = bookVal + pnl;
-    double totalDiv = cumulativeImntDividendsMap.get(imnt).get(accountType);
+    double totalDiv =
+        cumulativeImntDividendsMap.containsKey(imnt)
+            ? (cumulativeImntDividendsMap.get(imnt).containsKey(accountType)
+                ? cumulativeImntDividendsMap.get(imnt).get(accountType)
+                : 0.0)
+            : 0.0;
     String divYieldPercent = marketDataPythonEngineFeign.getTickerDividend(imnt);
 
     marketValuation.put("sector", node.getInstrument().getTicker().getSector());
