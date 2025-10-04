@@ -453,8 +453,8 @@ class CompleteMarketDataServiceImplTest {
             .build());
     completeMarketDataService.computePnL();
 
-    Map<String, Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>>> dividendsMap =
-        completeMarketDataService.getImntDividendsMap();
+    Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, List<DividendRecord>>>>
+        dividendsMap = completeMarketDataService.getImntDividendsMap();
     assertEquals(1, dividendsMap.size());
     assertEquals(
         10.0,

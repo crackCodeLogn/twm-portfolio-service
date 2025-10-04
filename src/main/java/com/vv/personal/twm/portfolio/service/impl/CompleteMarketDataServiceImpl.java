@@ -42,7 +42,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
-  private final Map<String, Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>>>
+  private final Map<
+          String, Map<MarketDataProto.AccountType, TreeMap<Integer, List<DividendRecord>>>>
       imntDividendsMap;
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>>
       dateDividendsMap; // date x account type x divs for that date
@@ -384,13 +385,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             if (realizedImntWithDividendPnLMap.containsKey(imnt)
                 && realizedImntWithDividendPnLMap.get(imnt).containsKey(accountType)) {
               double combinedValuation =
-                  pair.getRight()
+                  pair.getLeft()
                       + realizedImntWithDividendPnLMap
                           .get(imnt)
                           .get(accountType)
                           .floorEntry(TODAY_DATE)
                           .getValue();
-              imntPairMap.put(imnt, Pair.of(combinedValuation, pair.getLeft()));
+              imntPairMap.put(imnt, Pair.of(combinedValuation, pair.getRight()));
             }
           });
     }
@@ -402,8 +403,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         collectionData.add(
             new ImntValuationCurrentPnLAndActual(
                 entry.getKey(),
-                entry.getValue().getLeft(),
-                entry.getValue().getRight(),
+                entry.getValue().getLeft(), // current valuation
+                entry.getValue().getRight(), // actual investment
                 pnlPercentage));
       } else {
         log.info("Found NaN pnl percentage for {} x {}", entry.getKey(), accountType);
@@ -428,7 +429,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     collectionData.forEach(
         imntValuationCurrentPnLAndActual -> {
-          log.info(
+          log.debug(
               "[{}] {} => {}, {}, {}",
               accountType,
               imntValuationCurrentPnLAndActual.imnt(),
@@ -534,9 +535,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       // record dividend data in imntDividendsMap as the data structure holding translated data from
       // the div list
       imntDividendsMap.computeIfAbsent(instrument.getTicker().getSymbol(), k -> new HashMap<>());
-      Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>> divDateValueMap =
+      Map<MarketDataProto.AccountType, TreeMap<Integer, List<DividendRecord>>> divDateValueMap =
           imntDividendsMap.get(instrument.getTicker().getSymbol());
-      divDateValueMap.computeIfAbsent(accountType, k -> new HashMap<>());
+      divDateValueMap.computeIfAbsent(accountType, k -> new TreeMap<>());
       divDateValueMap
           .get(accountType)
           .compute(divDate, (k, v) -> v == null ? new ArrayList<>() : v)
@@ -785,7 +786,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     // populate realizedImntWithDividendPnLMap
     for (String dividendTicker : imntDividendsMap.keySet()) {
-      Map<MarketDataProto.AccountType, Map<Integer, List<DividendRecord>>> accountTypeMapMap =
+      Map<MarketDataProto.AccountType, TreeMap<Integer, List<DividendRecord>>> accountTypeMapMap =
           imntDividendsMap.get(dividendTicker);
 
       accountTypeMapMap.forEach(
