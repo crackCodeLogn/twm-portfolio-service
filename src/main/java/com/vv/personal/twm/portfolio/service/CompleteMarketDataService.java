@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -28,6 +29,8 @@ public interface CompleteMarketDataService {
 
   Map<String, String> getBestAndWorstPerformers(
       MarketDataProto.AccountType accountType, int n, boolean includeDividends);
+
+  List<String> getMarketValuations(boolean includeDividends);
 
   Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
 

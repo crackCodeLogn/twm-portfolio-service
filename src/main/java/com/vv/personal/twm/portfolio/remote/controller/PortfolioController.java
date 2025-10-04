@@ -116,22 +116,12 @@ public class PortfolioController {
   }
 
   @GetMapping("/market/valuation/account")
-  public DataPacketProto.DataPacket getMarketAccountValuation(
+  public DataPacketProto.DataPacket getMarketImntAccountValuation(
       @RequestParam("imnt") String imnt, @RequestParam("accountType") String accountType) {
     log.info("getMarketAccountValuation {} invoked", accountType);
     MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
     return DataPacketProto.DataPacket.newBuilder()
         .putAllStringStringMap(centralDataPointService.getMarketValuation(imnt, accountTypeEnum))
-        .build();
-  }
-
-  @GetMapping("/market/valuations/account")
-  public DataPacketProto.DataPacket getMarketAccountValuations(
-      @RequestParam("accountType") String accountType) {
-    log.info("getMarketAccountValuations {} invoked", accountType);
-    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
-    return DataPacketProto.DataPacket.newBuilder()
-        .putAllIntDoubleMap(centralDataPointService.getMarketValuations(accountTypeEnum))
         .build();
   }
 
@@ -147,10 +137,31 @@ public class PortfolioController {
   }
 
   @GetMapping("/market/valuations")
-  public DataPacketProto.DataPacket getMarketValuations() {
-    log.info("getMarketValuations invoked");
+  public DataPacketProto.DataPacket getMarketValuations(
+      @RequestParam("divs") boolean includeDividends) {
+    log.info(
+        "getMarketValuations invoked for data aggr for imnt across account types with divs {}",
+        includeDividends);
     return DataPacketProto.DataPacket.newBuilder()
-        .putAllIntDoubleMap(centralDataPointService.getMarketValuations())
+        .addAllStrings(centralDataPointService.getMarketValuations(includeDividends))
+        .build();
+  }
+
+  @GetMapping("/market/valuations/plot")
+  public DataPacketProto.DataPacket getMarketValuationsForPlot() {
+    log.info("getMarketValuationsForPlot invoked");
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getMarketValuationsForPlot())
+        .build();
+  }
+
+  @GetMapping("/market/valuations/plot/account")
+  public DataPacketProto.DataPacket getMarketAccountValuations(
+      @RequestParam("accountType") String accountType) {
+    log.info("getMarketAccountValuations {} invoked", accountType);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllIntDoubleMap(centralDataPointService.getMarketValuationsForPlot(accountTypeEnum))
         .build();
   }
 
@@ -207,13 +218,6 @@ public class PortfolioController {
   @GetMapping("/")
   public String get() {
     return "hi";
-  }
-
-  @GetMapping("/data")
-  public void getPortfolio() {
-    log.info("Firing get portfolio request");
-    // soldTickerDataWarehouse.generateData();
-    log.info("get portf request completed");
   }
 
   private List<String> split(String data) {

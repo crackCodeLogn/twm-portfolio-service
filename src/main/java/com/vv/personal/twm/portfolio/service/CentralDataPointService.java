@@ -4,6 +4,7 @@ import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 
@@ -33,11 +34,13 @@ public interface CentralDataPointService {
 
   Map<Integer, Double> getGicValuations(BankProto.CurrencyCode currency);
 
+  List<String> getMarketValuations(boolean includeDividends);
+
   Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
 
-  Map<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType);
+  Map<Integer, Double> getMarketValuationsForPlot(MarketDataProto.AccountType accountType);
 
-  Map<Integer, Double> getMarketValuations();
+  Map<Integer, Double> getMarketValuationsForPlot();
 
   Map<String, Double> getCumulativeImntDividendValuations(MarketDataProto.AccountType accountType);
 

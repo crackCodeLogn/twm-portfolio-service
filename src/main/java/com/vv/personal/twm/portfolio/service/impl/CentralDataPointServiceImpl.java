@@ -10,6 +10,7 @@ import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.TreeMap;
@@ -84,13 +85,19 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public List<String> getMarketValuations(boolean includeDividends) {
+    return completeMarketDataService.getMarketValuations(includeDividends);
+  }
+
+  @Override
   public Map<String, String> getMarketValuation(
       String imnt, MarketDataProto.AccountType accountType) {
     return completeMarketDataService.getMarketValuation(imnt, accountType);
   }
 
   @Override
-  public TreeMap<Integer, Double> getMarketValuations(MarketDataProto.AccountType accountType) {
+  public TreeMap<Integer, Double> getMarketValuationsForPlot(
+      MarketDataProto.AccountType accountType) {
     TreeMap<Integer, Double> marketValuations = new TreeMap<>();
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =
         completeMarketDataService.getCombinedDatePnLCumulativeMap();
@@ -100,7 +107,7 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
-  public TreeMap<Integer, Double> getMarketValuations() {
+  public TreeMap<Integer, Double> getMarketValuationsForPlot() {
     TreeMap<Integer, Double> marketValuations = new TreeMap<>();
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> combinedDatePnLCumulativeMap =
         completeMarketDataService.getCombinedDatePnLCumulativeMap();

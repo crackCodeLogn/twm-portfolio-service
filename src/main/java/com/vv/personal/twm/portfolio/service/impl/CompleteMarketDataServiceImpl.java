@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeAndFormat2Double;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
+import com.google.common.collect.Lists;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
@@ -38,7 +39,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class CompleteMarketDataServiceImpl implements CompleteMarketDataService {
   private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
+
   private static final String UNKNOWN_SECTOR = "UNKNOWN";
+  private static final String KEY_ACCOUNT_TYPE = "accountType";
+  private static final String KEY_ACCOUNT_TYPES = "accountTypes";
+  private static final String KEY_BOOK_VAL = "bookVal";
+  private static final String KEY_CURRENT_VAL = "currentVal";
+  private static final String KEY_DIV_YIELD_PERCENT = "divYieldPercent";
+  private static final String KEY_IMNT = "imnt";
+  private static final String KEY_PNL = "pnl";
+  private static final String KEY_SECTOR = "sector";
+  private static final String KEY_TOTAL_DIV = "totalDiv";
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -449,6 +460,68 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   @Override
+  public List<String> getMarketValuations(boolean includeDividendsForCurrentVal) {
+    List<String> valuations = new ArrayList<>(marketData.size());
+    Map<String, Map<String, String>> imntValuationMap = new TreeMap<>();
+
+    marketData.forEach(
+        (imnt, accountTypeDataListMap) -> {
+          Map<String, String> valuationDataMap = new HashMap<>();
+
+          List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0);
+          // 0 - book val, 1 - pnl, 2 - total div
+          List<String> accountTypes = new ArrayList<>();
+          accountTypeDataListMap.forEach(
+              (accountType, dataList) -> {
+                accountTypes.add(accountType.name());
+
+                DataNode node = dataList.getTail();
+                double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
+                double pnl =
+                    unrealizedImntPnLMap
+                        .get(imnt)
+                        .get(accountType)
+                        .floorEntry(TODAY_DATE)
+                        .getValue();
+                double totalDiv =
+                    cumulativeImntDividendsMap.containsKey(imnt)
+                        ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
+                        : 0.0;
+
+                values.set(0, values.get(0) + bookVal);
+                values.set(
+                    1, values.get(1) + pnl + (includeDividendsForCurrentVal ? totalDiv : 0.0));
+                values.set(2, values.get(2) + totalDiv);
+              });
+          double currentVal = values.get(0) + values.get(1);
+          Collections.sort(accountTypes);
+          String accountTypesInUse = StringUtils.join(accountTypes, ", ");
+
+          valuationDataMap.put(KEY_IMNT, imnt);
+          valuationDataMap.put(KEY_ACCOUNT_TYPES, accountTypesInUse);
+          valuationDataMap.put(KEY_SECTOR, imntSectorMap.getOrDefault(imnt, UNKNOWN_SECTOR));
+          valuationDataMap.put(
+              KEY_DIV_YIELD_PERCENT,
+              sanitizeAndFormat2Double(imntDivYieldMap.getOrDefault(imnt, 0.0)));
+          valuationDataMap.put(KEY_BOOK_VAL, sanitizeAndFormat2Double(values.get(0)));
+          valuationDataMap.put(KEY_PNL, sanitizeAndFormat2Double(values.get(1)));
+          valuationDataMap.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(values.get(2)));
+          valuationDataMap.put(KEY_CURRENT_VAL, sanitizeAndFormat2Double(currentVal));
+
+          imntValuationMap.put(imnt, valuationDataMap);
+        });
+
+    imntValuationMap.values().stream()
+        .forEach(
+            kv -> {
+              List<String> vals = new ArrayList<>(kv.size());
+              kv.forEach((k, v) -> vals.add(String.format("%s=%s", k, v)));
+              valuations.add(StringUtils.join(vals, "|"));
+            });
+    return valuations;
+  }
+
+  @Override
   public Map<String, String> getMarketValuation(
       String imnt, MarketDataProto.AccountType accountType) {
     Map<String, String> marketValuation = new HashMap<>();
@@ -469,20 +542,18 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     double currentVal = bookVal + pnl;
     double totalDiv =
         cumulativeImntDividendsMap.containsKey(imnt)
-            ? (cumulativeImntDividendsMap.get(imnt).containsKey(accountType)
-                ? cumulativeImntDividendsMap.get(imnt).get(accountType)
-                : 0.0)
+            ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
             : 0.0;
     double divYieldPercent = imntDivYieldMap.get(imnt);
 
-    marketValuation.put("imnt", imnt);
-    marketValuation.put("accountType", accountType.name());
-    marketValuation.put("sector", node.getInstrument().getTicker().getSector());
-    marketValuation.put("divYieldPercent", sanitizeAndFormat2Double(divYieldPercent));
-    marketValuation.put("bookVal", sanitizeAndFormat2Double(bookVal));
-    marketValuation.put("currentVal", sanitizeAndFormat2Double(currentVal));
-    marketValuation.put("pnl", sanitizeAndFormat2Double(pnl));
-    marketValuation.put("totalDiv", sanitizeAndFormat2Double(totalDiv));
+    marketValuation.put(KEY_IMNT, imnt);
+    marketValuation.put(KEY_ACCOUNT_TYPE, accountType.name());
+    marketValuation.put(KEY_SECTOR, node.getInstrument().getTicker().getSector());
+    marketValuation.put(KEY_DIV_YIELD_PERCENT, sanitizeAndFormat2Double(divYieldPercent));
+    marketValuation.put(KEY_BOOK_VAL, sanitizeAndFormat2Double(bookVal));
+    marketValuation.put(KEY_CURRENT_VAL, sanitizeAndFormat2Double(currentVal));
+    marketValuation.put(KEY_PNL, sanitizeAndFormat2Double(pnl));
+    marketValuation.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(totalDiv));
 
     log.info("Computed market valuation for {} x {}", imnt, accountType);
     return marketValuation;
