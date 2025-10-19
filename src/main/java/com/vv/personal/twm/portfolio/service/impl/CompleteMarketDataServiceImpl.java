@@ -3,7 +3,9 @@ package com.vv.personal.twm.portfolio.service.impl;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeAndFormat2Double;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
@@ -50,6 +52,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private static final String KEY_PNL = "pnl";
   private static final String KEY_SECTOR = "sector";
   private static final String KEY_TOTAL_DIV = "totalDiv";
+  private static final String KEY_TOTAL_IMNTS = "totalInstruments";
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -567,6 +570,64 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   @Override
   public Map<String, String> getAllImntsSector() {
     return imntSectorMap;
+  }
+
+  @Override
+  public Map<String, Double> getNetMarketValuations(
+      Optional<MarketDataProto.AccountType> optionalAccountType,
+      boolean includeDividendsForCurrentVal) {
+    Map<String, Integer> keyLookup = Map.of(KEY_BOOK_VAL, 0, KEY_PNL, 1, KEY_TOTAL_DIV, 2);
+    List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0); // to store above 3 vals in-place
+    Set<String> imnts = new HashSet<>();
+
+    marketData.forEach(
+        (imnt, accountTypeDataListMap) -> {
+          Set<MarketDataProto.AccountType> accountTypesToLookAt =
+              optionalAccountType.isEmpty()
+                  ? accountTypeDataListMap.keySet()
+                  : Sets.newHashSet(optionalAccountType.get());
+
+          accountTypesToLookAt.stream()
+              .filter(accountTypeDataListMap::containsKey)
+              .forEach(
+                  accountType -> {
+                    imnts.add(imnt);
+                    DataNode node = accountTypeDataListMap.get(accountType).getTail();
+                    double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
+                    double pnl =
+                        unrealizedImntPnLMap
+                            .get(imnt)
+                            .get(accountType)
+                            .floorEntry(TODAY_DATE)
+                            .getValue();
+                    double totalDiv =
+                        cumulativeImntDividendsMap.containsKey(imnt)
+                            ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
+                            : 0.0;
+
+                    values.set(
+                        keyLookup.get(KEY_BOOK_VAL),
+                        values.get(keyLookup.get(KEY_BOOK_VAL)) + bookVal);
+                    values.set(
+                        keyLookup.get(KEY_PNL),
+                        values.get(keyLookup.get(KEY_PNL))
+                            + pnl
+                            + (includeDividendsForCurrentVal ? totalDiv : 0.0));
+                    values.set(
+                        keyLookup.get(KEY_TOTAL_DIV),
+                        values.get(keyLookup.get(KEY_TOTAL_DIV)) + totalDiv);
+                  });
+        });
+    double currentVal =
+        values.get(keyLookup.get(KEY_BOOK_VAL)) + values.get(keyLookup.get(KEY_PNL));
+
+    return ImmutableMap.<String, Double>builder()
+        .put(KEY_TOTAL_IMNTS, (double) imnts.size())
+        .put(KEY_BOOK_VAL, values.get(keyLookup.get(KEY_BOOK_VAL)))
+        .put(KEY_PNL, values.get(keyLookup.get(KEY_PNL)))
+        .put(KEY_CURRENT_VAL, currentVal)
+        .put(KEY_TOTAL_DIV, values.get(keyLookup.get(KEY_TOTAL_DIV)))
+        .build();
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {

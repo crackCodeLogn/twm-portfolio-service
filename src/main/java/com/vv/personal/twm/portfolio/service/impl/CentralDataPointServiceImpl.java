@@ -12,6 +12,7 @@ import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
@@ -163,5 +164,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
         .putAllStringStringMap(imntSectorMap)
         .putAllStringDoubleMap(imntDividendMap)
         .build();
+  }
+
+  @Override
+  public Map<String, Double> getNetMarketValuations(
+      Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends) {
+    return completeMarketDataService.getNetMarketValuations(optionalAccountType, includeDividends);
   }
 }

@@ -6,6 +6,7 @@ import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 
 /**
@@ -52,4 +53,7 @@ public interface CentralDataPointService {
       MarketDataProto.AccountType accountType, int n, boolean includeDividends);
 
   DataPacketProto.DataPacket getDividendYieldAndSectorForAllImnts();
+
+  Map<String, Double> getNetMarketValuations(
+      Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends);
 }

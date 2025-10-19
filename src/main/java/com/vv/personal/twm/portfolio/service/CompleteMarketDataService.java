@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -37,4 +38,7 @@ public interface CompleteMarketDataService {
   Map<String, Double> getAllImntsDividendYieldPercentage();
 
   Map<String, String> getAllImntsSector();
+
+  Map<String, Double> getNetMarketValuations(
+      Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends);
 }

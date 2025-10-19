@@ -147,6 +147,34 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/valuations/net")
+  public DataPacketProto.DataPacket getNetMarketValuations(
+      @RequestParam("divs") boolean includeDividends) {
+    log.info(
+        "getNetMarketValuations invoked for data aggr for imnt across account types with divs {}",
+        includeDividends);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(
+            centralDataPointService.getNetMarketValuations(Optional.empty(), includeDividends))
+        .build();
+  }
+
+  @GetMapping("/market/valuations/net/account")
+  public DataPacketProto.DataPacket getNetMarketValuations(
+      @RequestParam("accountType") String accountType,
+      @RequestParam("divs") boolean includeDividends) {
+    log.info(
+        "getNetMarketValuations invoked for data aggr for imnt for account type {} with divs {}",
+        accountType,
+        includeDividends);
+    MarketDataProto.AccountType accountTypeEnum = MarketDataProto.AccountType.valueOf(accountType);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(
+            centralDataPointService.getNetMarketValuations(
+                Optional.of(accountTypeEnum), includeDividends))
+        .build();
+  }
+
   @GetMapping("/market/valuations/plot")
   public DataPacketProto.DataPacket getMarketValuationsForPlot() {
     log.info("getMarketValuationsForPlot invoked");
