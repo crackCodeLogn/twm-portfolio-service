@@ -50,6 +50,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private static final String KEY_DIV_YIELD_PERCENT = "divYieldPercent";
   private static final String KEY_IMNT = "imnt";
   private static final String KEY_PNL = "pnl";
+  private static final String KEY_QTY = "qty";
   private static final String KEY_SECTOR = "sector";
   private static final String KEY_TOTAL_DIV = "totalDiv";
   private static final String KEY_TOTAL_IMNTS = "totalInstruments";
@@ -372,7 +373,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   public Map<String, String> getBestAndWorstPerformers(
       MarketDataProto.AccountType accountType, int n, boolean includeDividends) {
     Map<String, String> bestAndWorstPerformerMap = new HashMap<>();
-    Map<String, Pair<Double, Double>> imntPairMap = new HashMap<>();
+    Map<String, List<Double>> imntInfoListMap = new HashMap<>();
 
     unrealizedImntPnLMap.forEach(
         (imnt, accountTypeMap) -> {
@@ -385,41 +386,43 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
               DataNode lastImntNode = marketData.get(imnt).get(accountType).getTail();
               double investmentActual =
                   lastImntNode.getAcb().getAcbPerUnit() * lastImntNode.getRunningQuantity();
+              double qty = lastImntNode.getRunningQuantity();
 
-              Pair<Double, Double> pair = Pair.of(currentValuationPnL, investmentActual);
-              imntPairMap.put(imnt, pair);
+              imntInfoListMap.put(
+                  imnt, Lists.newArrayList(currentValuationPnL, investmentActual, qty));
             }
           }
         });
 
     if (includeDividends) {
       log.info("Including dividend and sells in the best and worst performers calculation");
-      imntPairMap.forEach(
-          (imnt, pair) -> {
+      imntInfoListMap.forEach(
+          (imnt, infoList) -> {
             if (realizedImntWithDividendPnLMap.containsKey(imnt)
                 && realizedImntWithDividendPnLMap.get(imnt).containsKey(accountType)) {
               double combinedValuation =
-                  pair.getLeft()
+                  infoList.get(0)
                       + realizedImntWithDividendPnLMap
                           .get(imnt)
                           .get(accountType)
                           .floorEntry(TODAY_DATE)
                           .getValue();
-              imntPairMap.put(imnt, Pair.of(combinedValuation, pair.getRight()));
+              infoList.set(0, combinedValuation);
             }
           });
     }
 
-    List<ImntValuationCurrentPnLAndActual> collectionData = new ArrayList<>(imntPairMap.size());
-    for (Map.Entry<String, Pair<Double, Double>> entry : imntPairMap.entrySet()) {
-      Double pnlPercentage = (entry.getValue().getLeft() * 100.0 / entry.getValue().getRight());
+    List<ImntValuationCurrentPnLAndActual> collectionData = new ArrayList<>(imntInfoListMap.size());
+    for (Map.Entry<String, List<Double>> entry : imntInfoListMap.entrySet()) {
+      Double pnlPercentage = (entry.getValue().get(0) * 100.0 / entry.getValue().get(1));
       if (pnlPercentage != Double.NaN) {
         collectionData.add(
             new ImntValuationCurrentPnLAndActual(
                 entry.getKey(),
-                entry.getValue().getLeft(), // current valuation
-                entry.getValue().getRight(), // actual investment
-                pnlPercentage));
+                entry.getValue().get(0), // current valuation
+                entry.getValue().get(1), // actual investment
+                pnlPercentage,
+                entry.getValue().get(2))); // qty
       } else {
         log.info("Found NaN pnl percentage for {} x {}", entry.getKey(), accountType);
       }
@@ -444,19 +447,21 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     collectionData.forEach(
         imntValuationCurrentPnLAndActual -> {
           log.debug(
-              "[{}] {} => {}, {}, {}",
+              "[{}] {} => {}, {}, {}, {}",
               accountType,
               imntValuationCurrentPnLAndActual.imnt(),
               imntValuationCurrentPnLAndActual.currentValuationPnL(),
               imntValuationCurrentPnLAndActual.investmentActual(),
-              imntValuationCurrentPnLAndActual.pnlPercentage());
+              imntValuationCurrentPnLAndActual.pnlPercentage(),
+              imntValuationCurrentPnLAndActual.qty());
 
           bestAndWorstPerformerMap.put(
               imntValuationCurrentPnLAndActual.imnt(),
               String.format(
-                  "%.02f|%.02f",
+                  "%.02f|%.02f|%.02f",
                   imntValuationCurrentPnLAndActual.currentValuationPnL(),
-                  imntValuationCurrentPnLAndActual.investmentActual()));
+                  imntValuationCurrentPnLAndActual.investmentActual(),
+                  imntValuationCurrentPnLAndActual.qty()));
         });
 
     return bestAndWorstPerformerMap;
@@ -471,8 +476,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         (imnt, accountTypeDataListMap) -> {
           Map<String, String> valuationDataMap = new HashMap<>();
 
-          List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0);
-          // 0 - book val, 1 - pnl, 2 - total div
+          List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0);
+          // 0 - book val, 1 - pnl, 2 - total div, 3 - qty
           List<String> accountTypes = new ArrayList<>();
           accountTypeDataListMap.forEach(
               (accountType, dataList) -> {
@@ -490,11 +495,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                     cumulativeImntDividendsMap.containsKey(imnt)
                         ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
                         : 0.0;
+                double qty = node.getRunningQuantity(); // from the tail
 
                 values.set(0, values.get(0) + bookVal);
                 values.set(
                     1, values.get(1) + pnl + (includeDividendsForCurrentVal ? totalDiv : 0.0));
                 values.set(2, values.get(2) + totalDiv);
+                values.set(3, values.get(3) + qty);
               });
           double currentVal = values.get(0) + values.get(1);
           Collections.sort(accountTypes);
@@ -510,11 +517,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           valuationDataMap.put(KEY_PNL, sanitizeAndFormat2Double(values.get(1)));
           valuationDataMap.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(values.get(2)));
           valuationDataMap.put(KEY_CURRENT_VAL, sanitizeAndFormat2Double(currentVal));
+          valuationDataMap.put(KEY_QTY, sanitizeAndFormat2Double(values.get(3)));
 
           imntValuationMap.put(imnt, valuationDataMap);
         });
 
-    imntValuationMap.values().stream()
+    imntValuationMap
+        .values()
         .forEach(
             kv -> {
               List<String> vals = new ArrayList<>(kv.size());
@@ -576,8 +585,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   public Map<String, Double> getNetMarketValuations(
       Optional<MarketDataProto.AccountType> optionalAccountType,
       boolean includeDividendsForCurrentVal) {
-    Map<String, Integer> keyLookup = Map.of(KEY_BOOK_VAL, 0, KEY_PNL, 1, KEY_TOTAL_DIV, 2);
-    List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0); // to store above 3 vals in-place
+    Map<String, Integer> keyLookup =
+        Map.of(KEY_BOOK_VAL, 0, KEY_PNL, 1, KEY_TOTAL_DIV, 2, KEY_QTY, 3);
+    List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0); // to store above 4 vals in-place
     Set<String> imnts = new HashSet<>();
 
     marketData.forEach(
@@ -604,6 +614,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                         cumulativeImntDividendsMap.containsKey(imnt)
                             ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
                             : 0.0;
+                    double qty = node.getRunningQuantity();
 
                     values.set(
                         keyLookup.get(KEY_BOOK_VAL),
@@ -616,6 +627,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                     values.set(
                         keyLookup.get(KEY_TOTAL_DIV),
                         values.get(keyLookup.get(KEY_TOTAL_DIV)) + totalDiv);
+                    values.set(keyLookup.get(KEY_QTY), values.get(keyLookup.get(KEY_QTY)) + qty);
                   });
         });
     double currentVal =
@@ -627,6 +639,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .put(KEY_PNL, values.get(keyLookup.get(KEY_PNL)))
         .put(KEY_CURRENT_VAL, currentVal)
         .put(KEY_TOTAL_DIV, values.get(keyLookup.get(KEY_TOTAL_DIV)))
+        .put(KEY_QTY, values.get(keyLookup.get(KEY_QTY)))
         .build();
   }
 
@@ -1155,5 +1168,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   private record ImntValuationCurrentPnLAndActual(
-      String imnt, Double currentValuationPnL, Double investmentActual, Double pnlPercentage) {}
+      String imnt,
+      Double currentValuationPnL,
+      Double investmentActual,
+      Double pnlPercentage,
+      Double qty) {}
 }
