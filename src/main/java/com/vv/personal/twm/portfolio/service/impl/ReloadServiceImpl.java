@@ -36,6 +36,7 @@ public class ReloadServiceImpl implements ReloadService {
       log.warn("Clearing bank data service and market data service!");
       completeBankDataService.clear();
       completeMarketDataService.clear();
+      completeMarketDataService.setReloadInProgress(true);
     }
 
     log.info("Starting reload...");
@@ -43,6 +44,7 @@ public class ReloadServiceImpl implements ReloadService {
     try {
       completeBankDataService.load();
       completeMarketDataService.load();
+      completeMarketDataService.setReloadInProgress(false);
 
       loadTimer.stop();
       log.info("Reload completed in {} s", loadTimer.getTime(TimeUnit.SECONDS));

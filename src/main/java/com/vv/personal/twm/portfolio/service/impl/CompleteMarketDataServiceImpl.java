@@ -95,6 +95,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private OutdatedSymbols outdatedSymbols;
+  private boolean isReloadInProgress;
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
@@ -122,6 +123,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.dateLocalDateCache = dateLocalDateCache;
     this.extractMarketPortfolioDataService = extractMarketPortfolioDataService;
     this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
+    this.isReloadInProgress = false;
   }
 
   @Override
@@ -155,7 +157,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             .getPortfolio());
 
     // load analysis data for imnts which are bought
-    tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments());
+    tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments(), isReloadInProgress);
     computePnL();
 
     computeCumulativeDividend();

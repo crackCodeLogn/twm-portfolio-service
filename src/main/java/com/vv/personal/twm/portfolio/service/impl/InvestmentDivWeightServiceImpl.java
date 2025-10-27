@@ -170,7 +170,7 @@ public class InvestmentDivWeightServiceImpl implements InvestmentDivWeightServic
         log.warn(
             "No market data available for basket analysis for {}. Attempting downloading of missing ticker data",
             ticker);
-        tickerDataWarehouseService.loadAnalysisDataForInstruments(Sets.newHashSet(ticker));
+        tickerDataWarehouseService.loadAnalysisDataForInstruments(Sets.newHashSet(ticker), false);
         optionalPortfolio = marketDataCrdbServiceFeign.getLimitedDataByTicker(ticker, deltaDays);
 
         if (optionalPortfolio.isEmpty()) {

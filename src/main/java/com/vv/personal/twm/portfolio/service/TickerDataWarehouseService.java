@@ -13,7 +13,7 @@ public interface TickerDataWarehouseService {
 
   void loadBenchmarkData();
 
-  void loadAnalysisDataForInstruments(Set<String> instruments);
+  void loadAnalysisDataForInstruments(Set<String> instruments, boolean isReloadInProgress);
 
   Double getMarketData(String imnt, int date);
 

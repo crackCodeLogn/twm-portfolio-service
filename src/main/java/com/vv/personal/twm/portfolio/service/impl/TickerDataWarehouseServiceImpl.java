@@ -45,14 +45,25 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
             benchmarkTicker, lookBackDate.toString(), endDate.toString());
     populateMarketDates(benchmarkTickerData);
 
-    loadAnalysisDataForInstruments(Sets.newHashSet(benchmarkTicker));
+    loadAnalysisDataForInstruments(Sets.newHashSet(benchmarkTicker), false);
   }
 
   @Override
-  public void loadAnalysisDataForInstruments(Set<String> instruments) {
+  public void loadAnalysisDataForInstruments(Set<String> instruments, boolean isReloadInProgress) {
     instruments.forEach( // don't parallelize just yet due to py flask
         instrument -> {
           log.info("Loading analysis data for {}", instrument);
+          if (isReloadInProgress) {
+            int currentDateForMarketDataRemoval = DateFormatUtil.getDate(LocalDate.now());
+            log.info(
+                "Forcing removal of market data for {} x 1{}",
+                instrument,
+                currentDateForMarketDataRemoval);
+
+            marketDataCrdbServiceFeign.deleteMarketData(
+                instrument, currentDateForMarketDataRemoval);
+          }
+
           MarketDataProto.Ticker tickerDataFromDb =
               marketDataCrdbServiceFeign.getMarketDataByTicker(instrument);
           fillAnalysisWarehouse(tickerDataFromDb);

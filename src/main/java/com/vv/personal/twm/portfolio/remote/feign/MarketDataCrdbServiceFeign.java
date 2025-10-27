@@ -4,6 +4,7 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.ping.remote.feign.PingFeign;
 import java.util.Optional;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,9 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
 
   @PostMapping("/crdb/mkt/data/")
   String addMarketData(@RequestBody MarketDataProto.Portfolio portfolio);
+
+  @DeleteMapping("/crdb/mkt/data/{ticker}/{date}")
+  String deleteMarketData(@PathVariable("ticker") String ticker, @PathVariable("date") int date);
 
   @GetMapping("/crdb/mkt/transactions/{direction}")
   Optional<MarketDataProto.Portfolio> getTransactions(@PathVariable("direction") String direction);

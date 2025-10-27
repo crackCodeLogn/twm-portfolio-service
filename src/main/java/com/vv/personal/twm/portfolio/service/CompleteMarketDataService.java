@@ -41,4 +41,6 @@ public interface CompleteMarketDataService {
 
   Map<String, Double> getNetMarketValuations(
       Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends);
+
+  void setReloadInProgress(boolean reloadInProgress);
 }
