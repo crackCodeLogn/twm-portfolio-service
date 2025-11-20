@@ -172,6 +172,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   private void populateDividendYields() {
+    if (!imntDivYieldMap.isEmpty()) {
+      log.warn("Not repopulating instrument dividend yield data");
+      return;
+    }
+
     log.info("Populating dividend yield data for all imnts");
     marketData
         .keySet()
@@ -285,7 +290,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     cumulativeImntDividendsMap.clear();
     sectorLevelImntAggrMap.clear();
     imntSectorMap.clear();
-    imntDivYieldMap.clear();
+    // imntDivYieldMap.clear();
     log.info("Completed market data clearing");
   }
 
