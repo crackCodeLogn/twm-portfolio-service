@@ -1,6 +1,9 @@
 spring:
   application:
     name: twm-portfolio-service
+  cloud:
+    compatibility-verifier:
+      enabled: false
 server:
   port: 40037
 

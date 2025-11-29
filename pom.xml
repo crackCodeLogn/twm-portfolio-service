@@ -5,26 +5,39 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.2</version>
+        <version>3.5.8</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.vv.personal</groupId>
     <artifactId>twm-portfolio-service</artifactId>
-    <version>1.8.4</version>
+    <version>1.8.5</version>
     <name>twm-portfolio-service</name>
     <description>TWM Portfolio service</description>
     <packaging>jar</packaging>
+
+    <!--
+    Dependency update note from 20251129:: Attempted to shift to spring-boot-starter-parent to 4.0.0,
+    however the following combinations of spring caused issues, because of which had to rollback to 3.5.8
+    I think the blocking culprit is openapi-webmvc => switching to 3.0.0 fails the startup with no class def error
+
+    Last good working combination:
+    spring-boot-starter-parent: 3.5.8
+    openapi-webmvc: 2.8.14
+    spring-cloud: 2024.0.2
+    -->
+
     <properties>
+        <artifactory.version>1.1.23</artifactory.version>
+        <apache-commons-io.version>2.21.0</apache-commons-io.version>
+        <apache-math4.version>4.0-beta1</apache-math4.version>
+        <google-guava.version>33.5.0-jre</google-guava.version>
         <java.version>17</java.version>
-        <spring-starter.version>4.1.3</spring-starter.version>
-        <spring-cloud.version>2023.0.3</spring-cloud.version>
-        <openapi-webmvc.version>2.3.0</openapi-webmvc.version>
-        <opencsv.version>5.9</opencsv.version>
-        <protobuf.version>4.31.1</protobuf.version>
-        <google-guava.version>33.4.7-jre</google-guava.version>
-        <mockito.version>5.12.0</mockito.version>
+        <mockito.version>5.20.0</mockito.version>
+        <openapi-webmvc.version>2.8.14</openapi-webmvc.version>
+        <opencsv.version>5.12.0</opencsv.version>
         <ping-client.version>1.0.4</ping-client.version>
-        <artifactory.version>1.1.22</artifactory.version>
+        <protobuf.version>4.33.1</protobuf.version>
+        <spring-cloud.version>2024.0.2</spring-cloud.version> <!-- spring-cloud-dependencies -->
     </properties>
 
     <dependencies>
@@ -53,6 +66,16 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>${apache-commons-io.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math4-core</artifactId>
+            <version>${apache-math4.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>

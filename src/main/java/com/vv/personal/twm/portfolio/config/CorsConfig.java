@@ -22,6 +22,13 @@ public class CorsConfig {
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*");
       }
+
+      /* Rolling back but keeping update done in attempt to solve spring boot starter parent 4.0.0 upgrade problem
+
+      @Override
+      public void configureMessageConverters(HttpMessageConverters.ServerBuilder builder) {
+        builder.addCustomConverter(protobufHttpMessageConverter());
+      }*/
     };
   }
 }
