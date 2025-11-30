@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/** Think about shifting this class to twm-calc-service #todo */
 public final class StatisticsUtil {
 
   private StatisticsUtil() {}
@@ -17,14 +18,17 @@ public final class StatisticsUtil {
   }
 
   public static Optional<Double> calculateStandardDeviation(List<Double> inputValues) {
-    Optional<Double> variance = calculateVariance(inputValues, Optional.empty());
-    return variance.map(Math::sqrt);
+    return calculateStandardDeviation(inputValues, Optional.empty());
   }
 
   public static Optional<Double> calculateStandardDeviation(
       List<Double> inputValues, Optional<Double> inputMean) {
     Optional<Double> variance = calculateVariance(inputValues, inputMean);
     return variance.map(Math::sqrt);
+  }
+
+  public static Optional<Double> calculateStandardDeviation(Optional<Double> inputVariance) {
+    return inputVariance.map(Math::sqrt);
   }
 
   public static Optional<Double> calculateVariance(
@@ -37,6 +41,11 @@ public final class StatisticsUtil {
     for (int i = 0; i < inputValues.size(); i++)
       standardDeviation += Math.pow(inputValues.get(i) - mean.get(), 2);
     return Optional.of(standardDeviation / inputValues.size());
+  }
+
+  public static Optional<Double> calculateCoVariance(
+      List<Double> inputValues1, List<Double> inputValues2) {
+    return calculateCoVariance(inputValues1, Optional.empty(), inputValues2, Optional.empty());
   }
 
   public static Optional<Double> calculateCoVariance(
@@ -73,5 +82,17 @@ public final class StatisticsUtil {
 
   public static void calculateParallelLogarithmicDelta(List<Double> inputValues) {
     throw new UnsupportedOperationException("Not supported yet.");
+  }
+
+  public static Optional<Double> calculateCorrelation(
+      List<Double> inputValues1, List<Double> inputValues2) {
+    Optional<Double> covariance = calculateCoVariance(inputValues1, inputValues2);
+    if (covariance.isEmpty()) return covariance;
+
+    Optional<Double> standardDeviation1 = calculateStandardDeviation(inputValues1);
+    Optional<Double> standardDeviation2 = calculateStandardDeviation(inputValues2);
+    if (standardDeviation1.isEmpty() || standardDeviation2.isEmpty()) return Optional.empty();
+
+    return Optional.of(covariance.get() / (standardDeviation1.get() * standardDeviation2.get()));
   }
 }

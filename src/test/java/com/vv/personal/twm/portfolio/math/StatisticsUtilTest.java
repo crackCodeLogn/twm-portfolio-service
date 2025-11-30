@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.math;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.google.common.collect.Lists;
 import com.vv.personal.twm.portfolio.util.math.StatisticsUtil;
 import java.util.Arrays;
 import java.util.Collections;
@@ -27,10 +28,11 @@ class StatisticsUtilTest {
   private final List<Double> LOG_DATA = Arrays.asList(10.0, 20.0, 40.0, 80.0);
 
   // Covariance Data (N=5)
-  // X = [1, 2, 3, 4, 5], Mean_X = 3.0
+  // X = [1, 2, 3, 4, 5], Mean_X = 3.0, σ_X = 1.414
   private final List<Double> COV_X_DATA = Arrays.asList(1.0, 2.0, 3.0, 4.0, 5.0);
-  // Y = [5, 4, 3, 2, 1], Mean_Y = 3.0, Population Covariance(X, Y) = -2.0
+  // Y = [5, 4, 3, 2, 1], Mean_Y = 3.0, σ_Y = 1.414, Population Covariance(X, Y) = -2.0
   private final List<Double> COV_Y_NEG_DATA = Arrays.asList(5.0, 4.0, 3.0, 2.0, 1.0);
+  // Correlation => -1
 
   // Invalid Inputs
   private final List<Double> MISMATCHED_SIZE_DATA = Arrays.asList(1.0, 2.0); // Size 2
@@ -123,6 +125,13 @@ class StatisticsUtilTest {
   }
 
   @Test
+  void calculateStandardDeviation_FromVariance() {
+    Optional<Double> result = StatisticsUtil.calculateStandardDeviation(Optional.of(4.0));
+    assertTrue(result.isPresent());
+    assertEquals(2.0, result.get(), DELTA);
+  }
+
+  @Test
   void calculateStandardDeviation_WithMean_ShouldReturnCorrectPopulationStandardDeviation() {
     // Test with SIMPLE_DATA and pre-calculated mean 5.0, expected result 2.0
     Optional<Double> result = StatisticsUtil.calculateStandardDeviation(SIMPLE_DATA, MEAN_5_0);
@@ -140,7 +149,7 @@ class StatisticsUtilTest {
 
   @Test
   void calculateStandardDeviation_ShouldReturnEmptyForNullInput() {
-    Optional<Double> result = StatisticsUtil.calculateStandardDeviation(null);
+    Optional<Double> result = StatisticsUtil.calculateStandardDeviation(Optional.empty());
     assertTrue(result.isEmpty());
   }
 
@@ -150,10 +159,12 @@ class StatisticsUtilTest {
 
   @Test
   void calculateCoVariance_ShouldCalculateCorrectNegativeCovariance_WithoutMeans() {
-    // Test X and Y (negative correlation) -> Expected -2.0
     Optional<Double> result =
         StatisticsUtil.calculateCoVariance(COV_X_DATA, EMPTY_MEAN, COV_Y_NEG_DATA, EMPTY_MEAN);
+    assertTrue(result.isPresent());
+    assertEquals(-2.0, result.get(), DELTA);
 
+    result = StatisticsUtil.calculateCoVariance(COV_X_DATA, COV_Y_NEG_DATA);
     assertTrue(result.isPresent());
     assertEquals(-2.0, result.get(), DELTA);
   }
@@ -240,5 +251,28 @@ class StatisticsUtilTest {
     assertThrows(
         UnsupportedOperationException.class,
         () -> StatisticsUtil.calculateParallelLogarithmicDelta(SINGLE_VALUE_DATA));
+  }
+
+  // -------------------------------------------------------------------------------------------------------------
+  // ## calculateCorrelation Tests
+  // -------------------------------------------------------------------------------------------------------------
+  @Test
+  void calculateCorrelation() {
+    Optional<Double> correlation = StatisticsUtil.calculateCorrelation(COV_X_DATA, COV_Y_NEG_DATA);
+    assertTrue(correlation.isPresent());
+    assertEquals(-1.0, correlation.get(), DELTA);
+  }
+
+  @Test
+  void calculateCorrelation_FailedCompute() {
+    Optional<Double> correlation =
+        StatisticsUtil.calculateCorrelation(COV_X_DATA, Lists.newArrayList());
+    assertTrue(correlation.isEmpty());
+
+    correlation = StatisticsUtil.calculateCorrelation(Lists.newArrayList(), COV_Y_NEG_DATA);
+    assertTrue(correlation.isEmpty());
+
+    correlation = StatisticsUtil.calculateCorrelation(Lists.newArrayList(), Lists.newArrayList());
+    assertTrue(correlation.isEmpty());
   }
 }
