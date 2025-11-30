@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
+import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,4 +44,6 @@ public interface CompleteMarketDataService {
       Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends);
 
   void setReloadInProgress(boolean reloadInProgress);
+
+  void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
 }

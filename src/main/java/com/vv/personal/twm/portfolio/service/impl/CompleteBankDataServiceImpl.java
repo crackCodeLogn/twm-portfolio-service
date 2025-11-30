@@ -7,9 +7,11 @@ import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.model.tracking.ProgressTracker;
 import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.CalcServiceFeign;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
+import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.warehouse.bank.BankAccountWarehouse;
 import com.vv.personal.twm.portfolio.warehouse.bank.BankFixedDepositsWarehouse;
 import java.time.LocalDate;
@@ -30,12 +32,14 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class CompleteBankDataServiceImpl implements CompleteBankDataService {
+  private static final String CLIENT_VIVEK = "vivek-v2";
 
   private final BankAccountWarehouse bankAccountWarehouse;
   private final BankFixedDepositsWarehouse bankFixedDepositsWarehouse;
   private final BankCrdbServiceFeign bankCrdbServiceFeign;
   private final CalcServiceFeign calcServiceFeign;
   private final DateLocalDateCache dateLocalDateCache;
+  private final ProgressTrackerService progressTrackerService;
 
   private final Map<FixedDepositProto.AccountType, TreeMap<Integer, Double>>
       accountTypeDateAmountGicMap = new HashMap<>();
@@ -46,21 +50,30 @@ public class CompleteBankDataServiceImpl implements CompleteBankDataService {
   public void load() {
     log.info("Initiating complete bank data load");
     StopWatch stopWatch = StopWatch.createStarted();
+    progressTrackerService.publishProgressTracker(CLIENT_VIVEK, ProgressTracker.LOADING_BANK);
+
     // get CAD based bank accounts only, for now
     FixedDepositProto.FilterBy filterByCcyField = FixedDepositProto.FilterBy.CCY;
     BankProto.CurrencyCode currencyCodeCad = BankProto.CurrencyCode.CAD;
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_BANK_POPULATE_ACCOUNTS);
     BankProto.BankAccounts cadBankAccounts =
         bankCrdbServiceFeign.getBankAccounts(filterByCcyField.name(), currencyCodeCad.name());
     if (cadBankAccounts != null) populateBankAccounts(cadBankAccounts);
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_BANK_POPULATE_DEPOSITS);
     FixedDepositProto.FixedDepositList fixedDepositList =
         bankCrdbServiceFeign.getFixedDeposits(filterByCcyField.name(), currencyCodeCad.name());
     if (fixedDepositList != null) {
       populateFixedDeposits(fixedDepositList, currencyCodeCad);
+      progressTrackerService.publishProgressTracker(
+          CLIENT_VIVEK, ProgressTracker.LOADING_BANK_DEPOSITS_MAP);
       calcGicMaps();
     }
 
+    progressTrackerService.publishProgressTracker(CLIENT_VIVEK, ProgressTracker.READY_BANK);
     stopWatch.stop();
     log.info("Complete bank data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
   }

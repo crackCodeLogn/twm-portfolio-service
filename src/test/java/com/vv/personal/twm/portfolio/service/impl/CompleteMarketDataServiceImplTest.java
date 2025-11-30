@@ -12,6 +12,7 @@ import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TestInstrument;
@@ -33,6 +34,7 @@ class CompleteMarketDataServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
   @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+  @Mock private ProgressTrackerService progressTrackerService;
 
   private CompleteMarketDataServiceImpl completeMarketDataService;
 
@@ -43,7 +45,8 @@ class CompleteMarketDataServiceImplTest {
             new DateLocalDateCache(),
             null,
             tickerDataWarehouseService,
-            marketDataPythonEngineFeign);
+            marketDataPythonEngineFeign,
+            progressTrackerService);
   }
 
   @Test

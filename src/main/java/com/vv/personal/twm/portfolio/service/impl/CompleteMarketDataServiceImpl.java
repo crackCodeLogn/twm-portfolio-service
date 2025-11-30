@@ -11,10 +11,12 @@ import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.model.tracking.ProgressTracker;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
+import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.SanitizerUtil;
@@ -40,6 +42,7 @@ import org.springframework.stereotype.Service;
 @Setter
 @Service
 public class CompleteMarketDataServiceImpl implements CompleteMarketDataService {
+  private static final String CLIENT_VIVEK = "vivek-v2";
   private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
 
   private static final String UNKNOWN_SECTOR = "UNKNOWN";
@@ -94,6 +97,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+  private final ProgressTrackerService progressTrackerService;
   private OutdatedSymbols outdatedSymbols;
   private boolean isReloadInProgress;
 
@@ -101,7 +105,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       DateLocalDateCache dateLocalDateCache,
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
       TickerDataWarehouseService tickerDataWarehouseService,
-      MarketDataPythonEngineFeign marketDataPythonEngineFeign) {
+      MarketDataPythonEngineFeign marketDataPythonEngineFeign,
+      ProgressTrackerService progressTrackerService) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
@@ -123,6 +128,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.dateLocalDateCache = dateLocalDateCache;
     this.extractMarketPortfolioDataService = extractMarketPortfolioDataService;
     this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
+    this.progressTrackerService = progressTrackerService;
     this.isReloadInProgress = false;
   }
 
@@ -130,8 +136,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   public void load() {
     log.info("Initiating complete market data load");
     StopWatch stopWatch = StopWatch.createStarted();
+    progressTrackerService.publishProgressTracker(CLIENT_VIVEK, ProgressTracker.LOADING_MARKET);
 
     // first populate the buy side
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_POPULATE_PORTFOLIO);
     populate(
         extractMarketPortfolioDataService
             .extractMarketPortfolioData(MarketDataProto.Direction.BUY)
@@ -141,8 +150,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         extractMarketPortfolioDataService
             .extractMarketPortfolioData(MarketDataProto.Direction.SELL)
             .getPortfolio());
+
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_ACB);
     computeAcb(); // compute the ACB once all the data has been populated
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_POPULATE_DIVIDENDS);
     populateDividends(
         extractMarketPortfolioDataService
             .extractMarketPortfolioDividendData(MarketDataProto.AccountType.TFSA)
@@ -157,15 +171,27 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             .getPortfolio());
 
     // load analysis data for imnts which are bought
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_LOAD_ANALYSIS);
     tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments(), isReloadInProgress);
+
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_PNL);
     computePnL();
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_CUMULATIVE_DIVIDENDS);
     computeCumulativeDividend();
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_SECTOR_AGGR);
     computeSectorLevelImntAggregationData();
 
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_POPULATE_DIVIDENDS_YIELD);
     populateDividendYields();
 
+    progressTrackerService.publishProgressTracker(CLIENT_VIVEK, ProgressTracker.READY_MARKET);
     stopWatch.stop();
     log.info(
         "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));

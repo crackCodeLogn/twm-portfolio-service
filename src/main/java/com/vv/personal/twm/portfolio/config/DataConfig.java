@@ -7,13 +7,17 @@ import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
+import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
+import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
+import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.service.impl.CentralDataPointServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteBankDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteMarketDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ExtractMarketPortfolioDataServiceImpl;
+import com.vv.personal.twm.portfolio.service.impl.ProgressTrackerServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ReloadServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
 import com.vv.personal.twm.portfolio.warehouse.bank.BankAccountWarehouse;
@@ -83,23 +87,25 @@ public class DataConfig {
   }
 
   @Bean
-  public CompleteBankDataServiceImpl completeBankDataService() {
+  public CompleteBankDataService completeBankDataService() {
     return new CompleteBankDataServiceImpl(
         bankAccountWarehouse(),
         bankFixedDepositsWarehouse(),
         bankCrdbServiceFeign,
         calcServiceFeign,
-        dateLocalDateCache());
+        dateLocalDateCache(),
+        progressTrackerService());
   }
 
   @Bean
-  public CompleteMarketDataServiceImpl completeMarketDataService() {
-    CompleteMarketDataServiceImpl marketDataService =
+  public CompleteMarketDataService completeMarketDataService() {
+    CompleteMarketDataService marketDataService =
         new CompleteMarketDataServiceImpl(
             dateLocalDateCache(),
             extractMarketPortfolioDataService(),
             tickerDataWarehouseService(),
-            marketDataPythonEngineFeign);
+            marketDataPythonEngineFeign,
+            progressTrackerService());
     marketDataService.setOutdatedSymbols(outdatedSymbols());
     return marketDataService;
   }
@@ -107,6 +113,11 @@ public class DataConfig {
   @Bean
   public CentralDataPointService centralDataPointService() {
     return new CentralDataPointServiceImpl(completeBankDataService(), completeMarketDataService());
+  }
+
+  @Bean
+  public ProgressTrackerService progressTrackerService() {
+    return new ProgressTrackerServiceImpl();
   }
 
   @Bean
