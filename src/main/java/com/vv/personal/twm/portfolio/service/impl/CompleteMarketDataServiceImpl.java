@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeAndFormat2Double;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -774,10 +775,75 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       log.error("Failed to delete market data for {} x {} dates", imnt, tickerDates.size(), e);
     }
 
+    log.info("Publishing {} records of {} to ticker data warehouse", tickerDates.size(), imnt);
+    tickerDataWarehouseService.fillAnalysisWarehouse(tickerData);
+
     log.info("Publishing {} records of {} to market data database", tickerDates.size(), imnt);
     String result = marketDataCrdbServiceFeign.addMarketDataForSingleTicker(tickerData);
+
     log.info("Market data save result: {}", result);
     return tickerDates.size();
+  }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrix(
+      List<String> targetInstruments) {
+    Optional<Table<String, String, Double>> optionalMatrix = correlationMatrix;
+    if (optionalMatrix.isPresent()) {
+      Table<String, String, Double> matrix = optionalMatrix.get();
+      Queue<String> newImnts = new LinkedList<>();
+      Queue<String> knownImnts = new LinkedList<>();
+
+      for (String imnt : targetInstruments) {
+        imnt = imnt.toUpperCase();
+        if (!matrix.rowKeySet().contains(imnt)) { // imnt we don't have data for!
+          if (localDates.isEmpty()) {
+            throw new RuntimeException(
+                "Unstable state where localDates is empty. Shouldn't happen ever!");
+          }
+
+          int recordsDownloaded =
+              forceDownloadMarketDataForDates(
+                  imnt,
+                  localDates.get(0).toString(),
+                  localDates.get(localDates.size() - 1).toString());
+          if (recordsDownloaded == 0) {
+            log.warn("Cannot download missing market data for unknown imnt {}", imnt);
+            continue;
+          }
+          newImnts.offer(imnt);
+        } else knownImnts.offer(imnt);
+      }
+
+      if (newImnts.isEmpty() && knownImnts.isEmpty()) {
+        log.warn(
+            "Weird state when the correlation matrix compute for {} target imnts led to no known / new imnts",
+            targetInstruments.size());
+      } else if (newImnts.isEmpty()) { // no need to re-compute the correlation matrix
+        List<String> knownInstruments = new ArrayList<>();
+        while (!knownImnts.isEmpty()) knownInstruments.add(knownImnts.poll());
+        Table<String, String, Double> resultantMatrix = HashBasedTable.create();
+
+        for (int i = 0; i < knownInstruments.size(); i++)
+          for (int j = i + 1; j < knownInstruments.size(); j++) {
+            String imnt1 = knownInstruments.get(i);
+            String imnt2 = knownInstruments.get(j);
+            Double val = matrix.get(imnt1, imnt2);
+            resultantMatrix.put(imnt1, imnt2, val);
+            resultantMatrix.put(imnt2, imnt1, val);
+          }
+
+        return Optional.of(resultantMatrix);
+
+      } else { // generate new correlation matrix
+        List<String> instruments = new ArrayList<>();
+        while (!newImnts.isEmpty()) instruments.add(newImnts.poll());
+        while (!knownImnts.isEmpty()) instruments.add(knownImnts.poll());
+
+        return computeStatisticsService.computeCorrelationMatrix(instruments, integerDates);
+      }
+    }
+    return Optional.empty();
   }
 
   @Override

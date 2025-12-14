@@ -25,4 +25,6 @@ public interface TickerDataWarehouseService {
   LocalDate convertDate(int date);
 
   List<LocalDate> getDates();
+
+  void fillAnalysisWarehouse(MarketDataProto.Ticker tickerData);
 }

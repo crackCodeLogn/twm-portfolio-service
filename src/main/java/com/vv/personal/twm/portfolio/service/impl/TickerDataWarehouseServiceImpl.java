@@ -203,7 +203,8 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
     return tickerDataWarehouse.getDates();
   }
 
-  private void fillAnalysisWarehouse(MarketDataProto.Ticker tickerData) {
+  @Override
+  public void fillAnalysisWarehouse(MarketDataProto.Ticker tickerData) {
     if (tickerData == null) return;
 
     String ticker = tickerData.getSymbol();

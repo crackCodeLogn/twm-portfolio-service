@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -260,8 +261,22 @@ public class PortfolioController {
     return correlationMatrix;
   }
 
-  @GetMapping("/correlation")
-  public String getCorrelation(
+  @GetMapping("/correlation/matrix")
+  public MarketDataProto.CorrelationMatrix getCorrelationMatrixForSelected(
+      @RequestBody DataPacketProto.DataPacket dataPacket) {
+    log.info("getCorrelationMatrix invoked for selected imnts: {}", dataPacket.getStringsCount());
+    Optional<Table<String, String, Double>> optionalCorrelationMatrix =
+        centralDataPointService.getCorrelationMatrix(dataPacket.getStringsList());
+    MarketDataProto.CorrelationMatrix correlationMatrix =
+        DataConverterUtil.getCorrelationMatrix(optionalCorrelationMatrix);
+    log.info(
+        "Correlation matrix proto created with {} entries for selected imnts",
+        correlationMatrix.getEntriesCount());
+    return correlationMatrix;
+  }
+
+  @GetMapping("/correlation/adhoc")
+  public String getCorrelationAdhoc(
       @RequestParam("imnt1") String imnt1, @RequestParam("imnt2") String imnt2) {
     log.info("getCorrelationMatrix invoked for {} x {}", imnt1, imnt2);
     OptionalDouble optionalCorrelation = centralDataPointService.getCorrelation(imnt1, imnt2);

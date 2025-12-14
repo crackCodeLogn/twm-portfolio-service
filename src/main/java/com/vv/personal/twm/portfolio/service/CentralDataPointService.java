@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.google.common.collect.Table;
+import com.google.protobuf.ProtocolStringList;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
@@ -62,6 +63,8 @@ public interface CentralDataPointService {
   OptionalInt forceDownloadMarketDataForDates(String imnt, String start, String end);
 
   Optional<Table<String, String, Double>> getCorrelationMatrix();
+
+  Optional<Table<String, String, Double>> getCorrelationMatrix(ProtocolStringList targetImnts);
 
   OptionalDouble getCorrelation(String imnt1, String imnt2);
 }

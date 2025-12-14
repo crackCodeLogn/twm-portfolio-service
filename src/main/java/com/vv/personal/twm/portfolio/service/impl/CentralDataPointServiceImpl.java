@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Table;
+import com.google.protobuf.ProtocolStringList;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
@@ -183,6 +184,13 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   @Override
   public Optional<Table<String, String, Double>> getCorrelationMatrix() {
     return completeMarketDataService.getCorrelationMatrix();
+  }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrix(
+      ProtocolStringList targetImnts) {
+    List<String> targetInstruments = targetImnts.stream().toList();
+    return completeMarketDataService.getCorrelationMatrix(targetInstruments);
   }
 
   @Override
