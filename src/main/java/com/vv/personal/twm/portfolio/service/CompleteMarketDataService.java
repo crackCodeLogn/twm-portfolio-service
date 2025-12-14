@@ -1,10 +1,12 @@
 package com.vv.personal.twm.portfolio.service;
 
+import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.TreeMap;
 
 /**
@@ -50,4 +52,8 @@ public interface CompleteMarketDataService {
   void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
 
   int forceDownloadMarketDataForDates(String imnt, String startDate, String endDate);
+
+  Optional<Table<String, String, Double>> getCorrelationMatrix();
+
+  OptionalDouble getCorrelation(String imnt1, String imnt2);
 }

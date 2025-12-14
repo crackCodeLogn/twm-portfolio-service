@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -170,5 +172,21 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public Map<String, Double> getNetMarketValuations(
       Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends) {
     return completeMarketDataService.getNetMarketValuations(optionalAccountType, includeDividends);
+  }
+
+  @Override
+  public OptionalInt forceDownloadMarketDataForDates(String imnt, String start, String end) {
+    return OptionalInt.of(
+        completeMarketDataService.forceDownloadMarketDataForDates(imnt, start, end));
+  }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrix() {
+    return completeMarketDataService.getCorrelationMatrix();
+  }
+
+  @Override
+  public OptionalDouble getCorrelation(String imnt1, String imnt2) {
+    return completeMarketDataService.getCorrelation(imnt1, imnt2);
   }
 }

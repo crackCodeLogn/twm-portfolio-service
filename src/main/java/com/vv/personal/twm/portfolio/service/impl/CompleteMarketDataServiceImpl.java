@@ -109,6 +109,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private Optional<Table<String, String, Double>> correlationMatrix;
   private OutdatedSymbols outdatedSymbols;
   private boolean isReloadInProgress;
+  private List<LocalDate> localDates;
+  private List<Integer> integerDates;
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
@@ -135,6 +137,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     imntSectorMap = new ConcurrentHashMap<>();
     imntDivYieldMap = new ConcurrentHashMap<>();
     correlationMatrix = Optional.empty();
+    localDates = new ArrayList<>();
+    integerDates = new ArrayList<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -216,33 +220,22 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   private void computeCorrelationMatrixInParallel() {
     ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
-    List<LocalDate> benchmarkDates = tickerDataWarehouseService.getDates();
     try {
       Future<List<String>> imntsForCorrelationFuture =
           singleThreadExecutor.submit(
               () ->
                   getInstrumentSelectionForCorrelationMatrixCompute(
-                      benchmarkDates, tickerDataWarehouseService, getInstruments()));
+                      localDates, tickerDataWarehouseService, getInstruments()));
       singleThreadExecutor.shutdown();
 
       List<String> imntsForCorrelation = imntsForCorrelationFuture.get();
       log.info(
           "Beginning compute of correlation matrix for {} instruments", imntsForCorrelation.size());
-      List<Integer> benchmarkDatesInt =
-          benchmarkDates.stream()
-              .map(dateLocalDateCache::get)
-              .map(OptionalInt::getAsInt)
-              .sorted()
-              .toList();
-      log.info(
-          "Generated benchmark dates of integers of size {} from benchmark local dates of size {}",
-          benchmarkDatesInt.size(),
-          benchmarkDates.size());
 
       // correlation matrix compute happens here
       this.correlationMatrix =
-          computeStatisticsService.computeCorrelationMatrix(imntsForCorrelation, benchmarkDatesInt);
-
+          computeStatisticsService.computeCorrelationMatrix(imntsForCorrelation, integerDates);
+      log.info("Correlation matrix => {}", this.correlationMatrix); // todo - switch to debug
     } catch (ExecutionException | InterruptedException e) {
       log.error("Compute correlation matrix execution failed", e);
     } finally {
@@ -391,6 +384,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     imntSectorMap.clear();
     // imntDivYieldMap.clear();
     correlationMatrix = Optional.empty();
+    integerDates.clear();
+    localDates.clear();
     log.info("Completed market data clearing");
   }
 
@@ -785,6 +780,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return tickerDates.size();
   }
 
+  @Override
+  public OptionalDouble getCorrelation(String imnt1, String imnt2) {
+    Optional<Double> correlation =
+        computeStatisticsService.computeCorrelation(imnt1, imnt2, integerDates);
+    return correlation.map(OptionalDouble::of).orElseGet(OptionalDouble::empty);
+  }
+
   void populate(MarketDataProto.Portfolio portfolio) {
     portfolio
         .getInstrumentsList()
@@ -888,11 +890,16 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   void computePnL() {
     List<LocalDate> dates = tickerDataWarehouseService.getDates();
+    Collections.sort(dates);
+    this.localDates = new ArrayList<>(dates);
+
     Set<Integer> localDates = new HashSet<>();
     dates.forEach(
         date -> {
           dateLocalDateCache.add(date);
-          localDates.add(dateLocalDateCache.get(date).getAsInt());
+          int intDate = dateLocalDateCache.get(date).getAsInt();
+          localDates.add(intDate);
+          this.integerDates.add(intDate);
         });
     Set<Integer> dividendDates = getDividendDates();
     boolean toSort = false;

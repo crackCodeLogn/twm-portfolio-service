@@ -1,5 +1,6 @@
 package com.vv.personal.twm.portfolio.service;
 
+import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import java.util.OptionalInt;
 
 /**
  * @author Vivek
@@ -56,4 +58,10 @@ public interface CentralDataPointService {
 
   Map<String, Double> getNetMarketValuations(
       Optional<MarketDataProto.AccountType> optionalAccountType, boolean includeDividends);
+
+  OptionalInt forceDownloadMarketDataForDates(String imnt, String start, String end);
+
+  Optional<Table<String, String, Double>> getCorrelationMatrix();
+
+  OptionalDouble getCorrelation(String imnt1, String imnt2);
 }

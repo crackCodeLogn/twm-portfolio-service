@@ -190,7 +190,8 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
 
       List<Double> imntValues = new ArrayList<>(dates.size());
       for (int i = 0; i < dates.size(); i++) {
-        imntValues.add(tickerDataWarehouseService.getMarketData(imnt, dates.get(i)));
+        Double value = tickerDataWarehouseService.getMarketData(imnt, dates.get(i));
+        if (value != null) imntValues.add(value);
       }
       // convert the raw prices to log returns
       Optional<List<Double>> logImntValues = StatisticsUtil.calculateLogarithmicDelta(imntValues);

@@ -1,21 +1,25 @@
 package com.vv.personal.twm.portfolio.remote.controller;
 
+import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
-import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
+import com.vv.personal.twm.portfolio.util.DataConverterUtil;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,7 +42,6 @@ public class PortfolioController {
   private final InvestmentDivWeightService investmentDivWeightService;
   private final CentralDataPointService centralDataPointService;
   private final ReloadService reloadService;
-  private final CompleteMarketDataService completeMarketDataService;
 
   /*
   @Lazy
@@ -67,8 +70,8 @@ public class PortfolioController {
       @RequestParam(defaultValue = "0.0") Double forceAbsoluteAmount,
       @RequestParam(defaultValue = "0.0") Double amountToConsiderForDistributionTfsa) {
 
-    List<String> highValList = split(highValImnts);
-    List<String> highDivList = split(highDivImnts);
+    List<String> highValList = DataConverterUtil.split(highValImnts);
+    List<String> highDivList = DataConverterUtil.split(highDivImnts);
     log.info(
         "getInvestmentDivWeights invoked with {} high val imnts, {} high div imnts, {} income, {} income split "
             + "percentage and {} amount for tfsa",
@@ -245,6 +248,31 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/correlation/matrix")
+  public MarketDataProto.CorrelationMatrix getCorrelationMatrix() {
+    log.info("getCorrelationMatrix invoked");
+    Optional<Table<String, String, Double>> optionalCorrelationMatrix =
+        centralDataPointService.getCorrelationMatrix();
+    MarketDataProto.CorrelationMatrix correlationMatrix =
+        DataConverterUtil.getCorrelationMatrix(optionalCorrelationMatrix);
+    log.info(
+        "Correlation matrix proto created with {} entries", correlationMatrix.getEntriesCount());
+    return correlationMatrix;
+  }
+
+  @GetMapping("/correlation")
+  public String getCorrelation(
+      @RequestParam("imnt1") String imnt1, @RequestParam("imnt2") String imnt2) {
+    log.info("getCorrelationMatrix invoked for {} x {}", imnt1, imnt2);
+    OptionalDouble optionalCorrelation = centralDataPointService.getCorrelation(imnt1, imnt2);
+    String correlation = "ERR";
+    if (optionalCorrelation.isPresent()) {
+      correlation = String.valueOf(optionalCorrelation.getAsDouble());
+    }
+    log.info("Correlation compute between {} x {} => {}", imnt1, imnt2, correlation);
+    return correlation;
+  }
+
   @GetMapping("/")
   public String get() {
     return "hi";
@@ -255,11 +283,11 @@ public class PortfolioController {
       @RequestParam("imnt") String imnt,
       @RequestParam("start") String startDate,
       @RequestParam("end") String endDate) {
-    log.info("getMarketAccountValuations {}:{}x{} invoked", imnt, startDate, endDate);
-    int imntRecordsDownloaded =
-        completeMarketDataService.forceDownloadMarketDataForDates(imnt, startDate, endDate);
+    log.info("getMarketAccountValuations {}:{}->{} invoked", imnt, startDate, endDate);
+    OptionalInt imntRecordsDownloaded =
+        centralDataPointService.forceDownloadMarketDataForDates(imnt, startDate, endDate);
     log.info("Downloaded {} imnt records for {}", imntRecordsDownloaded, imnt);
-    return imntRecordsDownloaded;
+    return imntRecordsDownloaded.isPresent() ? imntRecordsDownloaded.getAsInt() : 0;
   }
 
   private List<String> split(String data) {
