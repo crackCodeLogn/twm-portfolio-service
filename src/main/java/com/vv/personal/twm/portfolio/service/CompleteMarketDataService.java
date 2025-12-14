@@ -48,4 +48,6 @@ public interface CompleteMarketDataService {
   void shutdown();
 
   void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
+
+  int forceDownloadMarketDataForDates(String imnt, String startDate, String endDate);
 }

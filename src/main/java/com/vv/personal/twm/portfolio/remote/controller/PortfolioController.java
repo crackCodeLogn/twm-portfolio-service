@@ -6,6 +6,7 @@ import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.InvestmentDivWeight;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
+import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.InvestmentDivWeightService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
 import java.util.Arrays;
@@ -37,6 +38,7 @@ public class PortfolioController {
   private final InvestmentDivWeightService investmentDivWeightService;
   private final CentralDataPointService centralDataPointService;
   private final ReloadService reloadService;
+  private final CompleteMarketDataService completeMarketDataService;
 
   /*
   @Lazy
@@ -246,6 +248,18 @@ public class PortfolioController {
   @GetMapping("/")
   public String get() {
     return "hi";
+  }
+
+  @GetMapping("/manual/market/force/download-dates")
+  public Integer forceDownloadMarketDataForDates(
+      @RequestParam("imnt") String imnt,
+      @RequestParam("start") String startDate,
+      @RequestParam("end") String endDate) {
+    log.info("getMarketAccountValuations {}:{}x{} invoked", imnt, startDate, endDate);
+    int imntRecordsDownloaded =
+        completeMarketDataService.forceDownloadMarketDataForDates(imnt, startDate, endDate);
+    log.info("Downloaded {} imnt records for {}", imntRecordsDownloaded, imnt);
+    return imntRecordsDownloaded;
   }
 
   private List<String> split(String data) {

@@ -755,6 +755,36 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .build();
   }
 
+  @Override
+  public int forceDownloadMarketDataForDates(String imnt, String startDate, String endDate) {
+    MarketDataProto.Ticker tickerData =
+        marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(imnt, startDate, endDate);
+    if (tickerData == null) {
+      log.error("Failed to obtain data for {} from {} to {}", imnt, startDate, endDate);
+      return 0;
+    }
+
+    List<Integer> tickerDates =
+        tickerData.getDataList().stream().map(MarketDataProto.Value::getDate).toList();
+    log.info("Retrieved {} records from market data API for {}", tickerDates.size(), imnt);
+
+    log.info(
+        "Attempting purge of {} records from market data database for {}",
+        tickerDates.size(),
+        imnt);
+
+    try {
+      marketDataCrdbServiceFeign.deleteMarketData(imnt, tickerDates);
+    } catch (Exception e) {
+      log.error("Failed to delete market data for {} x {} dates", imnt, tickerDates.size(), e);
+    }
+
+    log.info("Publishing {} records of {} to market data database", tickerDates.size(), imnt);
+    String result = marketDataCrdbServiceFeign.addMarketDataForSingleTicker(tickerData);
+    log.info("Market data save result: {}", result);
+    return tickerDates.size();
+  }
+
   void populate(MarketDataProto.Portfolio portfolio) {
     portfolio
         .getInstrumentsList()
