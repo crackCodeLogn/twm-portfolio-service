@@ -801,15 +801,25 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             throw new RuntimeException(
                 "Unstable state where localDates is empty. Shouldn't happen ever!");
           }
-
-          int recordsDownloaded =
-              forceDownloadMarketDataForDates(
-                  imnt,
-                  localDates.get(0).toString(),
-                  localDates.get(localDates.size() - 1).toString());
-          if (recordsDownloaded == 0) {
-            log.warn("Cannot download missing market data for unknown imnt {}", imnt);
-            continue;
+          MarketDataProto.Ticker dbTickerData =
+              marketDataCrdbServiceFeign.getMarketDataByTicker(imnt);
+          if (dbTickerData != null && dbTickerData.getDataCount() > 0) {
+            log.info(
+                "Found market data for {} from db => {} records",
+                imnt,
+                dbTickerData.getDataCount());
+            tickerDataWarehouseService.fillAnalysisWarehouse(dbTickerData);
+          } else {
+            log.info("Querying market data API for {}", imnt);
+            int recordsDownloaded =
+                forceDownloadMarketDataForDates(
+                    imnt,
+                    localDates.get(0).toString(),
+                    localDates.get(localDates.size() - 1).toString());
+            if (recordsDownloaded == 0) {
+              log.warn("Cannot download missing market data for unknown imnt {}", imnt);
+              continue;
+            }
           }
           newImnts.offer(imnt);
         } else knownImnts.offer(imnt);
