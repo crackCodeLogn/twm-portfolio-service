@@ -7,17 +7,22 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.TestInstrument;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +40,8 @@ class CompleteMarketDataServiceImplTest {
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
   @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   @Mock private ProgressTrackerService progressTrackerService;
+  @Mock private ComputeStatisticsService computeStatisticsService;
+  @Mock private MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
 
   private CompleteMarketDataServiceImpl completeMarketDataService;
 
@@ -46,7 +53,9 @@ class CompleteMarketDataServiceImplTest {
             null,
             tickerDataWarehouseService,
             marketDataPythonEngineFeign,
-            progressTrackerService);
+            progressTrackerService,
+            computeStatisticsService,
+            marketDataCrdbServiceFeign);
   }
 
   @Test
@@ -824,6 +833,37 @@ class CompleteMarketDataServiceImplTest {
     Map<String, String> sectorLevelIndImntAggrMap =
         completeMarketDataService.getSectorLevelImntAggrDataMap(MarketDataProto.AccountType.IND);
     assertTrue(sectorLevelIndImntAggrMap.isEmpty());
+  }
+
+  @Test
+  public void testGetInstrumentSelectionForCorrelationMatrixCompute() {
+    List<LocalDate> benchmarkLocalDates =
+        Lists.newArrayList(
+            LocalDate.of(2025, 12, 11),
+            LocalDate.of(2025, 12, 12),
+            LocalDate.of(2025, 12, 15),
+            LocalDate.of(2025, 12, 16));
+
+    when(tickerDataWarehouseService.containsMarketData("t-v2-1.to", LocalDate.of(2025, 12, 11)))
+        .thenReturn(true);
+    when(tickerDataWarehouseService.containsMarketData("t-v2-1.to", LocalDate.of(2025, 12, 12)))
+        .thenReturn(false);
+
+    when(tickerDataWarehouseService.containsMarketData("t-v2-2.to", LocalDate.of(2025, 12, 11)))
+        .thenReturn(true);
+    when(tickerDataWarehouseService.containsMarketData("t-v2-2.to", LocalDate.of(2025, 12, 12)))
+        .thenReturn(true);
+    when(tickerDataWarehouseService.containsMarketData("t-v2-2.to", LocalDate.of(2025, 12, 15)))
+        .thenReturn(true);
+    when(tickerDataWarehouseService.containsMarketData("t-v2-2.to", LocalDate.of(2025, 12, 16)))
+        .thenReturn(true);
+
+    Set<String> imnts = Sets.newHashSet("t-v2-1.to", "t-v2-2.to");
+    List<String> instrumentSelectedForCorrelationMatrixCompute =
+        completeMarketDataService.getInstrumentSelectionForCorrelationMatrixCompute(
+            benchmarkLocalDates, tickerDataWarehouseService, imnts);
+    assertEquals(1, instrumentSelectedForCorrelationMatrixCompute.size());
+    assertTrue(instrumentSelectedForCorrelationMatrixCompute.contains("t-v2-2.to"));
   }
 
   private List<MarketDataProto.Instrument> generateTestInstruments() {

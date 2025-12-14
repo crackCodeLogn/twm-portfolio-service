@@ -37,6 +37,11 @@ public class TickerDataWarehouseImpl implements TickerDataWarehouse {
   }
 
   @Override
+  public boolean contains(LocalDate date, String imnt) {
+    return get(date, imnt) != null;
+  }
+
+  @Override
   public List<LocalDate> getDates() {
     return adjustedClosePriceTableForAnalysis.rowKeySet().stream()
         .sorted()

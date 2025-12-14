@@ -6,15 +6,18 @@ import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.model.tracking.ProgressTracker;
+import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
@@ -23,6 +26,10 @@ import com.vv.personal.twm.portfolio.util.SanitizerUtil;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.Setter;
@@ -92,12 +99,14 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       sectorLevelImntAggrMap; // sector level x account type x (imnt x investment-imnt)
   private final Map<String, String> imntSectorMap; // imnt x sector
   private final Map<String, Double> imntDivYieldMap; // imnt x div yield %
-
   private final DateLocalDateCache dateLocalDateCache;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final ProgressTrackerService progressTrackerService;
+  private final ComputeStatisticsService computeStatisticsService;
+  private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
+  private Optional<Table<String, String, Double>> correlationMatrix;
   private OutdatedSymbols outdatedSymbols;
   private boolean isReloadInProgress;
 
@@ -106,7 +115,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
       TickerDataWarehouseService tickerDataWarehouseService,
       MarketDataPythonEngineFeign marketDataPythonEngineFeign,
-      ProgressTrackerService progressTrackerService) {
+      ProgressTrackerService progressTrackerService,
+      ComputeStatisticsService computeStatisticsService,
+      MarketDataCrdbServiceFeign marketDataCrdbServiceFeign) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
@@ -123,6 +134,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     sectorLevelImntAggrMap = new ConcurrentHashMap<>();
     imntSectorMap = new ConcurrentHashMap<>();
     imntDivYieldMap = new ConcurrentHashMap<>();
+    correlationMatrix = Optional.empty();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -130,6 +142,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
     this.progressTrackerService = progressTrackerService;
     this.isReloadInProgress = false;
+
+    this.computeStatisticsService = computeStatisticsService;
+    this.marketDataCrdbServiceFeign = marketDataCrdbServiceFeign;
   }
 
   @Override
@@ -179,6 +194,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_PNL);
     computePnL();
 
+    computeCorrelationMatrixInParallel();
+
     progressTrackerService.publishProgressTracker(
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_CUMULATIVE_DIVIDENDS);
     computeCumulativeDividend();
@@ -195,6 +212,62 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     stopWatch.stop();
     log.info(
         "Complete market data load finished in {}ms", stopWatch.getTime(TimeUnit.MILLISECONDS));
+  }
+
+  private void computeCorrelationMatrixInParallel() {
+    ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+    List<LocalDate> benchmarkDates = tickerDataWarehouseService.getDates();
+    try {
+      Future<List<String>> imntsForCorrelationFuture =
+          singleThreadExecutor.submit(
+              () ->
+                  getInstrumentSelectionForCorrelationMatrixCompute(
+                      benchmarkDates, tickerDataWarehouseService, getInstruments()));
+      singleThreadExecutor.shutdown();
+
+      List<String> imntsForCorrelation = imntsForCorrelationFuture.get();
+      log.info(
+          "Beginning compute of correlation matrix for {} instruments", imntsForCorrelation.size());
+      List<Integer> benchmarkDatesInt =
+          benchmarkDates.stream()
+              .map(dateLocalDateCache::get)
+              .map(OptionalInt::getAsInt)
+              .sorted()
+              .toList();
+      log.info(
+          "Generated benchmark dates of integers of size {} from benchmark local dates of size {}",
+          benchmarkDatesInt.size(),
+          benchmarkDates.size());
+
+      // correlation matrix compute happens here
+      this.correlationMatrix =
+          computeStatisticsService.computeCorrelationMatrix(imntsForCorrelation, benchmarkDatesInt);
+
+    } catch (ExecutionException | InterruptedException e) {
+      log.error("Compute correlation matrix execution failed", e);
+    } finally {
+      singleThreadExecutor.shutdownNow();
+    }
+  }
+
+  List<String> getInstrumentSelectionForCorrelationMatrixCompute(
+      List<LocalDate> benchmarkLocalDates,
+      TickerDataWarehouseService tickerDataWarehouseService,
+      Set<String> imnts) {
+    List<String> imntsForCorrelation = new ArrayList<>(100);
+    for (String imnt : imnts) {
+      log.info("Checking eligibility of imnt {} for correlation compute", imnt);
+      boolean selectImntForCorrelationCompute = true;
+      for (LocalDate date : benchmarkLocalDates) {
+        if (!tickerDataWarehouseService.containsMarketData(imnt, date)) {
+          selectImntForCorrelationCompute = false;
+          break;
+        }
+      }
+      if (selectImntForCorrelationCompute) imntsForCorrelation.add(imnt);
+      else log.warn("Ignoring imnt {} for correlation matrix compute", imnt);
+    }
+    return imntsForCorrelation;
   }
 
   private void populateDividendYields() {
@@ -317,6 +390,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     sectorLevelImntAggrMap.clear();
     imntSectorMap.clear();
     // imntDivYieldMap.clear();
+    correlationMatrix = Optional.empty();
     log.info("Completed market data clearing");
   }
 
@@ -612,6 +686,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   @Override
   public Map<String, String> getAllImntsSector() {
     return imntSectorMap;
+  }
+
+  @Override
+  public void shutdown() {
+    log.info("Complete Market Data Service shutdown");
   }
 
   @Override

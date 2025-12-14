@@ -13,5 +13,7 @@ public interface TickerDataWarehouse {
 
   Double get(LocalDate date, String imnt);
 
+  boolean contains(LocalDate date, String imnt);
+
   List<LocalDate> getDates();
 }

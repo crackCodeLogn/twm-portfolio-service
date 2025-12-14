@@ -45,5 +45,7 @@ public interface CompleteMarketDataService {
 
   void setReloadInProgress(boolean reloadInProgress);
 
+  void shutdown();
+
   void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
 }

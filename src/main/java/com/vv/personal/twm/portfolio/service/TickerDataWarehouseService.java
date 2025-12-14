@@ -17,6 +17,8 @@ public interface TickerDataWarehouseService {
 
   Double getMarketData(String imnt, int date);
 
+  boolean containsMarketData(String imnt, LocalDate date);
+
   List<Pair<LocalDate, LocalDate>> identifyMissingDbDates(
       MarketDataProto.Ticker benchmarkTickerDataFromDb, List<Integer> marketDates);
 

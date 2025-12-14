@@ -141,6 +141,11 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
   }
 
   @Override
+  public boolean containsMarketData(String imnt, LocalDate date) {
+    return tickerDataWarehouse.contains(date, imnt);
+  }
+
+  @Override
   public List<Pair<LocalDate, LocalDate>> identifyMissingDbDates(
       MarketDataProto.Ticker benchmarkTickerDataFromDb, List<Integer> marketDates) {
     Set<Integer> dates = new HashSet<>();

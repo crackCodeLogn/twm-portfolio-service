@@ -9,6 +9,7 @@ import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
@@ -16,6 +17,7 @@ import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.service.impl.CentralDataPointServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteBankDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteMarketDataServiceImpl;
+import com.vv.personal.twm.portfolio.service.impl.ComputeStatisticsServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ExtractMarketPortfolioDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ProgressTrackerServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ReloadServiceImpl;
@@ -97,7 +99,7 @@ public class DataConfig {
         progressTrackerService());
   }
 
-  @Bean
+  @Bean(destroyMethod = "shutdown")
   public CompleteMarketDataService completeMarketDataService() {
     CompleteMarketDataService marketDataService =
         new CompleteMarketDataServiceImpl(
@@ -105,9 +107,16 @@ public class DataConfig {
             extractMarketPortfolioDataService(),
             tickerDataWarehouseService(),
             marketDataPythonEngineFeign,
-            progressTrackerService());
+            progressTrackerService(),
+            computeStatisticsService(),
+            marketDataCrdbServiceFeign);
     marketDataService.setOutdatedSymbols(outdatedSymbols());
     return marketDataService;
+  }
+
+  @Bean
+  public ComputeStatisticsService computeStatisticsService() {
+    return new ComputeStatisticsServiceImpl(tickerDataWarehouseService());
   }
 
   @Bean
