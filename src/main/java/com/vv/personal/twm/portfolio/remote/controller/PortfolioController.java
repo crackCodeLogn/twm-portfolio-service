@@ -249,7 +249,7 @@ public class PortfolioController {
         .build();
   }
 
-  @GetMapping("/correlation/matrix")
+  @GetMapping("/market/correlation/matrix")
   public MarketDataProto.CorrelationMatrix getCorrelationMatrix() {
     log.info("getCorrelationMatrix invoked");
     Optional<Table<String, String, Double>> optionalCorrelationMatrix =
@@ -261,7 +261,7 @@ public class PortfolioController {
     return correlationMatrix;
   }
 
-  @GetMapping("/correlation/matrix")
+  @GetMapping("/market/correlation/matrix")
   public MarketDataProto.CorrelationMatrix getCorrelationMatrixForSelected(
       @RequestBody DataPacketProto.DataPacket dataPacket) {
     log.info("getCorrelationMatrix invoked for selected imnts: {}", dataPacket.getStringsCount());
@@ -275,7 +275,7 @@ public class PortfolioController {
     return correlationMatrix;
   }
 
-  @GetMapping("/correlation/adhoc")
+  @GetMapping("/market/correlation/adhoc")
   public String getCorrelationAdhoc(
       @RequestParam("imnt1") String imnt1, @RequestParam("imnt2") String imnt2) {
     log.info("getCorrelationMatrix invoked for {} x {}", imnt1, imnt2);
