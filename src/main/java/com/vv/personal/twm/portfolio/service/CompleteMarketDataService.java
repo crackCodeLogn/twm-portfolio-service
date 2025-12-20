@@ -58,4 +58,6 @@ public interface CompleteMarketDataService {
   Optional<Table<String, String, Double>> getCorrelationMatrix(List<String> targetInstruments);
 
   OptionalDouble getCorrelation(String imnt1, String imnt2);
+
+  Optional<Table<String, String, Double>> getCorrelationMatrix(MarketDataProto.AccountType accType);
 }

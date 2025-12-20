@@ -856,11 +856,30 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return Optional.empty();
   }
 
+  // NOTE: works only for imnts whose information is present
   @Override
   public OptionalDouble getCorrelation(String imnt1, String imnt2) {
     Optional<Double> correlation =
         computeStatisticsService.computeCorrelation(imnt1, imnt2, integerDates);
     return correlation.map(OptionalDouble::of).orElseGet(OptionalDouble::empty);
+  }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrix(
+      MarketDataProto.AccountType accType) {
+    Optional<Table<String, String, Double>> optionalMatrix = correlationMatrix;
+    if (optionalMatrix.isPresent()) {
+      List<String> imnts = new ArrayList<>();
+      marketData.forEach(
+          (imnt, accountTypeValueMap) -> {
+            if (accountTypeValueMap.containsKey(accType)
+                && optionalMatrix.get().rowKeySet().contains(imnt)
+                && accountTypeValueMap.get(accType).getTail().getRunningQuantity() >= 0.5)
+              imnts.add(imnt);
+          });
+      return getCorrelationMatrix(imnts);
+    }
+    return Optional.empty();
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {

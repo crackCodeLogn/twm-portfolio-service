@@ -197,4 +197,10 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public OptionalDouble getCorrelation(String imnt1, String imnt2) {
     return completeMarketDataService.getCorrelation(imnt1, imnt2);
   }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrix(
+      MarketDataProto.AccountType accType) {
+    return completeMarketDataService.getCorrelationMatrix(accType);
+  }
 }

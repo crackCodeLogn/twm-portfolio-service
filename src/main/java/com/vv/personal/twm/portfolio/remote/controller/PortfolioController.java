@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -261,7 +263,24 @@ public class PortfolioController {
     return correlationMatrix;
   }
 
-  @GetMapping("/market/correlation/matrix")
+  @GetMapping("/market/correlation/matrix/{accountType}")
+  public MarketDataProto.CorrelationMatrix getCorrelationMatrix(
+      @PathVariable("accountType") String accountType) {
+    log.info("getCorrelationMatrix invoked for {}", accountType);
+    MarketDataProto.AccountType accType = MarketDataProto.AccountType.valueOf(accountType);
+
+    Optional<Table<String, String, Double>> optionalCorrelationMatrix =
+        centralDataPointService.getCorrelationMatrix(accType);
+    MarketDataProto.CorrelationMatrix correlationMatrix =
+        DataConverterUtil.getCorrelationMatrix(optionalCorrelationMatrix);
+    log.info(
+        "Correlation matrix proto created with {} entries for {}",
+        correlationMatrix.getEntriesCount(),
+        accountType);
+    return correlationMatrix;
+  }
+
+  @PostMapping("/market/correlation/matrix")
   public MarketDataProto.CorrelationMatrix getCorrelationMatrixForSelected(
       @RequestBody DataPacketProto.DataPacket dataPacket) {
     log.info("getCorrelationMatrix invoked for selected imnts: {}", dataPacket.getStringsCount());
