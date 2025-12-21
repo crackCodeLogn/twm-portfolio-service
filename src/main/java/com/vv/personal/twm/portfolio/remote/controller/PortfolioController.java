@@ -242,15 +242,6 @@ public class PortfolioController {
     return centralDataPointService.getDividendYieldAndSectorForAllImnts();
   }
 
-  @GetMapping("/net-worth")
-  public DataPacketProto.DataPacket getNetWorth(@RequestParam("ccy") String ccy) {
-    log.info("getNetWorth invoked");
-    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
-    return DataPacketProto.DataPacket.newBuilder()
-        .putAllStringDoubleMap(centralDataPointService.getLatestTotalNetWorthBreakDown(code))
-        .build();
-  }
-
   @GetMapping("/market/correlation/matrix")
   public MarketDataProto.CorrelationMatrix getCorrelationMatrix() {
     log.info("getCorrelationMatrix invoked");
@@ -294,6 +285,19 @@ public class PortfolioController {
     return correlationMatrix;
   }
 
+  @GetMapping("/market/sector/correlation/matrix")
+  public MarketDataProto.CorrelationMatrix getCorrelationMatrixForSectors() {
+    log.info("getCorrelationMatrixForSectors invoked for sectors");
+    Optional<Table<String, String, Double>> optionalCorrelationMatrix =
+        centralDataPointService.getCorrelationMatrixForSectors();
+    MarketDataProto.CorrelationMatrix correlationMatrix =
+        DataConverterUtil.getCorrelationMatrix(optionalCorrelationMatrix);
+    log.info(
+        "Sector Correlation matrix proto created with {} entries",
+        correlationMatrix.getEntriesCount());
+    return correlationMatrix;
+  }
+
   @GetMapping("/market/correlation/adhoc")
   public String getCorrelationAdhoc(
       @RequestParam("imnt1") String imnt1, @RequestParam("imnt2") String imnt2) {
@@ -305,6 +309,15 @@ public class PortfolioController {
     }
     log.info("Correlation compute between {} x {} => {}", imnt1, imnt2, correlation);
     return correlation;
+  }
+
+  @GetMapping("/net-worth")
+  public DataPacketProto.DataPacket getNetWorth(@RequestParam("ccy") String ccy) {
+    log.info("getNetWorth invoked");
+    BankProto.CurrencyCode code = BankProto.CurrencyCode.valueOf(ccy);
+    return DataPacketProto.DataPacket.newBuilder()
+        .putAllStringDoubleMap(centralDataPointService.getLatestTotalNetWorthBreakDown(code))
+        .build();
   }
 
   @GetMapping("/")

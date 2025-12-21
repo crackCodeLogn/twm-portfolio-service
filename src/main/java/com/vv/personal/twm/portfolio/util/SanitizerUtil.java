@@ -1,5 +1,7 @@
 package com.vv.personal.twm.portfolio.util;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
@@ -30,10 +32,18 @@ public final class SanitizerUtil {
   }
 
   public static String sanitizeString(String input) {
-    return input.replaceAll(" [Mm]anufactured", "-m").strip();
+    return StringUtils.isEmpty(input) ? EMPTY : input.replaceAll(" [Mm]anufactured", "-m").strip();
   }
 
   public static String sanitizeSector(String input) {
-    return StringUtils.isEmpty(input) ? "" : input.toLowerCase().strip().replaceAll("\\s+", "");
+    return StringUtils.isEmpty(input)
+        ? EMPTY
+        : input.toLowerCase().strip().replaceAll("\\s+", EMPTY);
+  }
+
+  public static String sanitizeStringOnLength(String input, int length) {
+    return StringUtils.isEmpty(input)
+        ? EMPTY
+        : input.substring(0, Math.min(length, input.length()));
   }
 }

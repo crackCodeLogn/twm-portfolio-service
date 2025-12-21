@@ -35,4 +35,12 @@ class SanitizerUtilTest {
     assertEquals("BNS-m", SanitizerUtil.sanitizeString("BNS manufactured"));
     assertEquals("BNS", SanitizerUtil.sanitizeString("BNS "));
   }
+
+  @Test
+  public void sanitizeStringOnLength() {
+    assertEquals("abcde", SanitizerUtil.sanitizeStringOnLength("abcdefghijklmn", 5));
+    assertEquals("abc", SanitizerUtil.sanitizeStringOnLength("abc", 5));
+    assertEquals("", SanitizerUtil.sanitizeStringOnLength("", 5));
+    assertEquals("", SanitizerUtil.sanitizeStringOnLength(null, 5));
+  }
 }

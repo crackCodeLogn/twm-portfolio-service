@@ -573,58 +573,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   @Override
   public List<String> getMarketValuations(boolean includeDividendsForCurrentVal) {
     List<String> valuations = new ArrayList<>(marketData.size());
-    Map<String, Map<String, String>> imntValuationMap = new TreeMap<>();
-
-    marketData.forEach(
-        (imnt, accountTypeDataListMap) -> {
-          Map<String, String> valuationDataMap = new HashMap<>();
-
-          List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0);
-          // 0 - book val, 1 - pnl, 2 - total div, 3 - qty
-          List<String> accountTypes = new ArrayList<>();
-          accountTypeDataListMap.forEach(
-              (accountType, dataList) -> {
-                accountTypes.add(accountType.name());
-
-                DataNode node = dataList.getTail();
-                double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
-                double pnl =
-                    unrealizedImntPnLMap
-                        .get(imnt)
-                        .get(accountType)
-                        .floorEntry(TODAY_DATE)
-                        .getValue();
-                double totalDiv =
-                    cumulativeImntDividendsMap.containsKey(imnt)
-                        ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
-                        : 0.0;
-                double qty = node.getRunningQuantity(); // from the tail
-
-                values.set(0, values.get(0) + bookVal);
-                values.set(
-                    1, values.get(1) + pnl + (includeDividendsForCurrentVal ? totalDiv : 0.0));
-                values.set(2, values.get(2) + totalDiv);
-                values.set(3, values.get(3) + qty);
-              });
-          double currentVal = values.get(0) + values.get(1);
-          Collections.sort(accountTypes);
-          String accountTypesInUse = StringUtils.join(accountTypes, ", ");
-
-          valuationDataMap.put(KEY_IMNT, imnt);
-          valuationDataMap.put(KEY_ACCOUNT_TYPES, accountTypesInUse);
-          valuationDataMap.put(KEY_SECTOR, imntSectorMap.getOrDefault(imnt, UNKNOWN_SECTOR));
-          valuationDataMap.put(
-              KEY_DIV_YIELD_PERCENT,
-              sanitizeAndFormat2Double(imntDivYieldMap.getOrDefault(imnt, 0.0)));
-          valuationDataMap.put(KEY_BOOK_VAL, sanitizeAndFormat2Double(values.get(0)));
-          valuationDataMap.put(KEY_PNL, sanitizeAndFormat2Double(values.get(1)));
-          valuationDataMap.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(values.get(2)));
-          valuationDataMap.put(KEY_CURRENT_VAL, sanitizeAndFormat2Double(currentVal));
-          valuationDataMap.put(KEY_QTY, sanitizeAndFormat2Double(values.get(3)));
-
-          imntValuationMap.put(imnt, valuationDataMap);
-        });
-
+    Map<String, Map<String, String>> imntValuationMap =
+        getImntValuationPortfolioLevel(includeDividendsForCurrentVal);
     imntValuationMap
         .values()
         .forEach(
@@ -880,6 +830,57 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       return getCorrelationMatrix(imnts);
     }
     return Optional.empty();
+  }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrixForSectors() {
+    Map<String, Map<String, String>> imntValuationPortfolioLevel =
+        getImntValuationPortfolioLevel(true);
+    Map<String, Pair<String, Double>> sectorMaxImntValuationMap = new HashMap<>();
+    Map<String, String> imntNewLabelMap = new HashMap<>();
+
+    imntSectorMap.forEach(
+        (imnt, sector) -> {
+          Double imntCurrentVal =
+              Double.parseDouble(imntValuationPortfolioLevel.get(imnt).get(KEY_CURRENT_VAL));
+          imntNewLabelMap.put(
+              imnt,
+              String.format(
+                  "%s|%s",
+                  SanitizerUtil.sanitizeStringOnLength(
+                      imntValuationPortfolioLevel.get(imnt).get(KEY_SECTOR), 7),
+                  imnt.substring(0, imnt.lastIndexOf('.'))));
+
+          if (!sectorMaxImntValuationMap.containsKey(sector))
+            sectorMaxImntValuationMap.put(sector, Pair.of(imnt, imntCurrentVal));
+          else {
+            Double existingSectorImntCurrentVal = sectorMaxImntValuationMap.get(sector).getValue();
+            if (imntCurrentVal > existingSectorImntCurrentVal) {
+              sectorMaxImntValuationMap.put(sector, Pair.of(imnt, imntCurrentVal));
+            }
+          }
+        });
+
+    log.info("Sector level max imnt details: {}", sectorMaxImntValuationMap);
+
+    List<String> imnts = sectorMaxImntValuationMap.values().stream().map(Pair::getKey).toList();
+    Optional<Table<String, String, Double>> correlationMatrix = getCorrelationMatrix(imnts);
+    if (correlationMatrix.isEmpty()) {
+      log.error("Failed to compute sector level correlation matrix");
+      return Optional.empty();
+    }
+    Table<String, String, Double> sectorCorrelationMatrixResult = HashBasedTable.create();
+    for (String rowImnt : correlationMatrix.get().rowKeySet()) {
+      for (String colImnt : correlationMatrix.get().columnKeySet()) {
+        Double correlation = correlationMatrix.get().get(rowImnt, colImnt);
+        if (correlation != null)
+          sectorCorrelationMatrixResult.put(
+              imntNewLabelMap.get(rowImnt), imntNewLabelMap.get(colImnt), correlation);
+      }
+    }
+    correlationMatrix = null; // force cleanup
+    log.debug("Sector Correlation matrix => {}", sectorCorrelationMatrixResult);
+    return Optional.of(sectorCorrelationMatrixResult);
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
@@ -1385,6 +1386,61 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                       combinedDatePnLCumulativeMap.computeIfAbsent(date, k -> new HashMap<>());
                   typeDoubleMap.put(accountType, cumulativeCombinedPnL);
                 })));
+  }
+
+  private Map<String, Map<String, String>> getImntValuationPortfolioLevel(
+      boolean includeDividendsForCurrentVal) {
+    Map<String, Map<String, String>> imntValuationMap = new TreeMap<>();
+    marketData.forEach(
+        (imnt, accountTypeDataListMap) -> {
+          Map<String, String> valuationDataMap = new HashMap<>();
+
+          List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0);
+          // 0 - book val, 1 - pnl, 2 - total div, 3 - qty
+          List<String> accountTypes = new ArrayList<>();
+          accountTypeDataListMap.forEach(
+              (accountType, dataList) -> {
+                accountTypes.add(accountType.name());
+
+                DataNode node = dataList.getTail();
+                double bookVal = node.getAcb().getAcbPerUnit() * node.getRunningQuantity();
+                double pnl =
+                    unrealizedImntPnLMap
+                        .get(imnt)
+                        .get(accountType)
+                        .floorEntry(TODAY_DATE)
+                        .getValue();
+                double totalDiv =
+                    cumulativeImntDividendsMap.containsKey(imnt)
+                        ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
+                        : 0.0;
+                double qty = node.getRunningQuantity(); // from the tail
+
+                values.set(0, values.get(0) + bookVal);
+                values.set(
+                    1, values.get(1) + pnl + (includeDividendsForCurrentVal ? totalDiv : 0.0));
+                values.set(2, values.get(2) + totalDiv);
+                values.set(3, values.get(3) + qty);
+              });
+          double currentVal = values.get(0) + values.get(1);
+          Collections.sort(accountTypes);
+          String accountTypesInUse = StringUtils.join(accountTypes, ", ");
+
+          valuationDataMap.put(KEY_IMNT, imnt);
+          valuationDataMap.put(KEY_ACCOUNT_TYPES, accountTypesInUse);
+          valuationDataMap.put(KEY_SECTOR, imntSectorMap.getOrDefault(imnt, UNKNOWN_SECTOR));
+          valuationDataMap.put(
+              KEY_DIV_YIELD_PERCENT,
+              sanitizeAndFormat2Double(imntDivYieldMap.getOrDefault(imnt, 0.0)));
+          valuationDataMap.put(KEY_BOOK_VAL, sanitizeAndFormat2Double(values.get(0)));
+          valuationDataMap.put(KEY_PNL, sanitizeAndFormat2Double(values.get(1)));
+          valuationDataMap.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(values.get(2)));
+          valuationDataMap.put(KEY_CURRENT_VAL, sanitizeAndFormat2Double(currentVal));
+          valuationDataMap.put(KEY_QTY, sanitizeAndFormat2Double(values.get(3)));
+
+          imntValuationMap.put(imnt, valuationDataMap);
+        });
+    return imntValuationMap;
   }
 
   private int getDate(DataNode node) {

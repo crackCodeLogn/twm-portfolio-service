@@ -69,4 +69,6 @@ public interface CentralDataPointService {
   OptionalDouble getCorrelation(String imnt1, String imnt2);
 
   Optional<Table<String, String, Double>> getCorrelationMatrix(MarketDataProto.AccountType accType);
+
+  Optional<Table<String, String, Double>> getCorrelationMatrixForSectors();
 }

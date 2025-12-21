@@ -203,4 +203,9 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
       MarketDataProto.AccountType accType) {
     return completeMarketDataService.getCorrelationMatrix(accType);
   }
+
+  @Override
+  public Optional<Table<String, String, Double>> getCorrelationMatrixForSectors() {
+    return completeMarketDataService.getCorrelationMatrixForSectors();
+  }
 }
