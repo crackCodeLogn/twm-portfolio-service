@@ -71,4 +71,18 @@ public interface CentralDataPointService {
   Optional<Table<String, String, Double>> getCorrelationMatrix(MarketDataProto.AccountType accType);
 
   Optional<Table<String, String, Double>> getCorrelationMatrixForSectors();
+
+  MarketDataProto.Portfolio getEntireMetaData();
+
+  MarketDataProto.Instrument getInstrumentMetaData(String imnt);
+
+  String upsertInstrumentMetaData(String imnt, DataPacketProto.DataPacket dataPacket);
+
+  String deleteInstrumentMetaData(String imnt);
+
+  String deleteEntireMetaData();
+
+  String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
+
+  String reloadMetaDataCache();
 }

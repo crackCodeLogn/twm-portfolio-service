@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 public class ReloadServiceImpl implements ReloadService {
   private final CompleteMarketDataService completeMarketDataService;
   private final CompleteBankDataService completeBankDataService;
+  private final InstrumentMetaDataService instrumentMetaDataService;
 
   @Override
   public boolean initialFullLoad() {
@@ -37,6 +39,7 @@ public class ReloadServiceImpl implements ReloadService {
       completeBankDataService.clear();
       completeMarketDataService.clear();
       completeMarketDataService.setReloadInProgress(true);
+      instrumentMetaDataService.clear();
     }
 
     log.info("Starting reload...");
@@ -45,6 +48,7 @@ public class ReloadServiceImpl implements ReloadService {
       completeBankDataService.load();
       completeMarketDataService.load();
       completeMarketDataService.setReloadInProgress(false);
+      instrumentMetaDataService.load(completeMarketDataService.getBenchMarkCurrentDate(), false);
 
       loadTimer.stop();
       log.info("Reload completed in {} s", loadTimer.getTime(TimeUnit.SECONDS));

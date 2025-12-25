@@ -38,8 +38,6 @@ public interface CompleteMarketDataService {
 
   Map<String, String> getMarketValuation(String imnt, MarketDataProto.AccountType accountType);
 
-  Map<String, Double> getAllImntsDividendYieldPercentage();
-
   Map<String, String> getAllImntsSector();
 
   Map<String, Double> getNetMarketValuations(
@@ -62,4 +60,6 @@ public interface CompleteMarketDataService {
   Optional<Table<String, String, Double>> getCorrelationMatrix(MarketDataProto.AccountType accType);
 
   Optional<Table<String, String, Double>> getCorrelationMatrixForSectors();
+
+  int getBenchMarkCurrentDate();
 }

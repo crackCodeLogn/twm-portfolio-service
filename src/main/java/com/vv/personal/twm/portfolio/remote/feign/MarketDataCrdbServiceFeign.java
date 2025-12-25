@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * @author Vivek
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
  */
 @FeignClient("twm-market-data-crdb-service")
 public interface MarketDataCrdbServiceFeign extends PingFeign {
+
+  // market-data
 
   @GetMapping("/crdb/mkt/data/{ticker}")
   MarketDataProto.Ticker getMarketDataByTicker(@PathVariable("ticker") String ticker);
@@ -40,6 +43,8 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
   @PostMapping("/crdb/mkt/data/{ticker}/dates")
   String deleteMarketData(@PathVariable("ticker") String ticker, @RequestBody List<Integer> dates);
 
+  // market-transactions
+
   @GetMapping("/crdb/mkt/transactions/{direction}")
   Optional<MarketDataProto.Portfolio> getTransactions(@PathVariable("direction") String direction);
 
@@ -48,4 +53,30 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
 
   @PostMapping("/crdb/mkt/transactions/")
   String postTransactions(MarketDataProto.Portfolio portfolio);
+
+  // market-metadata
+
+  @PostMapping("/crdb/mkt/metadata/data-single-imnt")
+  String addMarketMetaDataForSingleInstrument(@RequestBody MarketDataProto.Instrument instrument);
+
+  @PostMapping("/crdb/mkt/metadata/data/")
+  String addMarketMetaDataForPortfolio(
+      @RequestParam("truncate") boolean truncateFirst,
+      @RequestBody MarketDataProto.Portfolio portfolio);
+
+  @GetMapping("/crdb/mkt/metadata/data/{ticker}")
+  MarketDataProto.Instrument getMarketMetaDataByTicker(@PathVariable("ticker") String ticker);
+
+  @GetMapping("/crdb/mkt/metadata/data/")
+  MarketDataProto.Portfolio getEntireMarketMetaData();
+
+  @DeleteMapping("/crdb/mkt/metadata/data/{ticker}")
+  String deleteMarketMetaDataByTicker(@PathVariable("ticker") String ticker);
+
+  @PostMapping("/crdb/mkt/metadata/data/{ticker}/upsert")
+  String upsertMarketMetaDataForSingleTicker(
+      @PathVariable("ticker") String ticker, @RequestBody MarketDataProto.Instrument instrument);
+
+  @DeleteMapping("/crdb/mkt/metadata/data/")
+  String truncateMetaData();
 }

@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.util;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 
+import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 
@@ -29,6 +30,10 @@ public final class SanitizerUtil {
 
   public static String sanitizeAndFormat2Double(Double input) {
     return input == null ? "0.0" : String.format("%.02f", input);
+  }
+
+  public static String sanitizeAndFormat2Double(Optional<Double> input) {
+    return input.map(v -> String.format("%.02f", v)).orElse("0.0");
   }
 
   public static String sanitizeString(String input) {

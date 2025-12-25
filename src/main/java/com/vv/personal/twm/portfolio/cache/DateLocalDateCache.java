@@ -42,4 +42,8 @@ public class DateLocalDateCache {
   public boolean contains(LocalDate date) {
     return dateLocalDateCache.inverse().containsKey(date);
   }
+
+  public void flush() {
+    dateLocalDateCache.clear();
+  }
 }

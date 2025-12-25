@@ -11,6 +11,7 @@ import com.vv.personal.twm.portfolio.model.market.NetWorthBreakDownKey;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
 
   private final CompleteBankDataService completeBankDataService;
   private final CompleteMarketDataService completeMarketDataService;
+  private final InstrumentMetaDataService instrumentMetaDataService;
 
   @Override
   public Map<String, Double> getLatestTotalNetWorthBreakDown(BankProto.CurrencyCode ccy) {
@@ -160,7 +162,7 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   @Override
   public DataPacketProto.DataPacket getDividendYieldAndSectorForAllImnts() {
     Map<String, Double> imntDividendMap =
-        completeMarketDataService.getAllImntsDividendYieldPercentage();
+        instrumentMetaDataService.getAllImntsDividendYieldPercentage();
     Map<String, String> imntSectorMap = completeMarketDataService.getAllImntsSector();
 
     return DataPacketProto.DataPacket.newBuilder()
@@ -207,5 +209,40 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   @Override
   public Optional<Table<String, String, Double>> getCorrelationMatrixForSectors() {
     return completeMarketDataService.getCorrelationMatrixForSectors();
+  }
+
+  @Override
+  public MarketDataProto.Portfolio getEntireMetaData() {
+    return instrumentMetaDataService.getEntireMetaData();
+  }
+
+  @Override
+  public MarketDataProto.Instrument getInstrumentMetaData(String imnt) {
+    return instrumentMetaDataService.getInstrumentMetaData(imnt);
+  }
+
+  @Override
+  public String upsertInstrumentMetaData(String imnt, DataPacketProto.DataPacket dataPacket) {
+    return instrumentMetaDataService.upsertInstrumentMetaData(imnt, dataPacket);
+  }
+
+  @Override
+  public String deleteInstrumentMetaData(String imnt) {
+    return instrumentMetaDataService.deleteInstrumentMetaData(imnt);
+  }
+
+  @Override
+  public String deleteEntireMetaData() {
+    return instrumentMetaDataService.deleteEntireMetaData();
+  }
+
+  @Override
+  public String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket) {
+    return instrumentMetaDataService.truncateAndBulkAddEntireMetaData(dataPacket);
+  }
+
+  @Override
+  public String reloadMetaDataCache() {
+    return instrumentMetaDataService.reloadMetaDataCache();
   }
 }

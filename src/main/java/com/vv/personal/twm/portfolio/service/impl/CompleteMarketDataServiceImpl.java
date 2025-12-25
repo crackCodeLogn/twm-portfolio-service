@@ -20,6 +20,7 @@ import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
+import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
@@ -36,7 +37,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
@@ -99,8 +99,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final Map<String, Map<MarketDataProto.AccountType, Map<String, Double>>>
       sectorLevelImntAggrMap; // sector level x account type x (imnt x investment-imnt)
   private final Map<String, String> imntSectorMap; // imnt x sector
-  private final Map<String, Double> imntDivYieldMap; // imnt x div yield %
+
   private final DateLocalDateCache dateLocalDateCache;
+  private final InstrumentMetaDataService instrumentMetaDataService;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
@@ -115,6 +116,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
+      InstrumentMetaDataService instrumentMetaDataService,
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
       TickerDataWarehouseService tickerDataWarehouseService,
       MarketDataPythonEngineFeign marketDataPythonEngineFeign,
@@ -136,13 +138,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     cumulativeImntDividendsMap = new ConcurrentHashMap<>();
     sectorLevelImntAggrMap = new ConcurrentHashMap<>();
     imntSectorMap = new ConcurrentHashMap<>();
-    imntDivYieldMap = new ConcurrentHashMap<>();
     correlationMatrix = Optional.empty();
     localDates = new ArrayList<>();
     integerDates = new ArrayList<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
+    this.instrumentMetaDataService = instrumentMetaDataService;
     this.extractMarketPortfolioDataService = extractMarketPortfolioDataService;
     this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
     this.progressTrackerService = progressTrackerService;
@@ -209,10 +211,6 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_SECTOR_AGGR);
     computeSectorLevelImntAggregationData();
 
-    progressTrackerService.publishProgressTracker(
-        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_POPULATE_DIVIDENDS_YIELD);
-    populateDividendYields();
-
     progressTrackerService.publishProgressTracker(CLIENT_VIVEK, ProgressTracker.READY_MARKET);
     stopWatch.stop();
     log.info(
@@ -262,30 +260,6 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       else log.warn("Ignoring imnt {} for correlation matrix compute", imnt);
     }
     return imntsForCorrelation;
-  }
-
-  private void populateDividendYields() {
-    if (!imntDivYieldMap.isEmpty()) {
-      log.warn("Not repopulating instrument dividend yield data");
-      return;
-    }
-
-    log.info("Populating dividend yield data for all imnts");
-    marketData
-        .keySet()
-        .forEach(
-            imnt -> {
-              log.info("Querying dividend yield for imnt {}", imnt);
-              String divYield = marketDataPythonEngineFeign.getTickerDividend(imnt);
-
-              if (StringUtils.isEmpty(divYield)) {
-                log.warn("No dividend yield data found for {}", imnt);
-              } else if (NumberUtils.isParsable(divYield)) {
-                imntDivYieldMap.put(imnt, Double.parseDouble(divYield));
-              } else {
-                log.warn("Unable to parse div yield data for {} => {}", imnt, divYield);
-              }
-            });
   }
 
   void computeSectorLevelImntAggregationData() {
@@ -383,10 +357,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     cumulativeImntDividendsMap.clear();
     sectorLevelImntAggrMap.clear();
     imntSectorMap.clear();
-    // imntDivYieldMap.clear();
     correlationMatrix = Optional.empty();
     integerDates.clear();
     localDates.clear();
+    dateLocalDateCache.flush();
     log.info("Completed market data clearing");
   }
 
@@ -609,7 +583,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         cumulativeImntDividendsMap.containsKey(imnt)
             ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
             : 0.0;
-    double divYieldPercent = imntDivYieldMap.get(imnt);
+    double divYieldPercent = instrumentMetaDataService.getDividendYield(imnt).orElse(0.0);
 
     marketValuation.put(KEY_IMNT, imnt);
     marketValuation.put(KEY_ACCOUNT_TYPE, accountType.name());
@@ -622,11 +596,6 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     log.info("Computed market valuation for {} x {}", imnt, accountType);
     return marketValuation;
-  }
-
-  @Override
-  public Map<String, Double> getAllImntsDividendYieldPercentage() {
-    return imntDivYieldMap;
   }
 
   @Override
@@ -881,6 +850,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     correlationMatrix = null; // force cleanup
     log.debug("Sector Correlation matrix => {}", sectorCorrelationMatrixResult);
     return Optional.of(sectorCorrelationMatrixResult);
+  }
+
+  @Override
+  public int getBenchMarkCurrentDate() {
+    // works on the assumption that this method will be called after computePnl() where the dates
+    // have already been calculated via the ticker warehouse and sorted
+    return integerDates.isEmpty() ? -1 : integerDates.get(integerDates.size() - 1);
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
@@ -1431,7 +1407,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           valuationDataMap.put(KEY_SECTOR, imntSectorMap.getOrDefault(imnt, UNKNOWN_SECTOR));
           valuationDataMap.put(
               KEY_DIV_YIELD_PERCENT,
-              sanitizeAndFormat2Double(imntDivYieldMap.getOrDefault(imnt, 0.0)));
+              sanitizeAndFormat2Double(instrumentMetaDataService.getDividendYield(imnt)));
           valuationDataMap.put(KEY_BOOK_VAL, sanitizeAndFormat2Double(values.get(0)));
           valuationDataMap.put(KEY_PNL, sanitizeAndFormat2Double(values.get(1)));
           valuationDataMap.put(KEY_TOTAL_DIV, sanitizeAndFormat2Double(values.get(2)));

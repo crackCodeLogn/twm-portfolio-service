@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
 import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.CalcServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
@@ -11,6 +12,7 @@ import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
+import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.ReloadService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
@@ -19,6 +21,7 @@ import com.vv.personal.twm.portfolio.service.impl.CompleteBankDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteMarketDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ComputeStatisticsServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ExtractMarketPortfolioDataServiceImpl;
+import com.vv.personal.twm.portfolio.service.impl.InstrumentMetaDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ProgressTrackerServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ReloadServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.TickerDataWarehouseServiceImpl;
@@ -70,6 +73,11 @@ public class DataConfig {
   }
 
   @Bean
+  public InstrumentMetaDataCache instrumentMetaDataCache() {
+    return new InstrumentMetaDataCache();
+  }
+
+  @Bean
   public ExtractMarketPortfolioDataService extractMarketPortfolioDataService() {
     return new ExtractMarketPortfolioDataServiceImpl(
         marketDataCrdbServiceFeign, fileLocationConfig);
@@ -104,6 +112,7 @@ public class DataConfig {
     CompleteMarketDataService marketDataService =
         new CompleteMarketDataServiceImpl(
             dateLocalDateCache(),
+            instrumentMetaDataService(),
             extractMarketPortfolioDataService(),
             tickerDataWarehouseService(),
             marketDataPythonEngineFeign,
@@ -120,8 +129,15 @@ public class DataConfig {
   }
 
   @Bean
+  public InstrumentMetaDataService instrumentMetaDataService() {
+    return new InstrumentMetaDataServiceImpl(
+        instrumentMetaDataCache(), marketDataCrdbServiceFeign, marketDataPythonEngineFeign);
+  }
+
+  @Bean
   public CentralDataPointService centralDataPointService() {
-    return new CentralDataPointServiceImpl(completeBankDataService(), completeMarketDataService());
+    return new CentralDataPointServiceImpl(
+        completeBankDataService(), completeMarketDataService(), instrumentMetaDataService());
   }
 
   @Bean
@@ -138,6 +154,7 @@ public class DataConfig {
 
   @Bean
   public ReloadService reloadService() {
-    return new ReloadServiceImpl(completeMarketDataService(), completeBankDataService());
+    return new ReloadServiceImpl(
+        completeMarketDataService(), completeBankDataService(), instrumentMetaDataService());
   }
 }

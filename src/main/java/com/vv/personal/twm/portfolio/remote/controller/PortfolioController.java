@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -320,6 +321,50 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/metadata")
+  public MarketDataProto.Portfolio getEntireMetaData() {
+    log.info("getEntireMetaData invoked");
+    return centralDataPointService.getEntireMetaData();
+  }
+
+  @GetMapping("/market/metadata/{imnt}")
+  public MarketDataProto.Instrument getInstrumentMetaData(@PathVariable("imnt") String imnt) {
+    log.info("getInstrumentMetaData invoked for imnt: {}", imnt);
+    return centralDataPointService.getInstrumentMetaData(imnt);
+  }
+
+  @PostMapping("/market/metadata/{imnt}")
+  public String upsertInstrumentMetaData(
+      @PathVariable("imnt") String imnt, @RequestBody DataPacketProto.DataPacket dataPacket) {
+    log.info("upsertInstrumentMetaData invoked for instrument: {}", imnt);
+    return centralDataPointService.upsertInstrumentMetaData(imnt, dataPacket);
+  }
+
+  @DeleteMapping("/market/metadata/{imnt}")
+  public String deleteInstrumentMetaData(@PathVariable String imnt) {
+    log.info("deleteInstrumentMetaData invoked for imnt: {}", imnt);
+    return centralDataPointService.deleteInstrumentMetaData(imnt);
+  }
+
+  @DeleteMapping("/market/metadata")
+  public String deleteEntireMetaData() {
+    log.info("deleteEntireMetaData invoked");
+    return centralDataPointService.deleteEntireMetaData();
+  }
+
+  @GetMapping("/manual/market/metadata/reload")
+  public String reloadMetaDataCache() {
+    log.info("reloadMetaDataCache invoked");
+    return centralDataPointService.reloadMetaDataCache();
+  }
+
+  @PostMapping("/manual/market/metadata")
+  public String truncateAndBulkAddEntireMetaData(
+      @RequestBody DataPacketProto.DataPacket dataPacket) {
+    log.info("manual truncateAndBulkAddEntireMetaData invoked");
+    return centralDataPointService.truncateAndBulkAddEntireMetaData(dataPacket);
+  }
+
   @GetMapping("/")
   public String get() {
     return "hi";
@@ -337,9 +382,26 @@ public class PortfolioController {
     return imntRecordsDownloaded.isPresent() ? imntRecordsDownloaded.getAsInt() : 0;
   }
 
-  private List<String> split(String data) {
-    return Arrays.stream(StringUtils.split(data, ","))
-        .map(String::trim)
-        .collect(Collectors.toList());
+  // manual work only - todo - delete
+  @GetMapping("/manual/market/valuations/dividends")
+  public void getManualCumulativeImntDividendValuations() {
+    Arrays.stream(MarketDataProto.AccountType.values())
+        .forEach(
+            accountType -> {
+              log.info("\nProcessing dividends for {} account type", accountType);
+              Map<String, Double> cumulativeImntDividendValuations =
+                  centralDataPointService.getCumulativeImntDividendValuations(accountType);
+              List<Node> nodes = new ArrayList<>();
+              cumulativeImntDividendValuations.forEach(
+                  (imnt, val) -> {
+                    if (val != null) nodes.add(new Node(imnt, val));
+                  });
+              nodes.sort(Comparator.comparingDouble(Node::cumDiv).reversed());
+              nodes.forEach(System.out::println);
+
+              log.info("Sum total: {}", nodes.stream().mapToDouble(Node::cumDiv).sum());
+            });
   }
+
+  private record Node(String imnt, double cumDiv) {}
 }

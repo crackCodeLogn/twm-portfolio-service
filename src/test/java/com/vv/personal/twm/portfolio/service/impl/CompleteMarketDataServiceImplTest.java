@@ -15,6 +15,7 @@ import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
+import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
@@ -42,6 +43,7 @@ class CompleteMarketDataServiceImplTest {
   @Mock private ProgressTrackerService progressTrackerService;
   @Mock private ComputeStatisticsService computeStatisticsService;
   @Mock private MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
+  @Mock private InstrumentMetaDataService instrumentMetaDataService;
 
   private CompleteMarketDataServiceImpl completeMarketDataService;
 
@@ -50,6 +52,7 @@ class CompleteMarketDataServiceImplTest {
     completeMarketDataService =
         new CompleteMarketDataServiceImpl(
             new DateLocalDateCache(),
+            instrumentMetaDataService,
             null,
             tickerDataWarehouseService,
             marketDataPythonEngineFeign,
