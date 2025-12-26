@@ -39,4 +39,6 @@ public interface InstrumentMetaDataService {
   String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
 
   String reloadMetaDataCache();
+
+  MarketDataProto.Portfolio getCorporateActionNews();
 }

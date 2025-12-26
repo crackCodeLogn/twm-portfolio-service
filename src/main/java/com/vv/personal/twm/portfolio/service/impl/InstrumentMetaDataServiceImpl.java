@@ -14,6 +14,7 @@ import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -275,6 +276,29 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       log.error("Unable to clear instrument meta data from db", e);
     }
     return "Failed";
+  }
+
+  @Override
+  public MarketDataProto.Portfolio getCorporateActionNews() {
+    MarketDataProto.Portfolio.Builder portfolio = MarketDataProto.Portfolio.newBuilder();
+    List<MarketDataProto.Instrument> imnts = new ArrayList<>();
+
+    for (String imnt : instrumentMetaDataCache.getAllInstruments()) {
+      Optional<MarketDataProto.Instrument> instrumentMetaData = instrumentMetaDataCache.get(imnt);
+      if (instrumentMetaData.isPresent()
+          && instrumentMetaData.get().getCorporateActionsCount() > 0) {
+        MarketDataProto.Instrument.Builder imntBuilder = MarketDataProto.Instrument.newBuilder();
+        imntBuilder.setTicker(
+            MarketDataProto.Ticker.newBuilder()
+                .setSymbol(instrumentMetaData.get().getTicker().getSymbol())
+                .build());
+        imntBuilder.addAllCorporateActions(instrumentMetaData.get().getCorporateActionsList());
+        imnts.add(imntBuilder.build());
+      }
+    }
+    imnts.sort(Comparator.comparing(v -> v.getTicker().getSymbol()));
+    portfolio.addAllInstruments(imnts);
+    return portfolio.build();
   }
 
   Optional<MarketDataProto.Instrument> parseInstrument(

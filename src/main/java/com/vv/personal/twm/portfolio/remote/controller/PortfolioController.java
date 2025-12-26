@@ -321,6 +321,12 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/news/corp-actions")
+  public MarketDataProto.Portfolio getCorporateActionNews() {
+    log.info("getCorporateActionNews invoked");
+    return centralDataPointService.getCorporateActionNews();
+  }
+
   @GetMapping("/market/metadata")
   public MarketDataProto.Portfolio getEntireMetaData() {
     log.info("getEntireMetaData invoked");

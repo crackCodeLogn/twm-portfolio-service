@@ -85,4 +85,6 @@ public interface CentralDataPointService {
   String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
 
   String reloadMetaDataCache();
+
+  MarketDataProto.Portfolio getCorporateActionNews();
 }

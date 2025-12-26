@@ -245,4 +245,9 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public String reloadMetaDataCache() {
     return instrumentMetaDataService.reloadMetaDataCache();
   }
+
+  @Override
+  public MarketDataProto.Portfolio getCorporateActionNews() {
+    return instrumentMetaDataService.getCorporateActionNews();
+  }
 }
