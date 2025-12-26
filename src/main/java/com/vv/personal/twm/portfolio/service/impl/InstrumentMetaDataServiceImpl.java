@@ -1,5 +1,8 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
@@ -10,7 +13,10 @@ import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -60,9 +66,14 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   private static final String KEY_IMNT_TYPE = "imnt-type";
   private static final String KEY_NAME = "name";
 
+  private static final String JSON_KEY_CORP_ACTIONS = "corporateActions";
+  private static final String JSON_KEY_COMP_OFFICERS = "companyOfficers";
+
   private final InstrumentMetaDataCache instrumentMetaDataCache;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+
+  private final ObjectMapper mapper = new ObjectMapper();
 
   @Setter private int benchMarkCurrentDate = -1;
 
@@ -317,11 +328,12 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       } else {
         queryName(imnt).ifPresent(tickerBuilder::setName);
       }
+      queryInfo(imnt, imntBuilder);
 
       imntBuilder.setTicker(tickerBuilder.build());
-      System.out.println(imntBuilder);
-      System.out.println(kvMap);
-      return Optional.of(imntBuilder.build());
+      Optional<MarketDataProto.Instrument> build = Optional.of(imntBuilder.build());
+      log.debug(build.toString());
+      return build;
     } catch (Exception e) {
       log.error("Failed to parse instrument correctly for {} from {}", imnt, dataPacket, e);
     }
@@ -367,5 +379,107 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       log.error("Failed to query market dividend data", e);
     }
     return Optional.empty();
+  }
+
+  void queryInfo(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
+    log.info("Querying info for imnt {}", imnt);
+    try {
+      String info = marketDataPythonEngineFeign.getTickerInfo(imnt);
+      if (StringUtils.isEmpty(info)) {
+        log.warn("No info data found for {}", imnt);
+      } else {
+        JsonNode root = mapper.readTree(info);
+        populateInformationFromMap(root, imntBuilder, imnt);
+      }
+    } catch (Exception e) {
+      log.error("Failed to query info for imnt {}", imnt, e);
+    }
+  }
+
+  void populateInformationFromMap(
+      JsonNode root, MarketDataProto.Instrument.Builder imntBuilder, String imnt) {
+    handleCorporateActions(root, imntBuilder, imnt);
+    handleCompanyOfficers(root, imntBuilder);
+
+    Map<String, Object> result = mapper.convertValue(root, new TypeReference<>() {});
+    result.remove(JSON_KEY_CORP_ACTIONS);
+    result.remove(JSON_KEY_COMP_OFFICERS);
+
+    Map<String, String> metadata = new HashMap<>();
+    result.forEach(
+        (metaKey, metaValue) -> {
+          if (Objects.nonNull(metaValue)) metadata.put(metaKey, String.valueOf(metaValue));
+        });
+    imntBuilder.putAllMetaData(metadata);
+  }
+
+  private void handleCorporateActions(
+      JsonNode root, MarketDataProto.Instrument.Builder imntBuilder, String imnt) {
+    List<MarketDataProto.CorporateAction> corporateActions = new ArrayList<>();
+
+    JsonNode corpActions = root.get(JSON_KEY_CORP_ACTIONS);
+    if (Objects.nonNull(corpActions))
+      corpActions
+          .iterator()
+          .forEachRemaining(
+              node -> {
+                MarketDataProto.CorporateAction.Builder corporateAction =
+                    MarketDataProto.CorporateAction.newBuilder();
+
+                corporateAction.setHeader(readValue(node, "header"));
+                if ("Dividend".equalsIgnoreCase(corporateAction.getHeader()))
+                  handleDividendCorporateAction(corporateAction, node);
+                else log.warn("  : {}", corporateAction.getHeader());
+
+                corporateActions.add(corporateAction.build());
+              });
+    if (!corporateActions.isEmpty())
+      log.info("Found {} dividend corporate actions for {}", corporateActions.size(), imnt);
+    imntBuilder.addAllCorporateActions(corporateActions);
+  }
+
+  private void handleDividendCorporateAction(
+      MarketDataProto.CorporateAction.Builder corporateAction, JsonNode node) {
+    corporateAction.setMessage(readValue(node, "message"));
+
+    JsonNode meta = node.get("meta");
+    if (Objects.nonNull(meta)) {
+      corporateAction.setMetaAmount(readValue(meta, "amount"));
+      corporateAction.setMetaEventType(readValue(meta, "eventType"));
+
+      JsonNode dateEpoch = meta.get("dateEpochMs");
+      if (Objects.nonNull(dateEpoch)) {
+        Date date = new Date(dateEpoch.asLong());
+        corporateAction.setMetaDate(date.toString());
+      }
+    }
+  }
+
+  private void handleCompanyOfficers(
+      JsonNode root, MarketDataProto.Instrument.Builder imntBuilder) {
+    List<MarketDataProto.CompanyOfficer> companyOfficers = new ArrayList<>();
+
+    JsonNode compOfficers = root.get(JSON_KEY_COMP_OFFICERS);
+    if (Objects.nonNull(compOfficers))
+      compOfficers
+          .iterator()
+          .forEachRemaining(
+              node -> {
+                MarketDataProto.CompanyOfficer.Builder companyOfficer =
+                    MarketDataProto.CompanyOfficer.newBuilder();
+                companyOfficer.setName(readValue(node, "name"));
+                companyOfficer.setTitle(readValue(node, "title"));
+                companyOfficer.setTotalPay(readValue(node, "totalPay"));
+                companyOfficer.setFiscalYear(readValue(node, "fiscalYear"));
+                companyOfficer.setAge(readValue(node, "age"));
+
+                companyOfficers.add(companyOfficer.build());
+              });
+    imntBuilder.addAllCompanyOfficers(companyOfficers);
+  }
+
+  private String readValue(JsonNode node, String key) {
+    JsonNode value = node.get(key);
+    return Objects.nonNull(value) ? value.asText() : StringUtils.EMPTY;
   }
 }
