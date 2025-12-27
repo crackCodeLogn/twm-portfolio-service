@@ -119,6 +119,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                   .getDataList()
                   .add(MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
             }
+
+            queryInfo(imnt, imntBuilder); // update the imnt with latest metadata
           }
           MarketDataProto.Instrument updatedImnt = imntBuilder.build();
           instrumentMetaDataCache.offer(updatedImnt);
@@ -406,7 +408,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   }
 
   void queryInfo(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
-    log.info("Querying info for imnt {}", imnt);
+    log.info("Querying detailed info for imnt {}", imnt);
     try {
       String info = marketDataPythonEngineFeign.getTickerInfo(imnt);
       if (StringUtils.isEmpty(info)) {
