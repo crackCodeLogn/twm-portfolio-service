@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeAndFormat2Double;
 import static com.vv.personal.twm.portfolio.util.SanitizerUtil.sanitizeDouble;
+import static java.lang.Double.NaN;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableMap;
@@ -65,6 +66,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private static final String KEY_SECTOR = "sector";
   private static final String KEY_TOTAL_DIV = "totalDiv";
   private static final String KEY_TOTAL_IMNTS = "totalInstruments";
+  private static final String KEY_WBETA = "beta-weighted";
+  private static final String KEY_BETA = "beta";
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -492,7 +495,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     List<ImntValuationCurrentPnLAndActual> collectionData = new ArrayList<>(imntInfoListMap.size());
     for (Map.Entry<String, List<Double>> entry : imntInfoListMap.entrySet()) {
       Double pnlPercentage = (entry.getValue().get(0) * 100.0 / entry.getValue().get(1));
-      if (pnlPercentage != Double.NaN) {
+      if (pnlPercentage != NaN) {
         collectionData.add(
             new ImntValuationCurrentPnLAndActual(
                 entry.getKey(),
@@ -616,6 +619,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         Map.of(KEY_BOOK_VAL, 0, KEY_PNL, 1, KEY_TOTAL_DIV, 2, KEY_QTY, 3);
     List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0); // to store above 4 vals in-place
     Set<String> imnts = new HashSet<>();
+    Map<String, Pair<Double, Double>> imntBetaCurrentValue = new HashMap<>();
 
     marketData.forEach(
         (imnt, accountTypeDataListMap) -> {
@@ -624,6 +628,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                   ? accountTypeDataListMap.keySet()
                   : Sets.newHashSet(optionalAccountType.get());
 
+          List<Double> currentVal = Lists.newArrayList(0.0);
           accountTypesToLookAt.stream()
               .filter(accountTypeDataListMap::containsKey)
               .forEach(
@@ -642,23 +647,45 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                             ? cumulativeImntDividendsMap.get(imnt).getOrDefault(accountType, 0.0)
                             : 0.0;
                     double qty = node.getRunningQuantity();
+                    double pnlWithDiv = pnl + (includeDividendsForCurrentVal ? totalDiv : 0.0);
 
                     values.set(
                         keyLookup.get(KEY_BOOK_VAL),
                         values.get(keyLookup.get(KEY_BOOK_VAL)) + bookVal);
                     values.set(
-                        keyLookup.get(KEY_PNL),
-                        values.get(keyLookup.get(KEY_PNL))
-                            + pnl
-                            + (includeDividendsForCurrentVal ? totalDiv : 0.0));
+                        keyLookup.get(KEY_PNL), values.get(keyLookup.get(KEY_PNL)) + pnlWithDiv);
                     values.set(
                         keyLookup.get(KEY_TOTAL_DIV),
                         values.get(keyLookup.get(KEY_TOTAL_DIV)) + totalDiv);
                     values.set(keyLookup.get(KEY_QTY), values.get(keyLookup.get(KEY_QTY)) + qty);
+
+                    currentVal.set(0, currentVal.get(0) + bookVal + pnlWithDiv);
                   });
+
+          Optional<Double> optionalBeta = instrumentMetaDataService.getBeta(imnt);
+          if (optionalBeta.isEmpty()) {
+            log.warn("Not considering {} for beta calc as beta was not found", imnt);
+          } else {
+            imntBetaCurrentValue.put(imnt, Pair.of(optionalBeta.get(), currentVal.get(0)));
+          }
         });
+    double currentValForBeta = 0.0;
+    for (Pair<Double, Double> pair : imntBetaCurrentValue.values())
+      currentValForBeta += pair.getRight();
+
     double currentVal =
         values.get(keyLookup.get(KEY_BOOK_VAL)) + values.get(keyLookup.get(KEY_PNL));
+
+    log.info(
+        "Delta {} > {} from cv: {}, tccv: {}",
+        optionalAccountType,
+        currentVal - currentValForBeta,
+        currentVal,
+        currentValForBeta);
+    Double weightedBeta =
+        currentValForBeta == 0.0
+            ? NaN
+            : getWeightedBeta(imntBetaCurrentValue.values(), currentValForBeta);
 
     return ImmutableMap.<String, Double>builder()
         .put(KEY_TOTAL_IMNTS, (double) imnts.size())
@@ -667,6 +694,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .put(KEY_CURRENT_VAL, currentVal)
         .put(KEY_TOTAL_DIV, values.get(keyLookup.get(KEY_TOTAL_DIV)))
         .put(KEY_QTY, values.get(keyLookup.get(KEY_QTY)))
+        .put(KEY_WBETA, weightedBeta)
         .build();
   }
 
@@ -1421,6 +1449,14 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   private int getDate(DataNode node) {
     return node.getInstrument().getTicker().getData(0).getDate();
+  }
+
+  private Double getWeightedBeta(
+      Collection<Pair<Double, Double>> betaCurrentVals, double totalCurrentVal) {
+    double weightedBeta = 0.0;
+    for (Pair<Double, Double> pair : betaCurrentVals)
+      weightedBeta += pair.getKey() * pair.getValue();
+    return weightedBeta / totalCurrentVal;
   }
 
   /*private int getNextMarketDate(int date) {

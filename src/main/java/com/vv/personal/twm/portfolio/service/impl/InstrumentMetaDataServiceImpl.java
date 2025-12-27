@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
@@ -55,6 +56,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
           .put("Technology", "tech")
           .put("Unknown", "etf-mkt")
           .build();
+  private static final List<String> BETA_FIELDS = Lists.newArrayList("beta", "beta3Year");
 
   private static final String KEY_MER = "mer";
   private static final String KEY_DIV_YIELD = "div-yield";
@@ -182,6 +184,19 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   @Override
   public Optional<Double> getManagementExpenseRatio(String imnt) {
     return instrumentMetaDataCache.get(imnt).map(MarketDataProto.Instrument::getMer);
+  }
+
+  @Override
+  public Optional<Double> getBeta(String imnt) {
+    Optional<MarketDataProto.Instrument> instrumentMetaData = instrumentMetaDataCache.get(imnt);
+    if (instrumentMetaData.isPresent()) {
+      try {
+        return getBeta(imnt, instrumentMetaData.get().getMetaDataMap());
+      } catch (Exception e) {
+        log.error("Failed to get beta for imnt {}", imnt, e);
+      }
+    }
+    return Optional.empty();
   }
 
   @Override
@@ -439,6 +454,21 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     imntBuilder.putAllMetaData(metadata);
   }
 
+  private Optional<Double> getBeta(String imnt, Map<String, String> metadataMap) {
+    for (String betaField : BETA_FIELDS) {
+      String beta = metadataMap.get(betaField);
+      if (!StringUtils.isEmpty(beta)) {
+        try {
+          return Optional.of(Double.parseDouble(beta));
+        } catch (NumberFormatException e) {
+          log.warn("Failed to convert beta {} to double", beta, e);
+        }
+      }
+    }
+    log.warn("Cannot find beta for {}", imnt);
+    return Optional.empty();
+  }
+
   private void handleCorporateActions(
       JsonNode root, MarketDataProto.Instrument.Builder imntBuilder, String imnt) {
     List<MarketDataProto.CorporateAction> corporateActions = new ArrayList<>();
@@ -455,7 +485,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                 corporateAction.setHeader(readValue(node, "header"));
                 if ("Dividend".equalsIgnoreCase(corporateAction.getHeader()))
                   handleDividendCorporateAction(corporateAction, node);
-                else log.warn("  : {}", corporateAction.getHeader());
+                else log.warn("Unknown corporate action : {}", corporateAction.getHeader());
 
                 corporateActions.add(corporateAction.build());
               });

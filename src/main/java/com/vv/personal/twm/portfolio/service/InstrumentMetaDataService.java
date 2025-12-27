@@ -24,6 +24,8 @@ public interface InstrumentMetaDataService {
 
   Optional<Double> getManagementExpenseRatio(String imnt);
 
+  Optional<Double> getBeta(String imnt);
+
   InstrumentMetaDataCache getInstrumentMetaDataCache();
 
   MarketDataProto.Portfolio getEntireMetaData();
