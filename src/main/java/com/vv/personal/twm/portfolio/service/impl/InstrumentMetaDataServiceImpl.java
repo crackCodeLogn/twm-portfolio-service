@@ -431,6 +431,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       } else {
         JsonNode root = mapper.readTree(info);
         populateInformationFromMap(root, imntBuilder, imnt);
+
+        updateBeta(imnt, imntBuilder);
       }
     } catch (Exception e) {
       log.error("Failed to query info for imnt {}", imnt, e);
@@ -467,6 +469,15 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     }
     log.warn("Cannot find beta for {}", imnt);
     return Optional.empty();
+  }
+
+  private void updateBeta(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
+    Optional<Double> beta = getBeta(imnt, imntBuilder.getMetaDataMap());
+    if (beta.isEmpty()) {
+      log.warn("Failed to update beta for {}", imnt);
+      return;
+    }
+    imntBuilder.setBeta(beta.get());
   }
 
   private void handleCorporateActions(
