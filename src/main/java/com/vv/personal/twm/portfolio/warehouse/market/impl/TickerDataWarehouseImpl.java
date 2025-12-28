@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.warehouse.market.impl;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
 import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,10 +19,13 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 public class TickerDataWarehouseImpl implements TickerDataWarehouse {
 
+  private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
   private final Table<LocalDate, String, Double> adjustedClosePriceTableForAnalysis;
   private final TreeSet<String> instruments;
 
-  public TickerDataWarehouseImpl() {
+  public TickerDataWarehouseImpl(TickerDataWarehouseConfig tickerDataWarehouseConfig) {
+    this.tickerDataWarehouseConfig = tickerDataWarehouseConfig;
+
     this.instruments = new TreeSet<>();
     adjustedClosePriceTableForAnalysis = HashBasedTable.create();
   }
@@ -44,6 +48,10 @@ public class TickerDataWarehouseImpl implements TickerDataWarehouse {
   @Override
   public List<LocalDate> getDates() {
     return adjustedClosePriceTableForAnalysis.rowKeySet().stream()
+        .filter(
+            localDate ->
+                adjustedClosePriceTableForAnalysis.contains(
+                    localDate, tickerDataWarehouseConfig.getBenchmarkTicker()))
         .sorted()
         .collect(Collectors.toList());
   }

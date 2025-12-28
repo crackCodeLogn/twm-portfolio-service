@@ -103,6 +103,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       sectorLevelImntAggrMap; // sector level x account type x (imnt x investment-imnt)
   private final Map<String, String> imntSectorMap; // imnt x sector
 
+  private final Set<String> imntsNotInPortfolio;
+
   private final DateLocalDateCache dateLocalDateCache;
   private final InstrumentMetaDataService instrumentMetaDataService;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
@@ -144,6 +146,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     correlationMatrix = Optional.empty();
     localDates = new ArrayList<>();
     integerDates = new ArrayList<>();
+    imntsNotInPortfolio = new HashSet<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -200,6 +203,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_LOAD_ANALYSIS);
     tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments(), isReloadInProgress);
 
+    this.imntsNotInPortfolio.addAll(
+        tickerDataWarehouseService.loadAnalysisDataForInstrumentsNotInPortfolio(
+            getInstruments(), isReloadInProgress));
+
     progressTrackerService.publishProgressTracker(
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_PNL);
     computePnL();
@@ -223,21 +230,27 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private void computeCorrelationMatrixInParallel() {
     ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
     try {
+      Set<String> combinedImnts = new HashSet<>(imntsNotInPortfolio);
+      combinedImnts.addAll(getInstruments());
+      // todo - later note: all imnt not in portfolio are ending up getting excluded from corr
+      // compute, work on it later if time be.
+
       Future<List<String>> imntsForCorrelationFuture =
           singleThreadExecutor.submit(
               () ->
                   getInstrumentSelectionForCorrelationMatrixCompute(
-                      localDates, tickerDataWarehouseService, getInstruments()));
+                      localDates, tickerDataWarehouseService, combinedImnts));
       singleThreadExecutor.shutdown();
 
       List<String> imntsForCorrelation = imntsForCorrelationFuture.get();
       log.info(
           "Beginning compute of correlation matrix for {} instruments", imntsForCorrelation.size());
+      combinedImnts.clear();
 
       // correlation matrix compute happens here
       this.correlationMatrix =
           computeStatisticsService.computeCorrelationMatrix(imntsForCorrelation, integerDates);
-      log.info("Correlation matrix => {}", this.correlationMatrix); // todo - switch to debug
+      log.debug("Correlation matrix => {}", this.correlationMatrix);
     } catch (ExecutionException | InterruptedException e) {
       log.error("Compute correlation matrix execution failed", e);
     } finally {

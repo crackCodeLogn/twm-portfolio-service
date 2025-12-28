@@ -21,6 +21,8 @@ public class OutdatedSymbols {
 
   private final Map<String, OutdatedSymbol> outdatedSymbols = new ConcurrentHashMap<>();
 
+  // TODO - update logic to handle multiple outdated dates for a single symbol, to handle ^VIX
+
   public boolean load(String outdatedSymbolsFileLocation) {
     String outdatedSymbolCsvLocation =
         TextReaderUtil.readTextLines(outdatedSymbolsFileLocation).get(0);

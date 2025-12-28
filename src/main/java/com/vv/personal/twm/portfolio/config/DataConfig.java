@@ -54,7 +54,7 @@ public class DataConfig {
 
   @Bean
   public TickerDataWarehouse tickerDataWarehouse() {
-    return new TickerDataWarehouseImpl();
+    return new TickerDataWarehouseImpl(tickerDataWarehouseConfig);
   }
 
   @Bean

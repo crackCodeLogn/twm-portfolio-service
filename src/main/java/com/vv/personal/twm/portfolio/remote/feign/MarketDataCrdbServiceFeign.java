@@ -31,6 +31,9 @@ public interface MarketDataCrdbServiceFeign extends PingFeign {
   Optional<MarketDataProto.Portfolio> getLimitedDataByTicker(
       @PathVariable("ticker") String ticker, @PathVariable("limit") int limit);
 
+  @GetMapping("/crdb/mkt/data/unique/tickers")
+  List<String> getAllUniqueTickers();
+
   @PostMapping("/crdb/mkt/data-single-ticker/")
   String addMarketDataForSingleTicker(@RequestBody MarketDataProto.Ticker ticker);
 

@@ -97,16 +97,51 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
                       marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
                           instrument, dates.getLeft().toString(), dates.getRight().toString());
 
-                  fillAnalysisWarehouse(missingTickerDataRange);
-                  log.info(
-                      "Adding market data to db for {} from {} -> {}",
-                      instrument,
-                      dates.getLeft(),
-                      dates.getRight());
-                  marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
+                  if (missingTickerDataRange == null
+                      || missingTickerDataRange.getDataCount() == 0) {
+                    log.warn(
+                        "No data found for {} from {} -> {}",
+                        instrument,
+                        dates.getLeft(),
+                        dates.getRight());
+                  } else {
+                    fillAnalysisWarehouse(missingTickerDataRange);
+                    log.info(
+                        "Adding market data to db for {} from {} -> {}",
+                        instrument,
+                        dates.getLeft(),
+                        dates.getRight());
+                    marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
+                  }
                 }
               });
         });
+  }
+
+  @Override
+  public Set<String> loadAnalysisDataForInstrumentsNotInPortfolio(
+      Set<String> instrumentsInPortfolio, boolean isReloadInProgress) {
+    Set<String> allUniqueInstruments = new HashSet<>();
+    try {
+      List<String> allUniqueTickers = marketDataCrdbServiceFeign.getAllUniqueTickers();
+      allUniqueInstruments = new HashSet<>(allUniqueTickers);
+    } catch (Exception e) {
+      log.error("Failed to load analysis data for instruments not in portfolio", e);
+    }
+
+    if (allUniqueInstruments.isEmpty()) {
+      log.warn(
+          "No unique tickers found for instruments in portfolio, which is a bad state, cannot proceed");
+    } else {
+      allUniqueInstruments.removeAll(instrumentsInPortfolio);
+      if (!allUniqueInstruments.isEmpty()) {
+        log.info(
+            "Loading analysis data for {} instruments not in portfolio",
+            allUniqueInstruments.size());
+        loadAnalysisDataForInstruments(allUniqueInstruments, isReloadInProgress);
+      }
+    }
+    return allUniqueInstruments;
   }
 
   List<Pair<LocalDate, LocalDate>> identifyMissingDatesDueToOutdated(
