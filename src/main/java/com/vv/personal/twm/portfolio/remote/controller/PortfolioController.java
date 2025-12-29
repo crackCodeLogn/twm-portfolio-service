@@ -365,10 +365,9 @@ public class PortfolioController {
   }
 
   @PostMapping("/manual/market/metadata")
-  public String truncateAndBulkAddEntireMetaData(
-      @RequestBody DataPacketProto.DataPacket dataPacket) {
-    log.info("manual truncateAndBulkAddEntireMetaData invoked");
-    return centralDataPointService.truncateAndBulkAddEntireMetaData(dataPacket);
+  public String bulkAddEntireMetaData(@RequestBody DataPacketProto.DataPacket dataPacket) {
+    log.info("manual bulkAddEntireMetaData invoked");
+    return centralDataPointService.bulkAddEntireMetaData(dataPacket);
   }
 
   @GetMapping("/")

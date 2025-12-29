@@ -82,7 +82,7 @@ public interface CentralDataPointService {
 
   String deleteEntireMetaData();
 
-  String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
+  String bulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
 
   String reloadMetaDataCache();
 

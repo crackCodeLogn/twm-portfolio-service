@@ -237,8 +237,8 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
-  public String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket) {
-    return instrumentMetaDataService.truncateAndBulkAddEntireMetaData(dataPacket);
+  public String bulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket) {
+    return instrumentMetaDataService.bulkAddEntireMetaData(dataPacket);
   }
 
   @Override

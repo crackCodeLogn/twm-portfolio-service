@@ -57,6 +57,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
           .put("Unknown", "etf-mkt")
           .build();
   private static final List<String> BETA_FIELDS = Lists.newArrayList("beta", "beta3Year");
+  private static final String QUOTE_TYPE_FIELD = "quoteType";
 
   private static final String KEY_MER = "mer";
   private static final String KEY_DIV_YIELD = "div-yield";
@@ -279,8 +280,33 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
    * @return
    */
   @Override
-  public String truncateAndBulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket) {
-    throw new UnsupportedOperationException("Not supported yet.");
+  public String bulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket) {
+    int passed = 0;
+    try {
+      for (String inputLine : dataPacket.getStringsList()) {
+        String[] parts = StringUtils.split(inputLine.strip(), '|');
+        if (parts.length >= 1) {
+          String imnt = parts[0].strip();
+          DataPacketProto.DataPacket.Builder packet = DataPacketProto.DataPacket.newBuilder();
+
+          for (int i = 1; i < parts.length; i++) {
+            String part = parts[i].strip();
+            int index = part.indexOf('=');
+            String key = part.substring(0, index).strip();
+            String value = part.substring(index + 1).strip();
+            packet.putStringStringMap(key, value);
+          }
+
+          String metadataUpsertResult = upsertInstrumentMetaData(imnt, packet.build());
+          if (!metadataUpsertResult.equals("Failed")) passed++;
+        } else {
+          log.warn("Ignoring line for metadata parsing: {}", inputLine);
+        }
+      }
+    } catch (Exception e) {
+      log.error("Failed to truncateAndBulkAddEntireMetaData", e);
+    }
+    return String.valueOf(passed);
   }
 
   @Override
@@ -361,17 +387,14 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       } else {
         queryDividendYield(imnt).ifPresent(imntBuilder::setDividendYield);
       }
-      if (kvMap.containsKey(KEY_IMNT_TYPE)) {
-        tickerBuilder.setType(MarketDataProto.InstrumentType.valueOf(kvMap.get(KEY_IMNT_TYPE)));
-      }
       if (kvMap.containsKey(KEY_NAME)) {
         tickerBuilder.setName(kvMap.get(KEY_NAME));
       } else {
         queryName(imnt).ifPresent(tickerBuilder::setName);
       }
+      imntBuilder.setTicker(tickerBuilder);
       queryInfo(imnt, imntBuilder);
 
-      imntBuilder.setTicker(tickerBuilder.build());
       Optional<MarketDataProto.Instrument> build = Optional.of(imntBuilder.build());
       log.debug(build.toString());
       return build;
@@ -433,6 +456,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
         populateInformationFromMap(root, imntBuilder, imnt);
 
         updateBeta(imnt, imntBuilder);
+        updateImntType(imnt, imntBuilder);
       }
     } catch (Exception e) {
       log.error("Failed to query info for imnt {}", imnt, e);
@@ -478,6 +502,19 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       return;
     }
     imntBuilder.setBeta(beta.get());
+  }
+
+  private void updateImntType(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
+    String value = imntBuilder.getMetaDataMap().get(QUOTE_TYPE_FIELD);
+    if (!StringUtils.isEmpty(value)) {
+      try {
+        imntBuilder.getTickerBuilder().setType(MarketDataProto.InstrumentType.valueOf(value));
+      } catch (Exception e) {
+        log.warn("Failed to update imnt type for {}", imnt, e);
+      }
+    } else {
+      log.warn("Failed to find quoteType for {}", imnt);
+    }
   }
 
   private void handleCorporateActions(
