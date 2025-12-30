@@ -16,7 +16,9 @@ public interface TickerDataWarehouseService {
   void loadAnalysisDataForInstruments(Set<String> instruments, boolean isReloadInProgress);
 
   Set<String> loadAnalysisDataForInstrumentsNotInPortfolio(
-      Set<String> instrumentsInPortfolio, boolean isReloadInProgress);
+      Set<String> instrumentsInPortfolio,
+      boolean isReloadInProgress,
+      Set<String> imntsNotInPortfolio);
 
   Double getMarketData(String imnt, int date);
 

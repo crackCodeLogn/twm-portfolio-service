@@ -205,7 +205,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     this.imntsNotInPortfolio.addAll(
         tickerDataWarehouseService.loadAnalysisDataForInstrumentsNotInPortfolio(
-            getInstruments(), isReloadInProgress));
+            getInstruments(), isReloadInProgress, this.imntsNotInPortfolio));
 
     progressTrackerService.publishProgressTracker(
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_COMPUTE_PNL);
@@ -834,7 +834,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           (imnt, accountTypeValueMap) -> {
             if (accountTypeValueMap.containsKey(accType)
                 && optionalMatrix.get().rowKeySet().contains(imnt)
-                && accountTypeValueMap.get(accType).getTail().getRunningQuantity() >= 0.5)
+                && accountTypeValueMap.get(accType).getTail().getRunningQuantity() >= 0.001)
               imnts.add(imnt);
           });
       return getCorrelationMatrix(imnts);

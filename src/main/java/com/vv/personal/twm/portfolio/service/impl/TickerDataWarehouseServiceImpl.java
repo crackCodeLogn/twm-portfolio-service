@@ -120,7 +120,9 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
   @Override
   public Set<String> loadAnalysisDataForInstrumentsNotInPortfolio(
-      Set<String> instrumentsInPortfolio, boolean isReloadInProgress) {
+      Set<String> instrumentsInPortfolio,
+      boolean isReloadInProgress,
+      Set<String> imntsNotInPortfolio) {
     Set<String> allUniqueInstruments = new HashSet<>();
     try {
       List<String> allUniqueTickers = marketDataCrdbServiceFeign.getAllUniqueTickers();
@@ -134,6 +136,8 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
           "No unique tickers found for instruments in portfolio, which is a bad state, cannot proceed");
     } else {
       allUniqueInstruments.removeAll(instrumentsInPortfolio);
+      allUniqueInstruments.addAll(
+          imntsNotInPortfolio); // forcing a reload for the initially not in portf imnts
       if (!allUniqueInstruments.isEmpty()) {
         log.info(
             "Loading analysis data for {} instruments not in portfolio",

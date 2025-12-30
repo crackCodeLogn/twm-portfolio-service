@@ -48,7 +48,8 @@ public class ReloadServiceImpl implements ReloadService {
       completeBankDataService.load();
       completeMarketDataService.load();
       completeMarketDataService.setReloadInProgress(false);
-      instrumentMetaDataService.load(completeMarketDataService.getBenchMarkCurrentDate(), false);
+      instrumentMetaDataService.load(
+          completeMarketDataService.getBenchMarkCurrentDate(), !firstTimeLoad);
 
       loadTimer.stop();
       log.info("Reload completed in {} s", loadTimer.getTime(TimeUnit.SECONDS));

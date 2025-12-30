@@ -56,7 +56,7 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
     Optional<List<Double>> imnt1Values = Optional.empty();
     Optional<List<Double>> imnt2Values = Optional.empty();
 
-    log.info(
+    log.debug(
         "Firing up compute of correlation for imnts {} and {} for {} dates",
         instrument1,
         instrument2,
@@ -104,7 +104,7 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
       }
 
       correlation = StatisticsUtil.calculateCorrelation(imnt1Values.get(), imnt2Values.get());
-      log.info("Correlation between {} x {}: {}", instrument1, instrument2, correlation);
+      log.debug("Correlation between {} x {}: {}", instrument1, instrument2, correlation);
     } catch (Exception e) {
       log.error(
           "Failed to compute correlation between instruments {} x {} correctly",
@@ -113,7 +113,7 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
           e);
     } finally {
       timer.stop();
-      log.info(
+      log.debug(
           "Correlation compute for instruments {} and {} for {} dates took {} ms",
           instrument1,
           instrument2,

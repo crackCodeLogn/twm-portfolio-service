@@ -108,6 +108,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
           int metaDataDate = instrument.getTicker().getData(0).getDate();
 
           if (metaDataDate < benchMarkCurrentDate || forceReloadDataForCurrentDate) {
+            log.info("\tComputing meta data for {}", imnt);
             if (!OVERRIDE_INSTRUMENTS_DIV_YIELD_SKIP_UPDATE.contains(imnt)) {
               // div-yield is the only thing getting updated for now from yfinance (mkt engine)
               Optional<Double> divYield = queryDividendYield(imnt);
@@ -115,12 +116,11 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                 imntBuilder.setDividendYield(divYield.get());
                 writeBackToDb = true; // found a new update, thus need to write back to the db
               }
-
-              imntBuilder.getTicker().getDataList().clear();
+              imntBuilder.getTickerBuilder().clearData();
               imntBuilder
-                  .getTicker()
-                  .getDataList()
-                  .add(MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
+                  .getTickerBuilder()
+                  .addData(
+                      MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
             }
 
             queryInfo(imnt, imntBuilder); // update the imnt with latest metadata
@@ -539,6 +539,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
               });
     if (!corporateActions.isEmpty())
       log.info("Found {} dividend corporate actions for {}", corporateActions.size(), imnt);
+    imntBuilder.clearCorporateActions();
     imntBuilder.addAllCorporateActions(corporateActions);
   }
 
