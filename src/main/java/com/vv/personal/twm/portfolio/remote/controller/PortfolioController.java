@@ -57,8 +57,9 @@ public class PortfolioController {
   private final TickerDataWarehouse boughtTickerDataWarehouse;*/
 
   @GetMapping("/reload/v2k")
-  public String reloadV2kData() {
-    if (reloadService.reload()) return "OK";
+  public String reloadV2kData(
+      @RequestParam(value = "hardRefresh", defaultValue = "true") boolean hardRefresh) {
+    if (reloadService.reload(hardRefresh)) return "OK";
     else return "ERROR";
   }
 

@@ -9,7 +9,7 @@ public interface ReloadService {
   boolean initialFullLoad();
 
   // Reload for v2k only [me]
-  boolean reload();
+  boolean reload(boolean softRefresh);
 
   boolean reload(String uid);
 }

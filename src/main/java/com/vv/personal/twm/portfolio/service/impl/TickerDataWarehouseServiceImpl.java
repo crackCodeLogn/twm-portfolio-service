@@ -56,7 +56,7 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
           if (isReloadInProgress) {
             int currentDateForMarketDataRemoval = DateFormatUtil.getDate(LocalDate.now());
             log.info(
-                "Forcing removal of market data for {} x 1{}",
+                "Forcing removal of market data for {} x {}",
                 instrument,
                 currentDateForMarketDataRemoval);
 

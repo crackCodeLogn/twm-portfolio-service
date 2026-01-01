@@ -25,15 +25,15 @@ public class ReloadServiceImpl implements ReloadService {
 
   @Override
   public boolean initialFullLoad() {
-    return reload(true);
+    return reload(true, false);
   }
 
   @Override
-  public boolean reload() {
-    return reload(false);
+  public boolean reload(boolean hardRefresh) {
+    return reload(false, hardRefresh);
   }
 
-  boolean reload(boolean firstTimeLoad) {
+  boolean reload(boolean firstTimeLoad, boolean hardRefresh) {
     if (!firstTimeLoad) {
       log.warn("Clearing bank data service and market data service!");
       completeBankDataService.clear();
@@ -49,7 +49,7 @@ public class ReloadServiceImpl implements ReloadService {
       completeMarketDataService.load();
       completeMarketDataService.setReloadInProgress(false);
       instrumentMetaDataService.load(
-          completeMarketDataService.getBenchMarkCurrentDate(), !firstTimeLoad);
+          completeMarketDataService.getBenchMarkCurrentDate(), !firstTimeLoad && hardRefresh);
 
       loadTimer.stop();
       log.info("Reload completed in {} s", loadTimer.getTime(TimeUnit.SECONDS));
