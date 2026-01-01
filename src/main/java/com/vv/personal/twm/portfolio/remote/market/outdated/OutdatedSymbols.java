@@ -7,6 +7,7 @@ import java.io.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,20 +20,21 @@ public class OutdatedSymbols {
   private static final int START_DAY_OF_2XXX = 20000101;
   private static final int LAST_DAY_OF_2XXX = 29991231;
 
-  private final Map<String, OutdatedSymbol> outdatedSymbols = new ConcurrentHashMap<>();
-
-  // TODO - update logic to handle multiple outdated dates for a single symbol, to handle ^VIX
+  private final Map<String, TreeSet<OutdatedSymbol>> outdatedSymbols = new ConcurrentHashMap<>();
 
   public boolean load(String outdatedSymbolsFileLocation) {
     String outdatedSymbolCsvLocation =
         TextReaderUtil.readTextLines(outdatedSymbolsFileLocation).get(0);
     String downloadedLocation = CsvDownloaderUtil.downloadCsv(outdatedSymbolCsvLocation);
+    return loadFromFile(downloadedLocation);
+  }
 
+  public boolean loadFromFile(String downloadedLocation) {
     File file = new File(downloadedLocation);
     if (!file.exists()) {
       log.error(
           "Did not find outdated symbols file: {}, cannot load outdated symbols.",
-          outdatedSymbolsFileLocation);
+          downloadedLocation);
       return false;
     }
 
@@ -45,37 +47,38 @@ public class OutdatedSymbols {
       String symbol = parts[0];
       int outdateStartDate = Integer.parseInt(parts[1]);
       int outdateEndDate = Integer.parseInt(parts[2]);
-      outdatedSymbols.computeIfAbsent(
-          symbol,
-          k ->
-              new OutdatedSymbol(
-                  symbol,
-                  outdateStartDate == -1 ? START_DAY_OF_2XXX : outdateStartDate,
-                  outdateEndDate == -1 ? LAST_DAY_OF_2XXX : outdateEndDate));
+      outdatedSymbols.computeIfAbsent(symbol, k -> new TreeSet<>());
+      outdatedSymbols.get(symbol).add(generateOutdatedSymbol(outdateStartDate, outdateEndDate));
     }
 
     return true;
+  }
+
+  /** log(n) look up */
+  public boolean isCurrentDateOutdated(String imnt, int date) {
+    if (contains(imnt)) {
+      Optional<TreeSet<OutdatedSymbol>> outdatedSymbol = get(imnt);
+      if (outdatedSymbol.isPresent()) {
+        OutdatedSymbol inputDate = generateOutdatedSymbol(date, date);
+        OutdatedSymbol base = outdatedSymbol.get().floor(inputDate);
+        if (base == null) return false;
+        return date >= base.outdateStartDate() && date <= base.outdateEndDate();
+      }
+    }
+    return false;
   }
 
   public boolean contains(String symbol) {
     return outdatedSymbols.containsKey(symbol);
   }
 
-  public Optional<OutdatedSymbol> get(String symbol) {
+  public Optional<TreeSet<OutdatedSymbol>> get(String symbol) {
     return Optional.ofNullable(outdatedSymbols.get(symbol));
   }
 
-  public boolean isEmpty() {
-    return outdatedSymbols.isEmpty();
-  }
-
-  public boolean isCurrentDateOutdated(String imnt, int date) {
-    if (contains(imnt)) {
-      Optional<OutdatedSymbol> outdatedSymbol = get(imnt);
-      return outdatedSymbol
-          .filter(symbol -> date >= symbol.outdateStartDate() && date <= symbol.outdateEndDate())
-          .isPresent();
-    }
-    return false;
+  private OutdatedSymbol generateOutdatedSymbol(int startDate, int endDate) {
+    return new OutdatedSymbol(
+        startDate == -1 ? START_DAY_OF_2XXX : startDate,
+        endDate == -1 ? LAST_DAY_OF_2XXX : endDate);
   }
 }
