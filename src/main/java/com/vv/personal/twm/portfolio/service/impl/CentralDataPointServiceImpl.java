@@ -250,4 +250,9 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public MarketDataProto.Portfolio getCorporateActionNews() {
     return instrumentMetaDataService.getCorporateActionNews();
   }
+
+  @Override
+  public DataPacketProto.DataPacket getHeadingAtAGlance() {
+    return completeMarketDataService.getHeadingAtAGlance();
+  }
 }

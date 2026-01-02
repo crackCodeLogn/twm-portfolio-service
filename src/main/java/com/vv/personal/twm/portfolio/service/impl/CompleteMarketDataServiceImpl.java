@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
@@ -900,6 +901,30 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return integerDates.isEmpty() ? -1 : integerDates.get(integerDates.size() - 1);
   }
 
+  @Override
+  public DataPacketProto.DataPacket getHeadingAtAGlance() {
+    // ^VIX, 1/CADUSD=X, CADINR=X
+    DataPacketProto.DataPacket.Builder dataPacketBuilder = DataPacketProto.DataPacket.newBuilder();
+
+    String imnt;
+    Optional<Double> data;
+
+    imnt = "^VIX";
+    data = fetchLatestPrice(imnt, TODAY_DATE);
+    if (data.isPresent()) dataPacketBuilder.putStringDoubleMap(imnt, data.get());
+
+    imnt = "CADINR=X";
+    data = fetchLatestPrice(imnt, TODAY_DATE);
+    if (data.isPresent()) dataPacketBuilder.putStringDoubleMap(imnt, data.get());
+
+    imnt = "CADUSD=X";
+    data = fetchLatestPrice(imnt, TODAY_DATE);
+    if (data.isPresent() && data.get() >= 0.000001)
+      dataPacketBuilder.putStringDoubleMap("USDCAD=X", 1.0 / data.get());
+
+    return dataPacketBuilder.build();
+  }
+
   void populate(MarketDataProto.Portfolio portfolio) {
     portfolio
         .getInstrumentsList()
@@ -1470,6 +1495,18 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     for (Pair<Double, Double> pair : betaCurrentVals)
       weightedBeta += pair.getKey() * pair.getValue();
     return weightedBeta / totalCurrentVal;
+  }
+
+  private Optional<Double> fetchLatestPrice(String imnt, int tDate) {
+    int days = 11;
+    LocalDate tLocalDate = DateFormatUtil.getLocalDate(tDate);
+
+    while (days-- > 0) {
+      Double val = tickerDataWarehouseService.getMarketData(imnt, tLocalDate);
+      if (val != null) return Optional.of(val);
+      tLocalDate = tLocalDate.minusDays(1);
+    }
+    return Optional.empty();
   }
 
   /*private int getNextMarketDate(int date) {

@@ -1,6 +1,7 @@
 package com.vv.personal.twm.portfolio.service;
 
 import com.google.common.collect.Table;
+import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import java.util.List;
@@ -62,4 +63,6 @@ public interface CompleteMarketDataService {
   Optional<Table<String, String, Double>> getCorrelationMatrixForSectors();
 
   int getBenchMarkCurrentDate();
+
+  DataPacketProto.DataPacket getHeadingAtAGlance();
 }

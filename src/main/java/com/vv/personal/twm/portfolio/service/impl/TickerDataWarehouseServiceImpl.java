@@ -245,7 +245,12 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
   @Override
   public Double getMarketData(String imnt, int date) {
-    return tickerDataWarehouse.get(convertDate(date), imnt);
+    return getMarketData(imnt, convertDate(date));
+  }
+
+  @Override
+  public Double getMarketData(String imnt, LocalDate date) {
+    return tickerDataWarehouse.get(date, imnt);
   }
 
   @Override

@@ -87,4 +87,6 @@ public interface CentralDataPointService {
   String reloadMetaDataCache();
 
   MarketDataProto.Portfolio getCorporateActionNews();
+
+  DataPacketProto.DataPacket getHeadingAtAGlance();
 }

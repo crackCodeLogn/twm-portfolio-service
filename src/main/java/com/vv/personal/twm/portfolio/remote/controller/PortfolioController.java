@@ -328,6 +328,12 @@ public class PortfolioController {
     return centralDataPointService.getCorporateActionNews();
   }
 
+  @GetMapping("/market/heading/glance")
+  public DataPacketProto.DataPacket getHeadingAtAGlance() {
+    log.info("getHeadingAtAGlance invoked");
+    return centralDataPointService.getHeadingAtAGlance();
+  }
+
   @GetMapping("/market/metadata")
   public MarketDataProto.Portfolio getEntireMetaData() {
     log.info("getEntireMetaData invoked");
