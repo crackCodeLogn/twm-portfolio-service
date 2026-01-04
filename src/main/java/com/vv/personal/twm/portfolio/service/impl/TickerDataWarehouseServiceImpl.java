@@ -54,7 +54,8 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
         instrument -> {
           log.info("Loading analysis data for {}", instrument);
           if (isReloadInProgress) {
-            int currentDateForMarketDataRemoval = DateFormatUtil.getDate(LocalDate.now());
+            LocalDate now = LocalDate.now();
+            int currentDateForMarketDataRemoval = DateFormatUtil.getDate(now);
             log.info(
                 "Forcing removal of market data for {} x {}",
                 instrument,
@@ -62,6 +63,7 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
             marketDataCrdbServiceFeign.deleteMarketData(
                 instrument, currentDateForMarketDataRemoval);
+            tickerDataWarehouse.delete(now, instrument);
           }
 
           MarketDataProto.Ticker tickerDataFromDb =

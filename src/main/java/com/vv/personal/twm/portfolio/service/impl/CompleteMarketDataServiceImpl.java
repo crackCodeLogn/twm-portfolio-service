@@ -922,6 +922,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     if (data.isPresent() && data.get() >= 0.000001)
       dataPacketBuilder.putStringDoubleMap("USDCAD=X", 1.0 / data.get());
 
+    imnt = "USDINR=X";
+    data = fetchLatestPrice(imnt, TODAY_DATE);
+    if (data.isPresent()) dataPacketBuilder.putStringDoubleMap(imnt, data.get());
+
     return dataPacketBuilder.build();
   }
 

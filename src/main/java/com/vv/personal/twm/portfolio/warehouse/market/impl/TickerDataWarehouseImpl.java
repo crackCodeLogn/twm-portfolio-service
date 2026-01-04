@@ -41,6 +41,11 @@ public class TickerDataWarehouseImpl implements TickerDataWarehouse {
   }
 
   @Override
+  public void delete(LocalDate date, String imnt) {
+    adjustedClosePriceTableForAnalysis.remove(date, imnt);
+  }
+
+  @Override
   public boolean contains(LocalDate date, String imnt) {
     return get(date, imnt) != null;
   }

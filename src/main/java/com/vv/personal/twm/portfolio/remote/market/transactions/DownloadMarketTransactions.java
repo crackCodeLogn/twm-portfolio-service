@@ -27,7 +27,20 @@ public class DownloadMarketTransactions {
           .build();
 
   private static final Map<String, String> customTickerSymbolMap =
-      ImmutableMap.<String, String>builder().put("CRT.UN", "CRT-UN").build();
+      ImmutableMap.<String, String>builder()
+          .put("BEP.UN", "BEP-UN")
+          .put("BIP.UN", "BIP-UN")
+          .put("CAR.UN", "CAR-UN")
+          .put("CHP.UN", "CHP-UN")
+          .put("CRT.UN", "CRT-UN")
+          .put("GIB.A", "GIB-A")
+          .put("GRT.UN", "GRT-UN")
+          .put("QBR.B", "QBR-B")
+          .put("RCI.B", "RCI-B")
+          .put("REI.UN", "REI-UN")
+          .put("SRU.UN", "SRU-UN")
+          .put("TECK.B", "TECK-B")
+          .build();
 
   private static final Map<String, String> stkExchangeMap =
       ImmutableMap.<String, String>builder().put("ALV", "V").put("AFM", "V").build();
