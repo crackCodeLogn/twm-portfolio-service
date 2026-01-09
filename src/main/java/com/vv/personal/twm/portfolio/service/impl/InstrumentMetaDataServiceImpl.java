@@ -41,6 +41,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
 
   //  private static final List<String> dataFieldsForMetaDataUpdateViaMarketEngine =
   //      Lists.newArrayList("divYield");
+  private static final String SECTOR_ETF_BONDS = "etf-bon";
+  private static final String SECTOR_ETF_CASH = "etf-cas";
   private static final Set<String> OVERRIDE_INSTRUMENTS_DIV_YIELD_SKIP_UPDATE = Sets.newHashSet("");
   private static final Map<String, String> OVERRIDE_SECTOR_MAPPING =
       ImmutableMap.<String, String>builder()
@@ -56,6 +58,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
           .put("Technology", "tech")
           .put("Unknown", "etf-mkt")
           .build();
+  private static final Map<String, String> OVERRIDE_IMNT_SECTOR_MAPPING =
+      ImmutableMap.<String, String>builder().put("CASH.TO", SECTOR_ETF_CASH).build();
   private static final List<String> BETA_FIELDS = Lists.newArrayList("beta", "beta3Year");
   private static final String QUOTE_TYPE_FIELD = "quoteType";
 
@@ -457,6 +461,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
 
         updateBeta(imnt, imntBuilder);
         updateImntType(imnt, imntBuilder);
+        updateSector(imnt, imntBuilder);
       }
     } catch (Exception e) {
       log.error("Failed to query info for imnt {}", imnt, e);
@@ -514,6 +519,19 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       }
     } else {
       log.warn("Failed to find quoteType for {}", imnt);
+    }
+  }
+
+  private void updateSector(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
+    if (OVERRIDE_IMNT_SECTOR_MAPPING.containsKey(imnt)) {
+      imntBuilder.getTickerBuilder().setSector(OVERRIDE_IMNT_SECTOR_MAPPING.get(imnt));
+      log.info("Overriding sector of {} to {}", imnt, OVERRIDE_IMNT_SECTOR_MAPPING.get(imnt));
+    }
+
+    if (imntBuilder.getTickerBuilder().getType() == MarketDataProto.InstrumentType.ETF
+        && imntBuilder.getTickerBuilder().getName().toLowerCase().contains(" bond ")) {
+      imntBuilder.getTickerBuilder().setSector(SECTOR_ETF_BONDS);
+      log.info("Overriding sector of {} to {}", imnt, SECTOR_ETF_BONDS);
     }
   }
 
