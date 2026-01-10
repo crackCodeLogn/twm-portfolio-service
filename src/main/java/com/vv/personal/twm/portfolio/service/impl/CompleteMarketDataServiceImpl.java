@@ -1312,17 +1312,17 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     double tickerPrice = node.getPrev().getAcb().getAcbPerUnit();
     double pnL = (marketPrice - tickerPrice) * sellQty;
 
-    if (date == TODAY_DATE)
-      log.info(
-          "realized pnL {} x {} x {} x {} => mkt price '{}', qty '{}', ticker price '{}' => pnl= {}",
-          imnt,
-          type.name(),
-          date,
-          node.getInstrument().getDirection().name(),
-          marketPrice,
-          sellQty,
-          tickerPrice,
-          pnL);
+    // if (date == TODAY_DATE)
+    log.info(
+        "realized pnL {} x {} x {} x {} => mkt price '{}', qty '{}', ticker price '{}' => pnl= {}",
+        imnt,
+        type.name(),
+        date,
+        node.getInstrument().getDirection().name(),
+        marketPrice,
+        sellQty,
+        tickerPrice,
+        pnL);
     realizedDatePnLMap.computeIfAbsent(
         date,
         k -> {

@@ -58,4 +58,11 @@ class OutdatedSymbolsTest {
     assertFalse(outdatedSymbols.get("CM.TO").isPresent());
     assertFalse(outdatedSymbols.get("BNS.TO").isPresent());
   }
+
+  @Test
+  void isDelisted() {
+    assertTrue(outdatedSymbols.isDelisted("STLC.TO"));
+    assertFalse(outdatedSymbols.isDelisted("CM.TO"));
+    assertFalse(outdatedSymbols.isDelisted("^VIX"));
+  }
 }

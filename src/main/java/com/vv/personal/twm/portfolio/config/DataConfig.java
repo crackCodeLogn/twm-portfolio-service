@@ -130,8 +130,11 @@ public class DataConfig {
 
   @Bean
   public InstrumentMetaDataService instrumentMetaDataService() {
-    return new InstrumentMetaDataServiceImpl(
-        instrumentMetaDataCache(), marketDataCrdbServiceFeign, marketDataPythonEngineFeign);
+    InstrumentMetaDataService instrumentMetaDataService =
+        new InstrumentMetaDataServiceImpl(
+            instrumentMetaDataCache(), marketDataCrdbServiceFeign, marketDataPythonEngineFeign);
+    instrumentMetaDataService.setOutdatedSymbols(outdatedSymbols());
+    return instrumentMetaDataService;
   }
 
   @Bean

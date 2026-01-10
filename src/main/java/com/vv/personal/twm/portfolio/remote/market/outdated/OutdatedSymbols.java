@@ -68,6 +68,12 @@ public class OutdatedSymbols {
     return false;
   }
 
+  public boolean isDelisted(String imnt) {
+    return get(imnt)
+        .filter(symbols -> symbols.last().outdateEndDate() == LAST_DAY_OF_2XXX)
+        .isPresent();
+  }
+
   public boolean contains(String symbol) {
     return outdatedSymbols.containsKey(symbol);
   }

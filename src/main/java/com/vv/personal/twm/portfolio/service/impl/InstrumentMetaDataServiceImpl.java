@@ -11,6 +11,7 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
@@ -84,6 +85,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   private final ObjectMapper mapper = new ObjectMapper();
 
   @Setter private int benchMarkCurrentDate = -1;
+  @Setter private OutdatedSymbols outdatedSymbols;
 
   @Override
   public boolean load(int benchMarkCurrentDate, boolean forceReloadDataForCurrentDate) {
@@ -105,6 +107,11 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       // checking for stale state and enforcing a reload if required
       for (MarketDataProto.Instrument instrument : entireMetaData.getInstrumentsList()) {
         String imnt = instrument.getTicker().getSymbol();
+        if (outdatedSymbols != null && outdatedSymbols.isDelisted(imnt)) {
+          log.info("Skipping load of delisted imnt: {}", imnt);
+          continue;
+        }
+
         MarketDataProto.Instrument.Builder imntBuilder =
             MarketDataProto.Instrument.newBuilder().mergeFrom(instrument);
 

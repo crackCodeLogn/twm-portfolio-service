@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.service;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
+import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import java.util.Map;
 import java.util.Optional;
 
@@ -43,4 +44,6 @@ public interface InstrumentMetaDataService {
   String reloadMetaDataCache();
 
   MarketDataProto.Portfolio getCorporateActionNews();
+
+  void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
 }
