@@ -16,5 +16,6 @@ import org.springframework.context.annotation.Configuration;
 public class TickerDataWarehouseConfig {
   private boolean load;
   private int lookBackYears;
+  private int benchmarkStartDate;
   private String benchmarkTicker;
 }

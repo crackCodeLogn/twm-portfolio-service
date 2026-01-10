@@ -37,8 +37,10 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
   @Override
   public void loadBenchmarkData() {
     String benchmarkTicker = tickerDataWarehouseConfig.getBenchmarkTicker();
+    //    LocalDate lookBackDate =
+    //        LocalDate.now().minusYears(tickerDataWarehouseConfig.getLookBackYears());
     LocalDate lookBackDate =
-        LocalDate.now().minusYears(tickerDataWarehouseConfig.getLookBackYears());
+        DateFormatUtil.getLocalDate(tickerDataWarehouseConfig.getBenchmarkStartDate());
 
     MarketDataProto.Ticker benchmarkTickerData =
         marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(

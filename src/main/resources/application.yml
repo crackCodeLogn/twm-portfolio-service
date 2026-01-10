@@ -9,8 +9,9 @@ server:
 
 warehouse:
   load: false
-  lookBackYears: 5
-  benchmarkTicker: CM.TO
+  look-back-years: 5
+  benchmark-start-date: 20191210
+  benchmark-ticker: CM.TO
 
 locations:
   outdated-symbols: /var/mkt-data-outdated-symbols.txt
