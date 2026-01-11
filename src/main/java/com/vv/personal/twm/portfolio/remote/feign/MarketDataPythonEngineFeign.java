@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @author Vivek
  * @since 2023-11-24
  */
-@FeignClient(name = "market-data", url = "localhost:8083")
+@FeignClient("twm-market-data-engine")
 public interface MarketDataPythonEngineFeign {
 
   @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")

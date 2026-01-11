@@ -265,7 +265,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       Set<String> imnts) {
     List<String> imntsForCorrelation = new ArrayList<>(100);
     for (String imnt : imnts) {
-      log.info("Checking eligibility of imnt {} for correlation compute", imnt);
+      log.debug("Checking eligibility of imnt {} for correlation compute", imnt);
       boolean selectImntForCorrelationCompute = true;
       for (LocalDate date : benchmarkLocalDates) {
         if (!tickerDataWarehouseService.containsMarketData(imnt, date)) {
@@ -1074,7 +1074,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           dateIndex++;
         }
 
-        log.info("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
+        log.debug("Found dateIndex: {} for {} of {} {}", dateIndex, nodeDate, imnt, type);
         while (dateIndex < dates.size()) {
           int date = dateLocalDateCache.get(dates.get(dateIndex)).getAsInt();
           // find and point to the correct node for the date

@@ -114,8 +114,10 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
                     log.info(
                         "Adding market data to db for {} from {} -> {}",
                         instrument,
-                        dates.getLeft(),
-                        dates.getRight());
+                        missingTickerDataRange.getData(0).getDate(),
+                        missingTickerDataRange
+                            .getData(missingTickerDataRange.getDataCount() - 1)
+                            .getDate());
                     marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
                   }
                 }
