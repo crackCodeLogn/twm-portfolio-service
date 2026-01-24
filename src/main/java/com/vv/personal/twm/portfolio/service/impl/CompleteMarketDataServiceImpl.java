@@ -12,6 +12,7 @@ import com.google.common.collect.Table;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.cache.KeyInstrumentValueCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
@@ -107,6 +108,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final Set<String> imntsNotInPortfolio;
 
   private final DateLocalDateCache dateLocalDateCache;
+  private final KeyInstrumentValueCache keyInstrumentValueCache;
   private final InstrumentMetaDataService instrumentMetaDataService;
   private final ExtractMarketPortfolioDataService extractMarketPortfolioDataService;
   private final TickerDataWarehouseService tickerDataWarehouseService;
@@ -122,6 +124,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
+      KeyInstrumentValueCache keyInstrumentValueCache,
       InstrumentMetaDataService instrumentMetaDataService,
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
       TickerDataWarehouseService tickerDataWarehouseService,
@@ -151,6 +154,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
+    this.keyInstrumentValueCache = keyInstrumentValueCache;
     this.instrumentMetaDataService = instrumentMetaDataService;
     this.extractMarketPortfolioDataService = extractMarketPortfolioDataService;
     this.marketDataPythonEngineFeign = marketDataPythonEngineFeign;
@@ -378,6 +382,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     integerDates.clear();
     localDates.clear();
     dateLocalDateCache.flush();
+    keyInstrumentValueCache.flushAll();
     log.info("Completed market data clearing");
   }
 

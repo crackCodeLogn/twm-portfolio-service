@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.config;
 
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
+import com.vv.personal.twm.portfolio.cache.KeyInstrumentValueCache;
 import com.vv.personal.twm.portfolio.remote.feign.BankCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.CalcServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
@@ -78,6 +79,11 @@ public class DataConfig {
   }
 
   @Bean
+  public KeyInstrumentValueCache keyInstrumentValueCache() {
+    return new KeyInstrumentValueCache();
+  }
+
+  @Bean
   public ExtractMarketPortfolioDataService extractMarketPortfolioDataService() {
     return new ExtractMarketPortfolioDataServiceImpl(
         marketDataCrdbServiceFeign, fileLocationConfig);
@@ -112,6 +118,7 @@ public class DataConfig {
     CompleteMarketDataService marketDataService =
         new CompleteMarketDataServiceImpl(
             dateLocalDateCache(),
+            keyInstrumentValueCache(),
             instrumentMetaDataService(),
             extractMarketPortfolioDataService(),
             tickerDataWarehouseService(),
