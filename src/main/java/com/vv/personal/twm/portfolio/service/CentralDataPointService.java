@@ -89,4 +89,16 @@ public interface CentralDataPointService {
   MarketDataProto.Portfolio getCorporateActionNews();
 
   DataPacketProto.DataPacket getHeadingAtAGlance();
+
+  String invokePortfolioOptimizer(
+      MarketDataProto.AccountType accountType,
+      double targetBeta,
+      double maxVol,
+      double maxPe,
+      double maxWeight,
+      double minYield,
+      double newCash,
+      String objectiveMode);
+
+  void testInfo();
 }

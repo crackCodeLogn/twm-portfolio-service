@@ -78,10 +78,10 @@ class StatisticsUtilTest {
 
   @Test
   void calculateVariance_ShouldReturnCorrectPopulationVariance_WithoutMean() {
-    // Test with SIMPLE_DATA, expected variance 4.0
+    // Test with SIMPLE_DATA, expected variance 4.571
     Optional<Double> result = StatisticsUtil.calculateVariance(SIMPLE_DATA, EMPTY_MEAN);
     assertTrue(result.isPresent());
-    assertEquals(4.0, result.get(), DELTA);
+    assertEquals(4.571428, result.get(), DELTA);
   }
 
   @Test
@@ -89,15 +89,14 @@ class StatisticsUtilTest {
     // Test with SIMPLE_DATA and pre-calculated mean 5.0, expected variance 4.0
     Optional<Double> result = StatisticsUtil.calculateVariance(SIMPLE_DATA, MEAN_5_0);
     assertTrue(result.isPresent());
-    assertEquals(4.0, result.get(), DELTA);
+    assertEquals(4.571428, result.get(), DELTA);
   }
 
   @Test
   void calculateVariance_ShouldReturnZeroForSingleValue() {
     // Variance for a single value [10.0] is 0.0
     Optional<Double> result = StatisticsUtil.calculateVariance(SINGLE_VALUE_DATA, EMPTY_MEAN);
-    assertTrue(result.isPresent());
-    assertEquals(0.0, result.get(), DELTA);
+    assertFalse(result.isPresent()); // single value cannot provide variance anymore
   }
 
   @Test
@@ -118,10 +117,10 @@ class StatisticsUtilTest {
 
   @Test
   void calculateStandardDeviation_NoMean_ShouldReturnCorrectPopulationStandardDeviation() {
-    // Test with SIMPLE_DATA, expected result sqrt(4.0) = 2.0
+    // Test with SIMPLE_DATA, expected result sqrt(32/7) and no longer sqrt(32/8)
     Optional<Double> result = StatisticsUtil.calculateStandardDeviation(SIMPLE_DATA);
     assertTrue(result.isPresent());
-    assertEquals(2.0, result.get(), DELTA);
+    assertEquals(2.1380, result.get(), DELTA);
   }
 
   @Test
@@ -136,15 +135,14 @@ class StatisticsUtilTest {
     // Test with SIMPLE_DATA and pre-calculated mean 5.0, expected result 2.0
     Optional<Double> result = StatisticsUtil.calculateStandardDeviation(SIMPLE_DATA, MEAN_5_0);
     assertTrue(result.isPresent());
-    assertEquals(2.0, result.get(), DELTA);
+    assertEquals(2.13808, result.get(), DELTA);
   }
 
   @Test
   void calculateStandardDeviation_ShouldReturnZeroForSingleValue() {
     // Standard Deviation for a single value [10.0] is 0.0
     Optional<Double> result = StatisticsUtil.calculateStandardDeviation(SINGLE_VALUE_DATA);
-    assertTrue(result.isPresent());
-    assertEquals(0.0, result.get(), DELTA);
+    assertFalse(result.isPresent()); // std dev cannot be calc for single value now on
   }
 
   @Test
@@ -162,11 +160,11 @@ class StatisticsUtilTest {
     Optional<Double> result =
         StatisticsUtil.calculateCoVariance(COV_X_DATA, EMPTY_MEAN, COV_Y_NEG_DATA, EMPTY_MEAN);
     assertTrue(result.isPresent());
-    assertEquals(-2.0, result.get(), DELTA);
+    assertEquals(-2.5, result.get(), DELTA);
 
     result = StatisticsUtil.calculateCoVariance(COV_X_DATA, COV_Y_NEG_DATA);
     assertTrue(result.isPresent());
-    assertEquals(-2.0, result.get(), DELTA);
+    assertEquals(-2.5, result.get(), DELTA);
   }
 
   @Test
@@ -176,7 +174,7 @@ class StatisticsUtilTest {
         StatisticsUtil.calculateCoVariance(COV_X_DATA, MEAN_3_0, COV_X_DATA, MEAN_3_0);
 
     assertTrue(result.isPresent());
-    assertEquals(2.0, result.get(), DELTA);
+    assertEquals(2.5, result.get(), DELTA);
   }
 
   @Test
@@ -186,7 +184,7 @@ class StatisticsUtilTest {
         StatisticsUtil.calculateCoVariance(COV_X_DATA, MEAN_3_0, COV_Y_NEG_DATA, EMPTY_MEAN);
 
     assertTrue(result.isPresent());
-    assertEquals(-2.0, result.get(), DELTA);
+    assertEquals(-2.5, result.get(), DELTA);
   }
 
   @Test

@@ -17,17 +17,20 @@ import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
 import com.vv.personal.twm.portfolio.model.tracking.ProgressTracker;
+import com.vv.personal.twm.portfolio.remote.feign.CalcPythonEngine;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
-import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
+import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
+import com.vv.personal.twm.portfolio.util.DataConverterUtil;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.util.SanitizerUtil;
+import com.vv.personal.twm.portfolio.util.math.StatisticsUtil;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,6 +73,22 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private static final String KEY_TOTAL_IMNTS = "totalInstruments";
   private static final String KEY_WBETA = "beta-weighted";
   private static final String KEY_BETA = "beta";
+
+  private static final Map<MarketDataProto.Country, String> COUNTRY_MARKET_RETURN_SYMBOL_MAP =
+      ImmutableMap.<MarketDataProto.Country, String>builder()
+          .put(MarketDataProto.Country.CA, "^GSPTSE") // S&P/TSX Composite Index
+          .put(MarketDataProto.Country.US, "^GSPC") // S&P 500 Index
+          .put(MarketDataProto.Country.IN, "^NSEI") // Nifty 50 Index
+          .build();
+
+  private static final Map<MarketDataProto.Country, String>
+      COUNTRY_RISK_FREE_RETURN_CUSTOM_SYMBOL_MAP =
+          ImmutableMap.<MarketDataProto.Country, String>builder() // 10 year treasury bonds
+              .put(MarketDataProto.Country.CA, "^RF-CA") // BD.CDN.10YR.DQ.YLD
+              .put(MarketDataProto.Country.US, "^RF-US") // 10 YR
+              .build();
+
+  private static final boolean IGNORE_ALL_EXCEPT_EQUITY_FOR_OPTIMIZER = true;
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
   private final Map<String, Map<MarketDataProto.AccountType, DataList>> marketData;
@@ -114,8 +133,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private final TickerDataWarehouseService tickerDataWarehouseService;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final ProgressTrackerService progressTrackerService;
-  private final ComputeStatisticsService computeStatisticsService;
+  private final ComputeMarketStatisticsService computeMarketStatisticsService;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
+  private final CalcPythonEngine calcPythonEngine;
+
   private Optional<Table<String, String, Double>> correlationMatrix;
   private OutdatedSymbols outdatedSymbols;
   private boolean isReloadInProgress;
@@ -129,8 +150,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       ExtractMarketPortfolioDataService extractMarketPortfolioDataService,
       TickerDataWarehouseService tickerDataWarehouseService,
       MarketDataPythonEngineFeign marketDataPythonEngineFeign,
+      CalcPythonEngine calcPythonEngine,
       ProgressTrackerService progressTrackerService,
-      ComputeStatisticsService computeStatisticsService,
+      ComputeMarketStatisticsService computeMarketStatisticsService,
       MarketDataCrdbServiceFeign marketDataCrdbServiceFeign) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
@@ -161,8 +183,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.progressTrackerService = progressTrackerService;
     this.isReloadInProgress = false;
 
-    this.computeStatisticsService = computeStatisticsService;
+    this.computeMarketStatisticsService = computeMarketStatisticsService;
     this.marketDataCrdbServiceFeign = marketDataCrdbServiceFeign;
+    this.calcPythonEngine = calcPythonEngine;
   }
 
   @Override
@@ -254,7 +277,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
       // correlation matrix compute happens here
       this.correlationMatrix =
-          computeStatisticsService.computeCorrelationMatrix(imntsForCorrelation, integerDates);
+          computeMarketStatisticsService.computeCorrelationMatrix(
+              imntsForCorrelation, integerDates);
       log.debug("Correlation matrix => {}", this.correlationMatrix);
     } catch (ExecutionException | InterruptedException e) {
       log.error("Compute correlation matrix execution failed", e);
@@ -816,7 +840,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         while (!newImnts.isEmpty()) instruments.add(newImnts.poll());
         while (!knownImnts.isEmpty()) instruments.add(knownImnts.poll());
 
-        return computeStatisticsService.computeCorrelationMatrix(instruments, integerDates);
+        return computeMarketStatisticsService.computeCorrelationMatrix(instruments, integerDates);
       }
     }
     return Optional.empty();
@@ -826,7 +850,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   @Override
   public OptionalDouble getCorrelation(String imnt1, String imnt2) {
     Optional<Double> correlation =
-        computeStatisticsService.computeCorrelation(imnt1, imnt2, integerDates);
+        computeMarketStatisticsService.computeCorrelation(imnt1, imnt2, integerDates);
     return correlation.map(OptionalDouble::of).orElseGet(OptionalDouble::empty);
   }
 
@@ -932,6 +956,251 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     if (data.isPresent()) dataPacketBuilder.putStringDoubleMap(imnt, data.get());
 
     return dataPacketBuilder.build();
+  }
+
+  @Override
+  public Optional<Double> getLatestRiskFreeReturn(MarketDataProto.Country country) {
+    if (!COUNTRY_RISK_FREE_RETURN_CUSTOM_SYMBOL_MAP.containsKey(country)) {
+      log.warn("Did not recognize country {} for latest risk free return extraction", country);
+      return Optional.empty();
+    }
+    // TODO - update bank of canada data extraction logic later via csv/json:
+    // https://www.bankofcanada.ca/valet/observations/group/bond_yields_benchmark/csv
+    // main website: https://www.bankofcanada.ca/rates/interest-rates/canadian-bonds
+
+    if (country == MarketDataProto.Country.CA) return Optional.of(3.35); // as of 20260116
+    if (country == MarketDataProto.Country.US) return Optional.of(4.24); // as of 20260116
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<Double> getLatestMarketReturn(MarketDataProto.Country country) {
+    if (!COUNTRY_MARKET_RETURN_SYMBOL_MAP.containsKey(country)) {
+      log.warn("Did not recognize country {} for latest market return extraction", country);
+      return Optional.empty();
+    }
+
+    Optional<Double> currentValue =
+        fetchLatestPrice(COUNTRY_MARKET_RETURN_SYMBOL_MAP.get(country), TODAY_DATE);
+    if (currentValue.isPresent()) {
+      LocalDate tMinus1Year = DateFormatUtil.getLocalDate(TODAY_DATE).minusYears(1);
+      Optional<Double> tMinus1YearValue =
+          fetchLatestPrice(
+              COUNTRY_MARKET_RETURN_SYMBOL_MAP.get(country), DateFormatUtil.getDate(tMinus1Year));
+      return StatisticsUtil.calculateChangePercentage(tMinus1YearValue, currentValue);
+    }
+
+    return Optional.empty();
+  }
+
+  @Override
+  public void testInfo() {
+    List<String> imnts = new ArrayList<>(getInstruments());
+    Collections.sort(imnts);
+
+    // BETA first
+    /*for (String imnt : imnts) {
+      Optional<Double> betaFromMetaData = instrumentMetaDataService.getBeta(imnt);
+      Optional<Double> betaCalculated =
+          computeMarketStatisticsService.computeBeta(
+              imnt, COUNTRY_MARKET_RETURN_SYMBOL_MAP.get(MarketDataProto.Country.CA), integerDates);
+      if (betaFromMetaData.isPresent())
+        log.info("Beta> M: [{}], C: [{}]", betaFromMetaData.get(), betaCalculated.get());
+      else log.info("Beta> M: [{}], C: [{}]", betaFromMetaData, betaCalculated);
+    }*/
+    for (String imnt : imnts) {
+      Optional<Double> pe = instrumentMetaDataService.getPE(imnt);
+      log.info("PE (fwd): {} x {}", imnt, pe);
+    }
+
+    Optional<Double> rfr = getLatestRiskFreeReturn(MarketDataProto.Country.CA);
+    log.info("rfr: {}", rfr);
+    Optional<Double> marketReturn = getLatestMarketReturn(MarketDataProto.Country.CA);
+    log.info("marketReturn: {}", marketReturn);
+
+    for (String imnt : imnts) {
+      MarketDataProto.InstrumentType imntType = instrumentMetaDataService.getInstrumentType(imnt);
+      log.info("Imnt type: {} x {}", imnt, imntType);
+    }
+
+    for (String imnt : imnts) {
+      Optional<Double> dividendYield = instrumentMetaDataService.getDividendYield(imnt);
+      log.info("DivYield: {} x {}", imnt, dividendYield);
+    }
+
+    for (String imnt : imnts) {
+      Optional<Double> beta = instrumentMetaDataService.getBeta(imnt);
+      if (beta.isPresent()) {
+        Double imntReturn =
+            computeMarketStatisticsService.computeExpectedReturn(
+                beta.get(), rfr.get(), marketReturn.get());
+        log.info("Expected Return: {} x {}", imnt, imntReturn);
+      } else log.warn("No expected return for {} because of no beta", imnt);
+    }
+
+    for (String imnt : imnts) {
+      Optional<Double> std =
+          computeMarketStatisticsService.computeStandardDeviationInFormOfEWMAVol(
+              imnt, integerDates);
+      log.info("STD: {} x {}", imnt, std);
+    }
+  }
+
+  @Override
+  public String invokePortfolioOptimizer(
+      MarketDataProto.AccountType accountType,
+      double targetBeta,
+      double maxVol,
+      double maxPe,
+      double maxWeight,
+      double minYield,
+      double newCash,
+      String objectiveMode) {
+    log.info("Preparing data for invoking portfolio optimizer for {}", accountType);
+
+    List<String> imntsInScope =
+        marketData.entrySet().stream()
+            .filter(e -> e.getValue().containsKey(accountType))
+            .map(Map.Entry::getKey)
+            .sorted()
+            .toList();
+
+    log.info(
+        "Selected {} imnts for compute for portfolio optimizer for {}",
+        imntsInScope.size(),
+        accountType);
+
+    // extracting single level values out for 1st imnt - manual
+    Optional<Double> riskFreeReturn = getLatestRiskFreeReturn(MarketDataProto.Country.CA);
+    if (riskFreeReturn.isEmpty()) {
+      log.error(
+          "Could not find latest risk free return for Canada. Cannot invoke portfolio optimizer");
+      return "No latest RFR";
+    }
+
+    Optional<Double> marketReturn = getLatestMarketReturn(MarketDataProto.Country.CA);
+    if (marketReturn.isEmpty()) {
+      log.error("Could not find market return for Canada. Cannot invoke portfolio optimizer");
+      return "No market return found";
+    }
+    // add to first imnt manual here
+
+    // extracting imnt in scope level info
+    List<MarketDataProto.Instrument> instruments = new ArrayList<>(imntsInScope.size());
+    List<String> instrumentsForCorrelation = new ArrayList<>(imntsInScope.size());
+    for (String imnt : imntsInScope) {
+      MarketDataProto.InstrumentType imntType = instrumentMetaDataService.getInstrumentType(imnt);
+      if (IGNORE_ALL_EXCEPT_EQUITY_FOR_OPTIMIZER
+          && !imntType.equals(MarketDataProto.InstrumentType.EQUITY)) {
+        log.warn("Skipping imnt {} for optimizer calc as it has type {}", imnt, imntType);
+        continue;
+      }
+
+      Optional<Double> pe = instrumentMetaDataService.getPE(imnt);
+      Optional<Double> betaFromMetaData = instrumentMetaDataService.getBeta(imnt);
+      Optional<Double> dividendYield = instrumentMetaDataService.getDividendYield(imnt);
+      double imntReturn =
+          betaFromMetaData.isPresent()
+              ? computeMarketStatisticsService.computeExpectedReturn(
+                  betaFromMetaData.get(), riskFreeReturn.get(), marketReturn.get())
+              : NaN;
+      Optional<Double> std =
+          computeMarketStatisticsService.computeStandardDeviationInFormOfEWMAVol(
+              imnt, integerDates);
+
+      if (betaFromMetaData.isEmpty()
+          || dividendYield.isEmpty()
+          || std.isEmpty()
+          || pe.isEmpty()
+          || Double.isNaN(imntReturn)) {
+        log.warn(
+            "Cannot select imnt {} due to one of the missing param: beta {}, div yield {}, std {}, pe {}, return {}",
+            imnt,
+            betaFromMetaData,
+            dividendYield,
+            std,
+            pe,
+            imntReturn);
+        continue;
+      }
+
+      // use getMarketValuation(imnt, acctType) for getting the current val
+      // although, later, rethink about the current val details to be used
+      Map<String, String> marketValuation = getMarketValuation(imnt, accountType);
+      double currentValue = Double.parseDouble(marketValuation.get(KEY_CURRENT_VAL));
+
+      MarketDataProto.Instrument instrument =
+          generateInstrument(
+              imnt,
+              currentValue,
+              betaFromMetaData.get(),
+              dividendYield.get() / 100.0,
+              imntReturn / 100.0,
+              std.get(),
+              pe.get());
+      instruments.add(instrument);
+      instrumentsForCorrelation.add(imnt);
+    }
+
+    log.info("Generated imnt list with data of size {}", instruments.size());
+    if (instruments.size() < 2) {
+      log.error(
+          "Selected imnts reduced to {} post imnt level extraction for optimizer. Cannot proceed",
+          instruments.size());
+      return "Too less selected imnts";
+    }
+    /*if (imntsInScope.size() - instruments.size() > 3) {
+      log.warn(
+          "{} instruments were removed in selection. Investigate why is that the case",
+          imntsInScope.size() - instruments.size());
+      return "Investigate imnts selection reduction";
+    }*/
+
+    Optional<Double> vixOpt = fetchLatestPrice("^VIX", TODAY_DATE);
+    String riskMode = "CONSERVATIVE (HARVESTING PnL)";
+    /*double targetBeta = 1.055;
+    double maxVol = .35;
+    double maxPe = 90.0;
+    double maxWeight = .20;
+    double minYield = .015;*/
+    double vix = 16;
+
+    if (vixOpt.isPresent()) {
+      vix = vixOpt.get();
+      if (vix > 25) {
+        riskMode = "OPPORTUNISTIC (BUYING THE DIP)";
+        /*maxVol = .18; // todo - removing for now, will restore once experiments are done
+        maxPe = 18.0;
+        targetBeta = 1.15;*/
+      }
+    }
+    MarketDataProto.Instrument manualImntForOptimizer =
+        generateManualInstrumentForOptimizer(
+            vix, riskMode, targetBeta, maxVol, maxPe, maxWeight, minYield, newCash, objectiveMode);
+
+    Optional<Table<String, String, Double>> correlationMatrixOpt =
+        computeMarketStatisticsService.computeCorrelationMatrix(
+            instrumentsForCorrelation, integerDates);
+    MarketDataProto.CorrelationMatrix correlationMatrix =
+        DataConverterUtil.getCorrelationMatrix(correlationMatrixOpt);
+    if (correlationMatrix.getEntriesCount() == 0) {
+      log.error("Correlation matrix is empty");
+      return "Correlation matrix is empty";
+    }
+
+    MarketDataProto.Portfolio optimizerPortfolio =
+        MarketDataProto.Portfolio.newBuilder()
+            .setCorrelationMatrix(correlationMatrix)
+            .addInstruments(manualImntForOptimizer)
+            .addAllInstruments(instruments)
+            .build();
+
+    try {
+      return calcPythonEngine.calcPortfolioOptimizer(optimizerPortfolio);
+    } catch (Exception e) {
+      log.error("Failed to process portfolio optimizer", e);
+    }
+    return "Failed to process portfolio optimizer";
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
@@ -1504,6 +1773,51 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     for (Pair<Double, Double> pair : betaCurrentVals)
       weightedBeta += pair.getKey() * pair.getValue();
     return weightedBeta / totalCurrentVal;
+  }
+
+  private MarketDataProto.Instrument generateManualInstrumentForOptimizer(
+      Double vix,
+      String riskMode,
+      Double targetBeta,
+      Double maxVol,
+      Double maxPe,
+      Double maxWeight,
+      Double minYield,
+      Double newCash,
+      String objectiveMode) {
+    return MarketDataProto.Instrument.newBuilder()
+        .putMetaData("vix", String.valueOf(vix))
+        .putMetaData("risk_mode", riskMode)
+        .putMetaData("target_beta", String.valueOf(targetBeta))
+        .putMetaData("max_vol", String.valueOf(maxVol))
+        .putMetaData("max_pe", String.valueOf(maxPe))
+        .putMetaData("max_weight", String.valueOf(maxWeight))
+        .putMetaData("min_yield", String.valueOf(minYield))
+        .putMetaData("new_cash", String.valueOf(newCash))
+        .putMetaData("objective_mode", String.valueOf(objectiveMode))
+        .build();
+  }
+
+  private MarketDataProto.Instrument generateInstrument(
+      String symbol,
+      double capital,
+      double beta,
+      double imntYield,
+      double imntReturn,
+      double stdDev,
+      double peRatio) {
+    return MarketDataProto.Instrument.newBuilder()
+        .setTicker(
+            MarketDataProto.Ticker.newBuilder()
+                .setSymbol(symbol)
+                .addData(MarketDataProto.Value.newBuilder().setPrice(capital).build())
+                .build())
+        .setBeta(beta)
+        .setDividendYield(imntYield)
+        .putMetaData("return", String.valueOf(imntReturn))
+        .putMetaData("std_dev", String.valueOf(stdDev))
+        .putMetaData("pe_ratio", String.valueOf(peRatio))
+        .build();
   }
 
   private Optional<Double> fetchLatestPrice(String imnt, int tDate) {

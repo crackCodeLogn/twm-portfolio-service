@@ -65,4 +65,20 @@ public interface CompleteMarketDataService {
   int getBenchMarkCurrentDate();
 
   DataPacketProto.DataPacket getHeadingAtAGlance();
+
+  Optional<Double> getLatestRiskFreeReturn(MarketDataProto.Country country);
+
+  Optional<Double> getLatestMarketReturn(MarketDataProto.Country country);
+
+  void testInfo();
+
+  String invokePortfolioOptimizer(
+      MarketDataProto.AccountType accountType,
+      double targetBeta,
+      double maxVol,
+      double maxPe,
+      double maxWeight,
+      double minYield,
+      double newCash,
+      String objectiveMode);
 }

@@ -31,6 +31,10 @@ public class DateLocalDateCache {
     return Optional.ofNullable(dateLocalDateCache.get(date));
   }
 
+  public LocalDate getOrCalc(int date) {
+    return get(date).orElse(DateFormatUtil.getLocalDate(date));
+  }
+
   public OptionalInt get(LocalDate date) {
     return OptionalInt.of(dateLocalDateCache.inverse().get(date));
   }

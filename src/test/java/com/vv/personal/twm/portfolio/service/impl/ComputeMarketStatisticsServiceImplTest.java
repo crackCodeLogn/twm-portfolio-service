@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +22,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
  * @since 2025-12-01
  */
 @ExtendWith(MockitoExtension.class)
-class ComputeStatisticsServiceImplTest {
+class ComputeMarketStatisticsServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
-  private ComputeStatisticsServiceImpl computeStatisticsServiceImpl;
+  private ComputeMarketStatisticsServiceImpl computeStatisticsServiceImpl;
 
   @BeforeEach
   void setUp() {
-    computeStatisticsServiceImpl = new ComputeStatisticsServiceImpl(tickerDataWarehouseService);
+    computeStatisticsServiceImpl =
+        new ComputeMarketStatisticsServiceImpl(
+            new DateLocalDateCache(), tickerDataWarehouseService);
   }
 
   @AfterEach
@@ -130,9 +133,9 @@ class ComputeStatisticsServiceImplTest {
     assertEquals(-.772773, correlationMatrix.get().get("a.to", "z.to"), DELTA_PRECISION);
 
     // diagonals - self imnt correlation
-    assertEquals(0.0, correlationMatrix.get().get("v.to", "v.to"), DELTA_PRECISION);
-    assertEquals(0.0, correlationMatrix.get().get("z.to", "z.to"), DELTA_PRECISION);
-    assertEquals(0.0, correlationMatrix.get().get("o.to", "o.to"), DELTA_PRECISION);
-    assertEquals(0.0, correlationMatrix.get().get("a.to", "a.to"), DELTA_PRECISION);
+    assertEquals(1.0, correlationMatrix.get().get("v.to", "v.to"), DELTA_PRECISION);
+    assertEquals(1.0, correlationMatrix.get().get("z.to", "z.to"), DELTA_PRECISION);
+    assertEquals(1.0, correlationMatrix.get().get("o.to", "o.to"), DELTA_PRECISION);
+    assertEquals(1.0, correlationMatrix.get().get("a.to", "a.to"), DELTA_PRECISION);
   }
 }

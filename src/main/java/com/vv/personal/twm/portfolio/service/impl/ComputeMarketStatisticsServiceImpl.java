@@ -3,9 +3,11 @@ package com.vv.personal.twm.portfolio.service.impl;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
+import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.math.StatisticsUtil;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +32,101 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @AllArgsConstructor
 @Service
-public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
-
+public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisticsService {
+  private static final double LAMBDA_EWMA_VOL = .94;
+  private final DateLocalDateCache dateLocalDateCache;
   private final TickerDataWarehouseService tickerDataWarehouseService;
+
   private final Map<ImntDatesRecord, Optional<List<Double>>> tmpImntDatesRecordListMap =
       new ConcurrentHashMap<>();
+
+  /** CAPM */
+  @Override
+  public Double computeExpectedReturn(Double beta, Double riskFreeReturn, Double marketReturn) {
+    return riskFreeReturn + beta * (marketReturn - riskFreeReturn);
+  }
+
+  @Override
+  public Optional<Double> computeBeta(String instrument, String marketSymbol, List<Integer> dates) {
+    List<Double> imntValues = new ArrayList<>(dates.size());
+    List<Double> marketValues = new ArrayList<>(dates.size());
+
+    for (Integer date : dates) {
+      LocalDate localDate = dateLocalDateCache.getOrCalc(date);
+      Double imntPrice = tickerDataWarehouseService.getMarketData(instrument, localDate);
+      Double marketPrice = tickerDataWarehouseService.getMarketData(marketSymbol, localDate);
+      if (imntPrice != null && marketPrice != null) {
+        imntValues.add(imntPrice);
+        marketValues.add(marketPrice);
+      }
+    }
+
+    Optional<Double> covariance = StatisticsUtil.calculateCoVariance(imntValues, marketValues);
+    if (covariance.isPresent()) {
+      Optional<Double> variance = StatisticsUtil.calculateVariance(marketValues, Optional.empty());
+      if (variance.isPresent()) {
+        return Optional.of(covariance.get() / variance.get());
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Computes the standard deviation of an imnt using the EWMA (Exponentially Weighted Moving
+   * Average) volatility. <br>
+   * Concept is explained in detail here: https://www.investopedia.com/articles/07/ewma.asp,
+   * https://corporatefinanceinstitute.com/resources/career-map/sell-side/capital-markets/exponentially-weighted-moving-average-ewma/
+   */
+  @Override
+  public Optional<Double> computeStandardDeviationInFormOfEWMAVol(
+      String instrument, List<Integer> dates) {
+    List<Double> imntValues = new ArrayList<>(dates.size());
+    for (int i = 0; i < dates.size(); i++) {
+      Double value = tickerDataWarehouseService.getMarketData(instrument, dates.get(i));
+      if (value != null) imntValues.add(value);
+    }
+    Optional<List<Double>> logReturns = StatisticsUtil.calculateLogarithmicDelta(imntValues);
+    if (logReturns.isPresent()) {
+      double variance = Math.pow(logReturns.get().get(0), 2);
+      final double COUNTER_LAMBDA = 1 - LAMBDA_EWMA_VOL;
+
+      for (int i = 1; i < logReturns.get().size(); i++) {
+        variance =
+            LAMBDA_EWMA_VOL * variance + COUNTER_LAMBDA * Math.pow(logReturns.get().get(i), 2);
+      }
+
+      double dailyStdDev = Math.sqrt(variance);
+      return Optional.of(dailyStdDev * Math.sqrt(252)); // annualization
+      // cm -> 0.14254528859429927
+    }
+    return Optional.empty();
+    /*if (logReturns.isPresent()) return StatisticsUtil.calculateStandardDeviation(logReturns.get());
+    return Optional.empty();*/
+    // cm -> 0.014620557819936247
+    // return StatisticsUtil.calculateStandardDeviation(imntValues); // CM -> 21.523893573664377
+  }
+
+  @Override
+  public Optional<Double> computeLatestMovingAverage(
+      String instrument, int timeFrame, List<Integer> dates) {
+    if (dates == null || dates.isEmpty() || dates.size() < timeFrame || timeFrame <= 0) {
+      log.warn(
+          "Cannot compute moving average for {}x{}x{} dates", instrument, timeFrame, dates.size());
+      return Optional.empty();
+    }
+
+    double sum = 0.0;
+    int count = 0;
+    for (int i = dates.size() - 1; i >= 0 && timeFrame-- > 0; i--) {
+      LocalDate localDate = dateLocalDateCache.getOrCalc(dates.get(i));
+      Double price = tickerDataWarehouseService.getMarketData(instrument, localDate);
+      if (price != null) {
+        sum += price;
+        count++;
+      }
+    }
+    return Optional.of(sum / count);
+  }
 
   /**
    * Assumptions:
@@ -52,6 +144,7 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
       log.error("Can't compute correlation for empty instruments or dates.");
       return Optional.empty();
     }
+    if (instrument1.equals(instrument2)) return Optional.of(1.0);
 
     Optional<List<Double>> imnt1Values = Optional.empty();
     Optional<List<Double>> imnt2Values = Optional.empty();
@@ -146,7 +239,7 @@ public class ComputeStatisticsServiceImpl implements ComputeStatisticsService {
       List<Callable<Void>> correlationComputeTasks =
           new ArrayList<>(instruments.size() * instruments.size() / 2);
       for (int i = 0; i < instruments.size(); i++)
-        for (int j = i + 1; j < instruments.size(); j++)
+        for (int j = i; j < instruments.size(); j++)
           correlationComputeTasks.add(
               generateCorrelationComputeTask(
                   instruments.get(i), instruments.get(j), dates, correlationMatrix));

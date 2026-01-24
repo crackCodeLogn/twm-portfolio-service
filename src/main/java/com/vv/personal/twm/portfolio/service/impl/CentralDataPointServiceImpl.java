@@ -255,4 +255,23 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   public DataPacketProto.DataPacket getHeadingAtAGlance() {
     return completeMarketDataService.getHeadingAtAGlance();
   }
+
+  @Override
+  public String invokePortfolioOptimizer(
+      MarketDataProto.AccountType accountType,
+      double targetBeta,
+      double maxVol,
+      double maxPe,
+      double maxWeight,
+      double minYield,
+      double newCash,
+      String objectiveMode) {
+    return completeMarketDataService.invokePortfolioOptimizer(
+        accountType, targetBeta, maxVol, maxPe, maxWeight, minYield, newCash, objectiveMode);
+  }
+
+  @Override
+  public void testInfo() {
+    completeMarketDataService.testInfo();
+  }
 }

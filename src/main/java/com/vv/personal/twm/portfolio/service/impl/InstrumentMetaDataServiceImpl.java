@@ -63,6 +63,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       ImmutableMap.<String, String>builder().put("CASH.TO", SECTOR_ETF_CASH).build();
   private static final List<String> BETA_FIELDS = Lists.newArrayList("beta", "beta3Year");
   private static final String QUOTE_TYPE_FIELD = "quoteType";
+  private static final String FORWARD_PE_FIELD = "forwardPE";
 
   private static final String KEY_MER = "mer";
   private static final String KEY_DIV_YIELD = "div-yield";
@@ -209,6 +210,27 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       }
     }
     return Optional.empty();
+  }
+
+  @Override
+  public Optional<Double> getPE(String imnt) {
+    Optional<Double> pe = Optional.empty();
+    Optional<MarketDataProto.Instrument> instrumentMetaData = instrumentMetaDataCache.get(imnt);
+    if (instrumentMetaData.isPresent()) {
+      String forwardPE =
+          instrumentMetaData.get().getMetaDataOrDefault(FORWARD_PE_FIELD, StringUtils.EMPTY);
+      if (forwardPE.isEmpty()) log.warn("Did not find PE for imnt {}", imnt);
+      else pe = Optional.of(Double.parseDouble(forwardPE));
+    }
+    return pe;
+  }
+
+  @Override
+  public MarketDataProto.InstrumentType getInstrumentType(String imnt) {
+    Optional<MarketDataProto.Instrument> instrumentMetaData = instrumentMetaDataCache.get(imnt);
+    return instrumentMetaData
+        .map(v -> v.getTicker().getType())
+        .orElse(MarketDataProto.InstrumentType.UNRECOGNIZED);
   }
 
   @Override

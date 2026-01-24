@@ -10,11 +10,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.cache.KeyInstrumentValueCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.remote.feign.CalcPythonEngine;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
-import com.vv.personal.twm.portfolio.service.ComputeStatisticsService;
+import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
@@ -40,8 +42,9 @@ class CompleteMarketDataServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
   @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+  @Mock private CalcPythonEngine calcPythonEngine;
   @Mock private ProgressTrackerService progressTrackerService;
-  @Mock private ComputeStatisticsService computeStatisticsService;
+  @Mock private ComputeMarketStatisticsService computeMarketStatisticsService;
   @Mock private MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   @Mock private InstrumentMetaDataService instrumentMetaDataService;
 
@@ -52,12 +55,14 @@ class CompleteMarketDataServiceImplTest {
     completeMarketDataService =
         new CompleteMarketDataServiceImpl(
             new DateLocalDateCache(),
+            new KeyInstrumentValueCache(),
             instrumentMetaDataService,
             null,
             tickerDataWarehouseService,
             marketDataPythonEngineFeign,
+            calcPythonEngine,
             progressTrackerService,
-            computeStatisticsService,
+            computeMarketStatisticsService,
             marketDataCrdbServiceFeign);
   }
 
