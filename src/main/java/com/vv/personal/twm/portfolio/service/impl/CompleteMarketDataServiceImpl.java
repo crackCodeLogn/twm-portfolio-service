@@ -1243,7 +1243,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             .build();
 
     try {
-      return calcPythonEngine.calcPortfolioOptimizer(optimizerPortfolio);
+      MarketDataProto.Portfolio responsePortfolio =
+          calcPythonEngine.calcPortfolioOptimizer(optimizerPortfolio);
+      log.info("Response portfolio: {}", responsePortfolio);
+      return "Processed";
     } catch (Exception e) {
       log.error("Failed to process portfolio optimizer", e);
     }

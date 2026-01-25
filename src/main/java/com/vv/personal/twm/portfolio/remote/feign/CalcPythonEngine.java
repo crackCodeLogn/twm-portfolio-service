@@ -14,5 +14,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface CalcPythonEngine extends PingFeign {
 
   @PostMapping("/calc/portfolio/optimizer")
-  String calcPortfolioOptimizer(@RequestBody MarketDataProto.Portfolio requestPortfolio);
+  MarketDataProto.Portfolio calcPortfolioOptimizer(
+      @RequestBody MarketDataProto.Portfolio requestPortfolio);
 }
