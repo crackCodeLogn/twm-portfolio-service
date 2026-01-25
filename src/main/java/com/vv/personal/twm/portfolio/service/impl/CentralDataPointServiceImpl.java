@@ -11,6 +11,7 @@ import com.vv.personal.twm.portfolio.model.market.NetWorthBreakDownKey;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
+import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   private final CompleteBankDataService completeBankDataService;
   private final CompleteMarketDataService completeMarketDataService;
   private final InstrumentMetaDataService instrumentMetaDataService;
+  private final ComputeMarketStatisticsService computeMarketStatisticsService;
 
   @Override
   public Map<String, Double> getLatestTotalNetWorthBreakDown(BankProto.CurrencyCode ccy) {
@@ -265,9 +267,18 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
       double maxWeight,
       double minYield,
       double newCash,
-      String objectiveMode) {
+      String objectiveMode,
+      String ignoreImnts) {
     return completeMarketDataService.invokePortfolioOptimizer(
-        accountType, targetBeta, maxVol, maxPe, maxWeight, minYield, newCash, objectiveMode);
+        accountType,
+        targetBeta,
+        maxVol,
+        maxPe,
+        maxWeight,
+        minYield,
+        newCash,
+        objectiveMode,
+        ignoreImnts);
   }
 
   @Override

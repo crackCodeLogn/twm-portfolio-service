@@ -72,6 +72,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private static final String KEY_TOTAL_DIV = "totalDiv";
   private static final String KEY_TOTAL_IMNTS = "totalInstruments";
   private static final String KEY_WBETA = "beta-weighted";
+  private static final String KEY_IMNT_CURRV_WEIGHT_PREFIX = "imnt-weight-currv";
+  private static final String KEY_EXPECTED_DIV_YIELD_PERCENT = "expectedDivYieldPercent";
+  private static final String KEY_EXPECTED_RETURN_PERCENT = "expectedReturnPercent";
   private static final String KEY_BETA = "beta";
 
   private static final Map<MarketDataProto.Country, String> COUNTRY_MARKET_RETURN_SYMBOL_MAP =
@@ -662,7 +665,17 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         Map.of(KEY_BOOK_VAL, 0, KEY_PNL, 1, KEY_TOTAL_DIV, 2, KEY_QTY, 3);
     List<Double> values = Lists.newArrayList(0.0, 0.0, 0.0, 0.0); // to store above 4 vals in-place
     Set<String> imnts = new HashSet<>();
-    Map<String, Pair<Double, Double>> imntBetaCurrentValue = new HashMap<>();
+    Map<String, Double> imntCurrentValMapForWeight = new HashMap<>();
+    Map<String, Double> imntBetaMap = new HashMap<>();
+    Map<String, Double> imntDivYieldMap = new HashMap<>();
+    Map<String, Double> imntEprMap = new HashMap<>();
+
+    Optional<Double> riskFreeReturn = getLatestRiskFreeReturn(MarketDataProto.Country.CA);
+    Optional<Double> marketReturn = getLatestMarketReturn(MarketDataProto.Country.CA);
+    if (riskFreeReturn.isEmpty() || marketReturn.isEmpty()) {
+      log.warn("Unable to find risk free return / market return, cannot compute");
+      return new HashMap<>();
+    }
 
     marketData.forEach(
         (imnt, accountTypeDataListMap) -> {
@@ -705,16 +718,30 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                     currentVal.set(0, currentVal.get(0) + bookVal + pnlWithDiv);
                   });
 
-          Optional<Double> optionalBeta = instrumentMetaDataService.getBeta(imnt);
-          if (optionalBeta.isEmpty()) {
-            log.warn("Not considering {} for beta calc as beta was not found", imnt);
-          } else {
-            imntBetaCurrentValue.put(imnt, Pair.of(optionalBeta.get(), currentVal.get(0)));
+          if (currentVal.get(0) > 0.0) {
+            imntCurrentValMapForWeight.put(imnt, currentVal.get(0));
+
+            Double beta = instrumentMetaDataService.getBeta(imnt).orElse(0.0);
+            imntBetaMap.put(imnt, beta);
+            if (beta.equals(0.0)) log.warn("Beta for imnt {} not found", imnt);
+
+            Double divYield = instrumentMetaDataService.getDividendYield(imnt).orElse(0.0);
+            imntDivYieldMap.put(imnt, divYield);
+            if (divYield.equals(0.0)) log.warn("Div Yield for imnt {} not found", imnt);
+
+            Double imntEpr =
+                computeMarketStatisticsService.computeExpectedReturn(
+                    beta, riskFreeReturn.get(), marketReturn.get());
+            imntEprMap.put(imnt, imntEpr);
           }
         });
     double currentValForBeta = 0.0;
-    for (Pair<Double, Double> pair : imntBetaCurrentValue.values())
-      currentValForBeta += pair.getRight();
+    double totalCurrentVal = 0.0;
+    for (Map.Entry<String, Double> entry : imntCurrentValMapForWeight.entrySet()) {
+      String imnt = entry.getKey();
+      totalCurrentVal += entry.getValue();
+      if (imntBetaMap.containsKey(imnt)) currentValForBeta += imntCurrentValMapForWeight.get(imnt);
+    }
 
     double currentVal =
         values.get(keyLookup.get(KEY_BOOK_VAL)) + values.get(keyLookup.get(KEY_PNL));
@@ -728,17 +755,31 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     Double weightedBeta =
         currentValForBeta == 0.0
             ? NaN
-            : getWeightedBeta(imntBetaCurrentValue.values(), currentValForBeta);
+            : getWeightedBeta(imntBetaMap, imntCurrentValMapForWeight, currentValForBeta);
+    double expectedDivYield = 0.0;
+    double expecetedReturn = 0.0;
 
-    return ImmutableMap.<String, Double>builder()
-        .put(KEY_TOTAL_IMNTS, (double) imnts.size())
-        .put(KEY_BOOK_VAL, values.get(keyLookup.get(KEY_BOOK_VAL)))
-        .put(KEY_PNL, values.get(keyLookup.get(KEY_PNL)))
-        .put(KEY_CURRENT_VAL, currentVal)
-        .put(KEY_TOTAL_DIV, values.get(keyLookup.get(KEY_TOTAL_DIV)))
-        .put(KEY_QTY, values.get(keyLookup.get(KEY_QTY)))
-        .put(KEY_WBETA, weightedBeta)
-        .build();
+    Map<String, Double> map = new HashMap<>();
+    map.put(KEY_TOTAL_IMNTS, (double) imnts.size());
+    map.put(KEY_BOOK_VAL, values.get(keyLookup.get(KEY_BOOK_VAL)));
+    map.put(KEY_PNL, values.get(keyLookup.get(KEY_PNL)));
+    map.put(KEY_CURRENT_VAL, currentVal);
+    map.put(KEY_TOTAL_DIV, values.get(keyLookup.get(KEY_TOTAL_DIV)));
+    map.put(KEY_QTY, values.get(keyLookup.get(KEY_QTY)));
+    map.put(KEY_WBETA, weightedBeta);
+
+    for (Map.Entry<String, Double> entry : imntCurrentValMapForWeight.entrySet()) {
+      map.put(
+          String.format("%s-%s", KEY_IMNT_CURRV_WEIGHT_PREFIX, entry.getKey()),
+          entry.getValue() / totalCurrentVal);
+      expectedDivYield += entry.getValue() * imntDivYieldMap.get(entry.getKey());
+      expecetedReturn += entry.getValue() * imntEprMap.get(entry.getKey());
+    }
+    expectedDivYield /= totalCurrentVal;
+    expecetedReturn /= totalCurrentVal;
+    map.put(KEY_EXPECTED_DIV_YIELD_PERCENT, expectedDivYield);
+    map.put(KEY_EXPECTED_RETURN_PERCENT, expecetedReturn);
+    return map;
   }
 
   @Override
@@ -1055,12 +1096,18 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       double maxWeight,
       double minYield,
       double newCash,
-      String objectiveMode) {
+      String objectiveMode,
+      String ignoreImnts) {
     log.info("Preparing data for invoking portfolio optimizer for {}", accountType);
+    Set<String> exemptInstruments = new HashSet<>();
+    Collections.addAll(exemptInstruments, StringUtils.split(ignoreImnts, "|"));
 
     List<String> imntsInScope =
         marketData.entrySet().stream()
-            .filter(e -> e.getValue().containsKey(accountType))
+            .filter(
+                e ->
+                    e.getValue().containsKey(accountType)
+                        && !exemptInstruments.contains(e.getKey()))
             .map(Map.Entry::getKey)
             .sorted()
             .toList();
@@ -1767,11 +1814,16 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return node.getInstrument().getTicker().getData(0).getDate();
   }
 
+  /**
+   * Assumption is that the imnt current val map will always have >= entries than the imnt beta map
+   */
   private Double getWeightedBeta(
-      Collection<Pair<Double, Double>> betaCurrentVals, double totalCurrentVal) {
+      Map<String, Double> imntBetaMap,
+      Map<String, Double> imntCurrentValMap,
+      double totalCurrentVal) {
     double weightedBeta = 0.0;
-    for (Pair<Double, Double> pair : betaCurrentVals)
-      weightedBeta += pair.getKey() * pair.getValue();
+    for (String imnt : imntBetaMap.keySet())
+      weightedBeta += imntBetaMap.get(imnt) * imntCurrentValMap.get(imnt);
     return weightedBeta / totalCurrentVal;
   }
 

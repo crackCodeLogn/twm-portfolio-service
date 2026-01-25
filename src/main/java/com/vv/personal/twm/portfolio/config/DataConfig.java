@@ -151,7 +151,10 @@ public class DataConfig {
   @Bean
   public CentralDataPointService centralDataPointService() {
     return new CentralDataPointServiceImpl(
-        completeBankDataService(), completeMarketDataService(), instrumentMetaDataService());
+        completeBankDataService(),
+        completeMarketDataService(),
+        instrumentMetaDataService(),
+        computeMarketStatisticsService());
   }
 
   @Bean

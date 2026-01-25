@@ -98,7 +98,8 @@ public interface CentralDataPointService {
       double maxWeight,
       double minYield,
       double newCash,
-      String objectiveMode);
+      String objectiveMode,
+      String ignoreImnts);
 
   void testInfo();
 }

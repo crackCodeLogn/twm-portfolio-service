@@ -343,14 +343,23 @@ public class PortfolioController {
       @RequestParam double maxWeight,
       @RequestParam double minYield,
       @RequestParam(defaultValue = "0.0") double newCash,
-      @RequestParam String objectiveMode) {
+      @RequestParam(defaultValue = "MAX_RETURN") String objectiveMode,
+      @RequestParam(defaultValue = "") String ignoreImnts) {
     log.info("invokePortfolioOptimizer invoked for {}", accountType);
     MarketDataProto.AccountType accType = MarketDataProto.AccountType.valueOf(accountType);
 
     return DataPacketProto.DataPacket.newBuilder()
         .addStrings(
             centralDataPointService.invokePortfolioOptimizer(
-                accType, targetBeta, maxVol, maxPe, maxWeight, minYield, newCash, objectiveMode))
+                accType,
+                targetBeta,
+                maxVol,
+                maxPe,
+                maxWeight,
+                minYield,
+                newCash,
+                objectiveMode,
+                ignoreImnts))
         .build();
   }
 

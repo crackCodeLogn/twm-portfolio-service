@@ -80,5 +80,6 @@ public interface CompleteMarketDataService {
       double maxWeight,
       double minYield,
       double newCash,
-      String objectiveMode);
+      String objectiveMode,
+      String ignoreImnts);
 }
