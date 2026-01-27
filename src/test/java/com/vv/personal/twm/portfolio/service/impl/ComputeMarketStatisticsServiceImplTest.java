@@ -8,6 +8,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
@@ -137,5 +139,54 @@ class ComputeMarketStatisticsServiceImplTest {
     assertEquals(1.0, correlationMatrix.get().get("z.to", "z.to"), DELTA_PRECISION);
     assertEquals(1.0, correlationMatrix.get().get("o.to", "o.to"), DELTA_PRECISION);
     assertEquals(1.0, correlationMatrix.get().get("a.to", "a.to"), DELTA_PRECISION);
+  }
+
+  @Test
+  void computeExpectedReturn() {
+    double epr = computeStatisticsServiceImpl.computeExpectedReturn(1.2, 3.5, 10.1);
+    assertEquals(11.42, epr, DELTA_PRECISION);
+  }
+
+  @Test
+  void computeLatestMovingAverage() {
+    Optional<Double> result;
+
+    when(tickerDataWarehouseService.getMarketData("TEST-V2.TO", LocalDate.of(2026, 1, 30)))
+        .thenReturn(5.0);
+    when(tickerDataWarehouseService.getMarketData("TEST-V2.TO", LocalDate.of(2026, 1, 29)))
+        .thenReturn(5.2);
+    when(tickerDataWarehouseService.getMarketData("TEST-V2.TO", LocalDate.of(2026, 1, 28)))
+        .thenReturn(5.1);
+    result =
+        computeStatisticsServiceImpl.computeLatestMovingAverage(
+            "TEST-V2.TO",
+            3,
+            Lists.newArrayList(20260124, 20260126, 20260127, 20260128, 20260129, 20260130));
+    assertTrue(result.isPresent());
+    assertEquals(5.1, result.get(), DELTA_PRECISION);
+  }
+
+  @Test
+  void computeLatestMovingAverage_Empty() {
+    Optional<Double> result;
+
+    result = computeStatisticsServiceImpl.computeLatestMovingAverage("TEST-V2.TO", 3, null);
+    assertTrue(result.isEmpty());
+
+    result =
+        computeStatisticsServiceImpl.computeLatestMovingAverage("TEST-V2.TO", 3, new ArrayList<>());
+    assertTrue(result.isEmpty());
+
+    result =
+        computeStatisticsServiceImpl.computeLatestMovingAverage(
+            "TEST-V2.TO", 3, Lists.newArrayList(20260126));
+    assertTrue(result.isEmpty());
+
+    result =
+        computeStatisticsServiceImpl.computeLatestMovingAverage(
+            "TEST-V2.TO",
+            0,
+            Lists.newArrayList(20260124, 20260126, 20260127, 20260128, 20260129, 20260130));
+    assertTrue(result.isEmpty());
   }
 }

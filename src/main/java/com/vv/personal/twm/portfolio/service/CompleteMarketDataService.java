@@ -62,6 +62,8 @@ public interface CompleteMarketDataService {
 
   Optional<Table<String, String, Double>> getCorrelationMatrixForSectors();
 
+  Optional<Double> fetchLatestPrice(String imnt, int tDate);
+
   int getBenchMarkCurrentDate();
 
   DataPacketProto.DataPacket getHeadingAtAGlance();
@@ -82,4 +84,6 @@ public interface CompleteMarketDataService {
       double newCash,
       String objectiveMode,
       String ignoreImnts);
+
+  List<Integer> getMarketDates();
 }

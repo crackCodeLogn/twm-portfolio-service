@@ -338,10 +338,10 @@ public class PortfolioController {
   public DataPacketProto.DataPacket invokePortfolioOptimizer(
       @PathVariable("accountType") String accountType,
       @RequestParam double targetBeta,
-      @RequestParam double maxVol,
-      @RequestParam double maxPe,
-      @RequestParam double maxWeight,
       @RequestParam double minYield,
+      @RequestParam(defaultValue = "0.35") double maxVol,
+      @RequestParam(defaultValue = "90.0") double maxPe,
+      @RequestParam(defaultValue = "0.35") double maxWeight,
       @RequestParam(defaultValue = "0.0") double newCash,
       @RequestParam(defaultValue = "MAX_RETURN") String objectiveMode,
       @RequestParam(defaultValue = "") String ignoreImnts) {

@@ -1102,15 +1102,22 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     Set<String> exemptInstruments = new HashSet<>();
     Collections.addAll(exemptInstruments, StringUtils.split(ignoreImnts, "|"));
 
-    List<String> imntsInScope =
+    List<String> accountTypeImnts =
         marketData.entrySet().stream()
             .filter(
                 e ->
                     e.getValue().containsKey(accountType)
                         && !exemptInstruments.contains(e.getKey()))
             .map(Map.Entry::getKey)
-            .sorted()
             .toList();
+    Set<String> imntsInScope = new TreeSet<>(accountTypeImnts);
+    List<String> allImnts = new ArrayList<>(marketData.keySet());
+    // hard removing certain imnts
+    allImnts.remove("STLC.TO"); // delisted
+    allImnts.remove("TPZ.TO"); // incomplete mkt data
+    allImnts.remove("ASTL.TO"); // incomplete mkt data
+
+    Collections.sort(allImnts);
 
     log.info(
         "Selected {} imnts for compute for portfolio optimizer for {}",
@@ -1135,7 +1142,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     // extracting imnt in scope level info
     List<MarketDataProto.Instrument> instruments = new ArrayList<>(imntsInScope.size());
     List<String> instrumentsForCorrelation = new ArrayList<>(imntsInScope.size());
-    for (String imnt : imntsInScope) {
+    for (String imnt : allImnts) { // allImnts or accountTypeImnts
       MarketDataProto.InstrumentType imntType = instrumentMetaDataService.getInstrumentType(imnt);
       if (IGNORE_ALL_EXCEPT_EQUITY_FOR_OPTIMIZER
           && !imntType.equals(MarketDataProto.InstrumentType.EQUITY)) {
@@ -1154,37 +1161,49 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       Optional<Double> std =
           computeMarketStatisticsService.computeStandardDeviationInFormOfEWMAVol(
               imnt, integerDates);
+      Optional<Double> currentPrice = fetchLatestPrice(imnt, TODAY_DATE);
 
       if (betaFromMetaData.isEmpty()
           || dividendYield.isEmpty()
           || std.isEmpty()
           || pe.isEmpty()
-          || Double.isNaN(imntReturn)) {
+          || Double.isNaN(imntReturn)
+          || currentPrice.isEmpty()) {
         log.warn(
-            "Cannot select imnt {} due to one of the missing param: beta {}, div yield {}, std {}, pe {}, return {}",
+            "Cannot select imnt {} due to one of the missing param: beta {}, div yield {}, std {}, pe {}, return {}, current price {}",
             imnt,
             betaFromMetaData,
             dividendYield,
             std,
             pe,
-            imntReturn);
+            imntReturn,
+            currentPrice);
         continue;
       }
 
       // use getMarketValuation(imnt, acctType) for getting the current val
       // although, later, rethink about the current val details to be used
-      Map<String, String> marketValuation = getMarketValuation(imnt, accountType);
-      double currentValue = Double.parseDouble(marketValuation.get(KEY_CURRENT_VAL));
+      double currentValue = 0.0;
+      if (imntsInScope.contains(imnt)) {
+        Map<String, String> marketValuation = getMarketValuation(imnt, accountType);
+        currentValue = Double.parseDouble(marketValuation.get(KEY_CURRENT_VAL));
+      }
+      String sector = instrumentMetaDataService.getSector(imnt).orElse("Unknown");
+      double imntMaxWeight =
+          computeMarketStatisticsService.computeMaxWeight(
+              imnt, currentPrice, integerDates, dividendYield);
 
       MarketDataProto.Instrument instrument =
           generateInstrument(
               imnt,
+              sector,
               currentValue,
               betaFromMetaData.get(),
               dividendYield.get() / 100.0,
               imntReturn / 100.0,
               std.get(),
-              pe.get());
+              pe.get(),
+              imntMaxWeight);
       instruments.add(instrument);
       instrumentsForCorrelation.add(imnt);
     }
@@ -1242,6 +1261,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             .addAllInstruments(instruments)
             .build();
 
+    log.debug("Request optimizer portfolio: {}", optimizerPortfolio);
     try {
       MarketDataProto.Portfolio responsePortfolio =
           calcPythonEngine.calcPortfolioOptimizer(optimizerPortfolio);
@@ -1251,6 +1271,24 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       log.error("Failed to process portfolio optimizer", e);
     }
     return "Failed to process portfolio optimizer";
+  }
+
+  @Override
+  public List<Integer> getMarketDates() {
+    return integerDates;
+  }
+
+  @Override
+  public Optional<Double> fetchLatestPrice(String imnt, int tDate) {
+    int days = 11;
+    LocalDate tLocalDate = DateFormatUtil.getLocalDate(tDate);
+
+    while (days-- > 0) {
+      Double val = tickerDataWarehouseService.getMarketData(imnt, tLocalDate);
+      if (val != null) return Optional.of(val);
+      tLocalDate = tLocalDate.minusDays(1);
+    }
+    return Optional.empty();
   }
 
   void populate(MarketDataProto.Portfolio portfolio) {
@@ -1850,21 +1888,27 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .putMetaData("min_yield", String.valueOf(minYield))
         .putMetaData("new_cash", String.valueOf(newCash))
         .putMetaData("objective_mode", String.valueOf(objectiveMode))
+        .putMetaData(
+            "sector_caps",
+            String.format("%s=%f|%s=%f", "fin", .40, "energy", .30)) // todo - improve later
         .build();
   }
 
   private MarketDataProto.Instrument generateInstrument(
       String symbol,
+      String sector,
       double capital,
       double beta,
       double imntYield,
       double imntReturn,
       double stdDev,
-      double peRatio) {
+      double peRatio,
+      double maxWeight) {
     return MarketDataProto.Instrument.newBuilder()
         .setTicker(
             MarketDataProto.Ticker.newBuilder()
                 .setSymbol(symbol)
+                .setSector(sector)
                 .addData(MarketDataProto.Value.newBuilder().setPrice(capital).build())
                 .build())
         .setBeta(beta)
@@ -1872,19 +1916,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .putMetaData("return", String.valueOf(imntReturn))
         .putMetaData("std_dev", String.valueOf(stdDev))
         .putMetaData("pe_ratio", String.valueOf(peRatio))
+        .putMetaData("max_weight", String.valueOf(maxWeight))
         .build();
-  }
-
-  private Optional<Double> fetchLatestPrice(String imnt, int tDate) {
-    int days = 11;
-    LocalDate tLocalDate = DateFormatUtil.getLocalDate(tDate);
-
-    while (days-- > 0) {
-      Double val = tickerDataWarehouseService.getMarketData(imnt, tLocalDate);
-      if (val != null) return Optional.of(val);
-      tLocalDate = tLocalDate.minusDays(1);
-    }
-    return Optional.empty();
   }
 
   /*private int getNextMarketDate(int date) {

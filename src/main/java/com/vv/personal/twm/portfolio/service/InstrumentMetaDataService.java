@@ -31,6 +31,8 @@ public interface InstrumentMetaDataService {
 
   MarketDataProto.InstrumentType getInstrumentType(String imnt);
 
+  Optional<String> getSector(String imnt);
+
   InstrumentMetaDataCache getInstrumentMetaDataCache();
 
   MarketDataProto.Portfolio getEntireMetaData();

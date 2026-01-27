@@ -106,12 +106,99 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
     // return StatisticsUtil.calculateStandardDeviation(imntValues); // CM -> 21.523893573664377
   }
 
+  /** Relative Strength Index */
+  @Override
+  public Optional<Double> computeRsi(String instrument, int timeFrame, List<Integer> dates) {
+    if ("STLC.TO".equals(instrument)) return Optional.empty();
+
+    double rsi = 50.0; // Default to neutral
+    if (dates.size() <= timeFrame) return Optional.of(rsi);
+
+    List<Double> prices = new ArrayList<>();
+    int lookback = Math.min(dates.size(), 252);
+    for (int i = dates.size() - lookback; i < dates.size(); i++)
+      prices.add(tickerDataWarehouseService.getMarketData(instrument, dates.get(i)));
+
+    if (prices.size() <= timeFrame) {
+      log.warn("Lesser price points found for {} than the timeframe {}", instrument, timeFrame);
+      return Optional.of(rsi);
+    }
+
+    double avgGain = 0;
+    double avgLoss = 0;
+
+    // Initial average
+    for (int i = 1; i <= timeFrame; i++) {
+      double change = prices.get(i) - prices.get(i - 1);
+      if (change > 0) avgGain += change;
+      else avgLoss += Math.abs(change);
+    }
+    avgGain /= timeFrame;
+    avgLoss /= timeFrame;
+
+    // Smoothed averages (Wilder's method)
+    for (int i = timeFrame + 1; i < prices.size(); i++) {
+      double change = prices.get(i) - prices.get(i - 1);
+      double currentGain = Math.max(0, change);
+      double currentLoss = Math.max(0, -change);
+
+      avgGain = (avgGain * (timeFrame - 1) + currentGain) / timeFrame;
+      avgLoss = (avgLoss * (timeFrame - 1) + currentLoss) / timeFrame;
+    }
+
+    if (avgLoss == 0) rsi = 100.0;
+    else if (avgGain == 0) rsi = 0.0;
+    else {
+      double rs = avgGain / avgLoss;
+      rsi = 100.0 - (100.0 / (1 + rs));
+    }
+    return Optional.of(rsi);
+  }
+
+  @Override
+  public Double computeMaxWeight(
+      String imnt,
+      Optional<Double> currentPrice,
+      List<Integer> integerDates,
+      Optional<Double> yield) {
+    double weight = .25;
+    Optional<Double> ma200 = computeLatestMovingAverage(imnt, 200, integerDates);
+    Optional<Double> ma50 = computeLatestMovingAverage(imnt, 50, integerDates);
+    Optional<Double> rsi = computeRsi(imnt, 14, integerDates);
+
+    if (ma200.isEmpty() || ma50.isEmpty() || rsi.isEmpty() || currentPrice.isEmpty()) {
+      log.warn(
+          "Cannot calculate max weight accurately due to one of the missing factors: ma200 {}, ma50 {}, rsi {}, t-price {}",
+          ma200,
+          ma50,
+          rsi,
+          currentPrice);
+      return 0.0;
+    }
+
+    if (yield.isPresent() && yield.get() >= 7.0) {
+      log.warn("Minimizing weight of {} because its yield is {}", imnt, yield.get());
+      weight = .01;
+    }
+    // aggressive dip buy as it is undervalued
+    else if (rsi.get() < 30) {
+      weight = .35;
+      if (currentPrice.get() < ma200.get() * .90) weight = .45;
+    }
+    // aggressive profit take by selling current positions and buy more from under undervalued imnts
+    else if (currentPrice.get() > ma50.get() * 1.15 && rsi.get() > 70) weight = .10;
+    return weight;
+  }
+
   @Override
   public Optional<Double> computeLatestMovingAverage(
       String instrument, int timeFrame, List<Integer> dates) {
     if (dates == null || dates.isEmpty() || dates.size() < timeFrame || timeFrame <= 0) {
       log.warn(
-          "Cannot compute moving average for {}x{}x{} dates", instrument, timeFrame, dates.size());
+          "Cannot compute moving average for {}x{}x{} dates",
+          instrument,
+          timeFrame,
+          dates == null ? 0 : dates.size());
       return Optional.empty();
     }
 

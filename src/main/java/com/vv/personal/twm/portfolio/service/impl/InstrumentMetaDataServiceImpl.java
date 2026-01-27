@@ -219,6 +219,10 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     if (instrumentMetaData.isPresent()) {
       String forwardPE =
           instrumentMetaData.get().getMetaDataOrDefault(FORWARD_PE_FIELD, StringUtils.EMPTY);
+      if ("Infinity".equalsIgnoreCase(forwardPE)) { // URC.TO had this case from yf
+        log.warn("Infinity PE for {} has been removed", imnt);
+        forwardPE = StringUtils.EMPTY;
+      }
       if (forwardPE.isEmpty()) log.warn("Did not find PE for imnt {}", imnt);
       else pe = Optional.of(Double.parseDouble(forwardPE));
     }
@@ -231,6 +235,12 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     return instrumentMetaData
         .map(v -> v.getTicker().getType())
         .orElse(MarketDataProto.InstrumentType.UNRECOGNIZED);
+  }
+
+  @Override
+  public Optional<String> getSector(String imnt) {
+    Optional<MarketDataProto.Instrument> instrumentMetaData = instrumentMetaDataCache.get(imnt);
+    return instrumentMetaData.map(instrument -> instrument.getTicker().getSector());
   }
 
   @Override

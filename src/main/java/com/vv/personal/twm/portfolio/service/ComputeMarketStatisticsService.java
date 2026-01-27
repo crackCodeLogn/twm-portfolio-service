@@ -16,8 +16,16 @@ public interface ComputeMarketStatisticsService {
 
   Optional<Double> computeStandardDeviationInFormOfEWMAVol(String instrument, List<Integer> dates);
 
+  Optional<Double> computeRsi(String instrument, int timeFrame, List<Integer> dates);
+
   Optional<Double> computeLatestMovingAverage(
       String instrument, int timeFrame, List<Integer> dates);
+
+  Double computeMaxWeight(
+      String imnt,
+      Optional<Double> currentPrice,
+      List<Integer> integerDates,
+      Optional<Double> yield);
 
   Optional<Double> computeCorrelation(String instrument1, String instrument2, List<Integer> dates);
 
