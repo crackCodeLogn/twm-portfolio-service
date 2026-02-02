@@ -335,7 +335,7 @@ public class PortfolioController {
   }
 
   @GetMapping("/market/optimizer/{accountType}")
-  public DataPacketProto.DataPacket invokePortfolioOptimizer(
+  public MarketDataProto.Portfolio invokePortfolioOptimizer(
       @PathVariable("accountType") String accountType,
       @RequestParam double targetBeta,
       @RequestParam double minYield,
@@ -343,24 +343,30 @@ public class PortfolioController {
       @RequestParam(defaultValue = "90.0") double maxPe,
       @RequestParam(defaultValue = "0.35") double maxWeight,
       @RequestParam(defaultValue = "0.0") double newCash,
-      @RequestParam(defaultValue = "MAX_RETURN") String objectiveMode,
-      @RequestParam(defaultValue = "") String ignoreImnts) {
+      @RequestParam(defaultValue = "0.0") double forceCash,
+      @RequestParam(defaultValue = "MAX_RETURN")
+          String objectiveMode, // MAX_RETURN | BALANCED | MAX_YIELD
+      @RequestParam(defaultValue = "") String ignoreImnts,
+      @RequestParam(defaultValue = "") String forceImnts,
+      @RequestParam(defaultValue = "ACCOUNT_LEVEL")
+          String imntsScope // ACCOUNT_LEVEL | PORTFOLIO_LEVEL
+      ) {
     log.info("invokePortfolioOptimizer invoked for {}", accountType);
     MarketDataProto.AccountType accType = MarketDataProto.AccountType.valueOf(accountType);
 
-    return DataPacketProto.DataPacket.newBuilder()
-        .addStrings(
-            centralDataPointService.invokePortfolioOptimizer(
-                accType,
-                targetBeta,
-                maxVol,
-                maxPe,
-                maxWeight,
-                minYield,
-                newCash,
-                objectiveMode,
-                ignoreImnts))
-        .build();
+    return centralDataPointService.invokePortfolioOptimizer(
+        accType,
+        targetBeta,
+        maxVol,
+        maxPe,
+        maxWeight,
+        minYield,
+        newCash,
+        forceCash,
+        objectiveMode,
+        ignoreImnts,
+        forceImnts,
+        imntsScope);
   }
 
   // METADATA

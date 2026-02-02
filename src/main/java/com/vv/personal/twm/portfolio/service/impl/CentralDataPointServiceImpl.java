@@ -259,7 +259,7 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
-  public String invokePortfolioOptimizer(
+  public MarketDataProto.Portfolio invokePortfolioOptimizer(
       MarketDataProto.AccountType accountType,
       double targetBeta,
       double maxVol,
@@ -267,8 +267,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
       double maxWeight,
       double minYield,
       double newCash,
+      double forceCash,
       String objectiveMode,
-      String ignoreImnts) {
+      String ignoreImnts,
+      String forceImnts,
+      String imntsScope) {
     return completeMarketDataService.invokePortfolioOptimizer(
         accountType,
         targetBeta,
@@ -277,8 +280,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
         maxWeight,
         minYield,
         newCash,
+        forceCash,
         objectiveMode,
-        ignoreImnts);
+        ignoreImnts,
+        forceImnts,
+        imntsScope);
   }
 
   @Override

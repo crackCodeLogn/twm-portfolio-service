@@ -74,7 +74,7 @@ public interface CompleteMarketDataService {
 
   void testInfo();
 
-  String invokePortfolioOptimizer(
+  MarketDataProto.Portfolio invokePortfolioOptimizer(
       MarketDataProto.AccountType accountType,
       double targetBeta,
       double maxVol,
@@ -82,8 +82,11 @@ public interface CompleteMarketDataService {
       double maxWeight,
       double minYield,
       double newCash,
+      double forceCash,
       String objectiveMode,
-      String ignoreImnts);
+      String ignoreImnts,
+      String forceImnts,
+      String imntsScope);
 
   List<Integer> getMarketDates();
 }

@@ -1088,7 +1088,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   @Override
-  public String invokePortfolioOptimizer(
+  public MarketDataProto.Portfolio invokePortfolioOptimizer(
       MarketDataProto.AccountType accountType,
       double targetBeta,
       double maxVol,
@@ -1096,27 +1096,36 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       double maxWeight,
       double minYield,
       double newCash,
+      double forceCash,
       String objectiveMode,
-      String ignoreImnts) {
+      String ignoreImnts,
+      String forceImnts,
+      String imntsScope) {
     log.info("Preparing data for invoking portfolio optimizer for {}", accountType);
     Set<String> exemptInstruments = new HashSet<>();
     Collections.addAll(exemptInstruments, StringUtils.split(ignoreImnts, "|"));
+    Set<String> forcedInstruments = new HashSet<>();
+    Collections.addAll(forcedInstruments, StringUtils.split(forceImnts, "|"));
+    final boolean isForcedCash = forceCash > 0.0;
 
     List<String> accountTypeImnts =
-        marketData.entrySet().stream()
-            .filter(
-                e ->
-                    e.getValue().containsKey(accountType)
-                        && !exemptInstruments.contains(e.getKey()))
-            .map(Map.Entry::getKey)
-            .toList();
+        !forcedInstruments.isEmpty()
+            ? forcedInstruments.stream().toList()
+            : marketData.entrySet().stream()
+                .filter(
+                    e ->
+                        e.getValue().containsKey(accountType)
+                            && !exemptInstruments.contains(e.getKey()))
+                .map(Map.Entry::getKey)
+                .toList();
     Set<String> imntsInScope = new TreeSet<>(accountTypeImnts);
+    accountTypeImnts = null;
     List<String> allImnts = new ArrayList<>(marketData.keySet());
     // hard removing certain imnts
     allImnts.remove("STLC.TO"); // delisted
     allImnts.remove("TPZ.TO"); // incomplete mkt data
     allImnts.remove("ASTL.TO"); // incomplete mkt data
-
+    allImnts.removeAll(exemptInstruments);
     Collections.sort(allImnts);
 
     log.info(
@@ -1129,20 +1138,25 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     if (riskFreeReturn.isEmpty()) {
       log.error(
           "Could not find latest risk free return for Canada. Cannot invoke portfolio optimizer");
-      return "No latest RFR";
+      return generateErrorResponsePortfolio("No latest RFR");
     }
 
     Optional<Double> marketReturn = getLatestMarketReturn(MarketDataProto.Country.CA);
     if (marketReturn.isEmpty()) {
       log.error("Could not find market return for Canada. Cannot invoke portfolio optimizer");
-      return "No market return found";
+      return generateErrorResponsePortfolio("No market return found");
     }
     // add to first imnt manual here
 
     // extracting imnt in scope level info
     List<MarketDataProto.Instrument> instruments = new ArrayList<>(imntsInScope.size());
     List<String> instrumentsForCorrelation = new ArrayList<>(imntsInScope.size());
-    for (String imnt : allImnts) { // allImnts or accountTypeImnts
+    Collection<String> imntsUnderConsideration =
+        !forcedInstruments.isEmpty()
+            ? forcedInstruments
+            : ("ACCOUNT_LEVEL".equals(imntsScope) ? imntsInScope : allImnts);
+
+    for (String imnt : imntsUnderConsideration) {
       MarketDataProto.InstrumentType imntType = instrumentMetaDataService.getInstrumentType(imnt);
       if (IGNORE_ALL_EXCEPT_EQUITY_FOR_OPTIMIZER
           && !imntType.equals(MarketDataProto.InstrumentType.EQUITY)) {
@@ -1184,17 +1198,25 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       // use getMarketValuation(imnt, acctType) for getting the current val
       // although, later, rethink about the current val details to be used
       double currentValue = 0.0;
-      if (imntsInScope.contains(imnt)) {
+      if (imntsInScope.contains(imnt) && !isForcedCash) {
         Map<String, String> marketValuation = getMarketValuation(imnt, accountType);
-        currentValue = Double.parseDouble(marketValuation.get(KEY_CURRENT_VAL));
+        try {
+          currentValue = Double.parseDouble(marketValuation.get(KEY_CURRENT_VAL));
+        } catch (Exception e) {
+          log.error("Did not find valuation for {} in {}", imnt, accountType);
+          return generateErrorResponsePortfolio("Did not find valuation for " + imnt);
+        }
       }
       String sector = instrumentMetaDataService.getSector(imnt).orElse("Unknown");
       double imntMaxWeight =
           computeMarketStatisticsService.computeMaxWeight(
               imnt, currentPrice, integerDates, dividendYield);
+      double sharpeRatio =
+          computeMarketStatisticsService.computeSharpeRatio(
+              riskFreeReturn.get(), imntReturn, std.get() * 100.0);
 
       MarketDataProto.Instrument instrument =
-          generateInstrument(
+          generateInstrumentForOptimizer(
               imnt,
               sector,
               currentValue,
@@ -1202,8 +1224,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
               dividendYield.get() / 100.0,
               imntReturn / 100.0,
               std.get(),
+              sharpeRatio,
               pe.get(),
-              imntMaxWeight);
+              imntMaxWeight,
+              isForcedCash);
       instruments.add(instrument);
       instrumentsForCorrelation.add(imnt);
     }
@@ -1213,7 +1237,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       log.error(
           "Selected imnts reduced to {} post imnt level extraction for optimizer. Cannot proceed",
           instruments.size());
-      return "Too less selected imnts";
+      return generateErrorResponsePortfolio("Too less selected imnts");
     }
     /*if (imntsInScope.size() - instruments.size() > 3) {
       log.warn(
@@ -1242,7 +1266,15 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     }
     MarketDataProto.Instrument manualImntForOptimizer =
         generateManualInstrumentForOptimizer(
-            vix, riskMode, targetBeta, maxVol, maxPe, maxWeight, minYield, newCash, objectiveMode);
+            vix,
+            riskMode,
+            targetBeta,
+            maxVol,
+            maxPe,
+            maxWeight,
+            minYield,
+            isForcedCash ? forceCash : newCash, // forceCash overrides newCash if present
+            objectiveMode);
 
     Optional<Table<String, String, Double>> correlationMatrixOpt =
         computeMarketStatisticsService.computeCorrelationMatrix(
@@ -1251,7 +1283,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         DataConverterUtil.getCorrelationMatrix(correlationMatrixOpt);
     if (correlationMatrix.getEntriesCount() == 0) {
       log.error("Correlation matrix is empty");
-      return "Correlation matrix is empty";
+      return generateErrorResponsePortfolio("Correlation matrix is empty");
     }
 
     MarketDataProto.Portfolio optimizerPortfolio =
@@ -1265,12 +1297,22 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     try {
       MarketDataProto.Portfolio responsePortfolio =
           calcPythonEngine.calcPortfolioOptimizer(optimizerPortfolio);
-      log.info("Response portfolio: {}", responsePortfolio);
-      return "Processed";
+      MarketDataProto.Portfolio resultantPortfolio =
+          mergeRequestAndResponsePortfolioPostOptimizer(
+              optimizerPortfolio, responsePortfolio, riskFreeReturn);
+      log.debug("Resultant portfolio: {}", resultantPortfolio);
+      if (resultantPortfolio.getInstrumentsCount() > 0) {
+        log.info(
+            "Resultant portfolio status: {}",
+            resultantPortfolio.getInstruments(0).getMetaDataOrDefault("strategy_status", "-"));
+      } else {
+        log.error("Resultant portfolio is empty");
+      }
+      return resultantPortfolio;
     } catch (Exception e) {
       log.error("Failed to process portfolio optimizer", e);
     }
-    return "Failed to process portfolio optimizer";
+    return generateErrorResponsePortfolio("Failed to process portfolio optimizer");
   }
 
   @Override
@@ -1894,7 +1936,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         .build();
   }
 
-  private MarketDataProto.Instrument generateInstrument(
+  private MarketDataProto.Instrument generateInstrumentForOptimizer(
       String symbol,
       String sector,
       double capital,
@@ -1902,21 +1944,96 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       double imntYield,
       double imntReturn,
       double stdDev,
+      double sharpeRatio,
       double peRatio,
-      double maxWeight) {
+      double maxWeight,
+      boolean isForcedCash) {
     return MarketDataProto.Instrument.newBuilder()
         .setTicker(
             MarketDataProto.Ticker.newBuilder()
                 .setSymbol(symbol)
                 .setSector(sector)
-                .addData(MarketDataProto.Value.newBuilder().setPrice(capital).build())
+                .addData(
+                    MarketDataProto.Value.newBuilder()
+                        .setPrice(!isForcedCash ? capital : 0.0)
+                        .build())
                 .build())
         .setBeta(beta)
         .setDividendYield(imntYield)
         .putMetaData("return", String.valueOf(imntReturn))
         .putMetaData("std_dev", String.valueOf(stdDev))
+        .putMetaData("sharpe_ratio", String.valueOf(sharpeRatio))
         .putMetaData("pe_ratio", String.valueOf(peRatio))
         .putMetaData("max_weight", String.valueOf(maxWeight))
+        .build();
+  }
+
+  private MarketDataProto.Portfolio mergeRequestAndResponsePortfolioPostOptimizer(
+      MarketDataProto.Portfolio optimizerPortfolio,
+      MarketDataProto.Portfolio responsePortfolio,
+      Optional<Double> riskFreeReturn) {
+    if (optimizerPortfolio == null
+        || responsePortfolio == null
+        || optimizerPortfolio.getInstrumentsCount() == 0
+        || responsePortfolio.getInstrumentsCount() == 0) {
+      log.warn(
+          "Cannot complete the merge request of the 2 portfolio objects due to incomplete data");
+      return MarketDataProto.Portfolio.newBuilder().build();
+    }
+
+    MarketDataProto.Instrument.Builder baseStatImntBuilder =
+        MarketDataProto.Instrument.newBuilder().mergeFrom(optimizerPortfolio.getInstruments(0));
+    responsePortfolio
+        .getInstruments(0)
+        .getMetaDataMap()
+        .forEach((k, v) -> baseStatImntBuilder.putMetaData(String.format("strategy_%s", k), v));
+    if (baseStatImntBuilder.containsMetaData("strategy_vol")
+        && baseStatImntBuilder.containsMetaData("strategy_epr")
+        && riskFreeReturn.isPresent()) {
+      Double sharpeRatioPortfolio =
+          computeMarketStatisticsService.computeSharpeRatio(
+              riskFreeReturn.get(),
+              Double.parseDouble(baseStatImntBuilder.getMetaDataOrDefault("strategy_epr", "0.0"))
+                  * 100.0,
+              Double.parseDouble(baseStatImntBuilder.getMetaDataOrDefault("strategy_vol", "0.0"))
+                  * 100.0);
+      baseStatImntBuilder.putMetaData("strategy_sharpe", String.valueOf(sharpeRatioPortfolio));
+    }
+
+    Map<String, MarketDataProto.Instrument.Builder> imntMap = new HashMap<>();
+    responsePortfolio
+        .getInstrumentsList()
+        .subList(1, responsePortfolio.getInstrumentsCount())
+        .forEach(
+            imnt ->
+                imntMap.putIfAbsent(
+                    imnt.getTicker().getSymbol(),
+                    MarketDataProto.Instrument.newBuilder().mergeFrom(imnt)));
+    optimizerPortfolio
+        .getInstrumentsList()
+        .subList(1, optimizerPortfolio.getInstrumentsCount())
+        .forEach(
+            imnt -> {
+              if (!imntMap.containsKey(imnt.getTicker().getSymbol()))
+                log.warn(
+                    "Could not find imnt {} in optimizer response", imnt.getTicker().getSymbol());
+              else imntMap.get(imnt.getTicker().getSymbol()).mergeFrom(imnt);
+            });
+
+    return MarketDataProto.Portfolio.newBuilder()
+        .addInstruments(baseStatImntBuilder.build())
+        .addAllInstruments(
+            imntMap.values().stream().map(MarketDataProto.Instrument.Builder::build).toList())
+        .build();
+  }
+
+  private MarketDataProto.Portfolio generateErrorResponsePortfolio(String errorMsg) {
+    return MarketDataProto.Portfolio.newBuilder()
+        .addInstruments(
+            MarketDataProto.Instrument.newBuilder()
+                .putMetaData("status", "failed")
+                .putMetaData("status_msg", errorMsg)
+                .build())
         .build();
   }
 

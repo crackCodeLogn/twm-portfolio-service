@@ -90,7 +90,7 @@ public interface CentralDataPointService {
 
   DataPacketProto.DataPacket getHeadingAtAGlance();
 
-  String invokePortfolioOptimizer(
+  MarketDataProto.Portfolio invokePortfolioOptimizer(
       MarketDataProto.AccountType accountType,
       double targetBeta,
       double maxVol,
@@ -98,8 +98,11 @@ public interface CentralDataPointService {
       double maxWeight,
       double minYield,
       double newCash,
+      double forceCash,
       String objectiveMode,
-      String ignoreImnts);
+      String ignoreImnts,
+      String forceImnts,
+      String imntsScope);
 
   void testInfo();
 }

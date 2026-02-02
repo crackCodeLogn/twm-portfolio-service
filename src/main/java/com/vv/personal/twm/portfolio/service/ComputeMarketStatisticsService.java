@@ -21,6 +21,8 @@ public interface ComputeMarketStatisticsService {
   Optional<Double> computeLatestMovingAverage(
       String instrument, int timeFrame, List<Integer> dates);
 
+  Double computeSharpeRatio(Double riskFreeReturn, Double expectedReturn, Double standardDeviation);
+
   Double computeMaxWeight(
       String imnt,
       Optional<Double> currentPrice,

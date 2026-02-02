@@ -215,6 +215,12 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
     return Optional.of(sum / count);
   }
 
+  @Override
+  public Double computeSharpeRatio(
+      Double riskFreeReturn, Double expectedReturn, Double standardDeviation) {
+    return (expectedReturn - riskFreeReturn) / standardDeviation;
+  }
+
   /**
    * Assumptions:
    *
