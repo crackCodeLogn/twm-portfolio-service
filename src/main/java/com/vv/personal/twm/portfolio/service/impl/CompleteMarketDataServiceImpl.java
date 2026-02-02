@@ -234,6 +234,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_LOAD_ANALYSIS);
     tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments(), isReloadInProgress);
 
+    // load risk-free return
+    tickerDataWarehouseService.loadAnalysisDataForInstrumentsViaDbOnly(
+        Sets.newHashSet(COUNTRY_RISK_FREE_RETURN_CUSTOM_SYMBOL_MAP.values()), isReloadInProgress);
+
     this.imntsNotInPortfolio.addAll(
         tickerDataWarehouseService.loadAnalysisDataForInstrumentsNotInPortfolio(
             getInstruments(), isReloadInProgress, this.imntsNotInPortfolio));
@@ -673,7 +677,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     Optional<Double> riskFreeReturn = getLatestRiskFreeReturn(MarketDataProto.Country.CA);
     Optional<Double> marketReturn = getLatestMarketReturn(MarketDataProto.Country.CA);
     if (riskFreeReturn.isEmpty() || marketReturn.isEmpty()) {
-      log.warn("Unable to find risk free return / market return, cannot compute");
+      log.error("Unable to find risk free return / market return, cannot compute");
       return new HashMap<>();
     }
 
@@ -1009,9 +1013,9 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     // https://www.bankofcanada.ca/valet/observations/group/bond_yields_benchmark/csv
     // main website: https://www.bankofcanada.ca/rates/interest-rates/canadian-bonds
 
-    if (country == MarketDataProto.Country.CA) return Optional.of(3.35); // as of 20260116
-    if (country == MarketDataProto.Country.US) return Optional.of(4.24); // as of 20260116
-    return Optional.empty();
+    return fetchLatestPrice(COUNTRY_RISK_FREE_RETURN_CUSTOM_SYMBOL_MAP.get(country), TODAY_DATE);
+    // CA -> return Optional.of(3.35); // as of 20260116
+    // US -> return Optional.of(4.24); // as of 20260116
   }
 
   @Override

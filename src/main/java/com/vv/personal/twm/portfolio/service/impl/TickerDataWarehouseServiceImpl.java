@@ -126,6 +126,29 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
   }
 
   @Override
+  public void loadAnalysisDataForInstrumentsViaDbOnly(
+      Set<String> instruments, boolean isReloadInProgress) {
+    instruments.forEach(
+        instrument -> {
+          log.info("Loading direct db analysis data for {}", instrument);
+          if (isReloadInProgress) {
+            LocalDate now = LocalDate.now();
+            int currentDateForMarketDataRemoval = DateFormatUtil.getDate(now);
+            log.info(
+                "Forcing removal of direct db read market data for {} x {}",
+                instrument,
+                currentDateForMarketDataRemoval);
+            tickerDataWarehouse.delete(now, instrument);
+            // not removing data from db because these imnts are manually updated in db
+          }
+
+          MarketDataProto.Ticker tickerDataFromDb =
+              marketDataCrdbServiceFeign.getMarketDataByTicker(instrument);
+          fillAnalysisWarehouse(tickerDataFromDb);
+        });
+  }
+
+  @Override
   public Set<String> loadAnalysisDataForInstrumentsNotInPortfolio(
       Set<String> instrumentsInPortfolio,
       boolean isReloadInProgress,

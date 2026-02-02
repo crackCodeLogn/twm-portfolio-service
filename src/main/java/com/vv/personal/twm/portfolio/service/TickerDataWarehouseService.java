@@ -15,6 +15,8 @@ public interface TickerDataWarehouseService {
 
   void loadAnalysisDataForInstruments(Set<String> instruments, boolean isReloadInProgress);
 
+  void loadAnalysisDataForInstrumentsViaDbOnly(Set<String> instruments, boolean isReloadInProgress);
+
   Set<String> loadAnalysisDataForInstrumentsNotInPortfolio(
       Set<String> instrumentsInPortfolio,
       boolean isReloadInProgress,
