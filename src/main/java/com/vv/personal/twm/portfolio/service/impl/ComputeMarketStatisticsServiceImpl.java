@@ -4,6 +4,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.remote.market.max_weight.InstrumentMaxWeight;
 import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.math.StatisticsUtil;
@@ -36,6 +37,7 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
   private static final double LAMBDA_EWMA_VOL = .94;
   private final DateLocalDateCache dateLocalDateCache;
   private final TickerDataWarehouseService tickerDataWarehouseService;
+  private final InstrumentMaxWeight instrumentMaxWeight;
 
   private final Map<ImntDatesRecord, Optional<List<Double>>> tmpImntDatesRecordListMap =
       new ConcurrentHashMap<>();
@@ -161,6 +163,12 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
       Optional<Double> currentPrice,
       List<Integer> integerDates,
       Optional<Double> yield) {
+    Optional<Double> imntMaxWeightOverride = instrumentMaxWeight.getMaxWeight(imnt);
+    if (imntMaxWeightOverride.isPresent()) {
+      log.info("Overriding imnt max weight of {} to {}", imnt, imntMaxWeightOverride.get());
+      return imntMaxWeightOverride.get();
+    }
+
     double weight = .25;
     Optional<Double> ma200 = computeLatestMovingAverage(imnt, 200, integerDates);
     Optional<Double> ma50 = computeLatestMovingAverage(imnt, 50, integerDates);

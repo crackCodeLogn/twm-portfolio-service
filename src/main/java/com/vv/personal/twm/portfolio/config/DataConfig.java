@@ -8,6 +8,7 @@ import com.vv.personal.twm.portfolio.remote.feign.CalcPythonEngine;
 import com.vv.personal.twm.portfolio.remote.feign.CalcServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.remote.market.max_weight.InstrumentMaxWeight;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
 import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
@@ -86,6 +87,11 @@ public class DataConfig {
   }
 
   @Bean
+  public InstrumentMaxWeight instrumentMaxWeight() {
+    return new InstrumentMaxWeight(keyInstrumentValueCache());
+  }
+
+  @Bean
   public ExtractMarketPortfolioDataService extractMarketPortfolioDataService() {
     return new ExtractMarketPortfolioDataServiceImpl(
         marketDataCrdbServiceFeign, fileLocationConfig);
@@ -135,8 +141,9 @@ public class DataConfig {
 
   @Bean
   public ComputeMarketStatisticsService computeMarketStatisticsService() {
+    instrumentMaxWeight().load(fileLocationConfig.getImntMaxWeights());
     return new ComputeMarketStatisticsServiceImpl(
-        dateLocalDateCache(), tickerDataWarehouseService());
+        dateLocalDateCache(), tickerDataWarehouseService(), instrumentMaxWeight());
   }
 
   @Bean

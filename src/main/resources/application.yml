@@ -15,6 +15,7 @@ warehouse:
 
 locations:
   outdated-symbols: /var/mkt-data-outdated-symbols.txt
+  imnt-max-weights: /var/mkt-data-imnt-max-weights.txt
   market-transactions-buy: /var/mkt-data-b.txt
   market-transactions-sell: /var/mkt-data-s.txt
   market-transactions-div-tfsa: /var/mkt-data-div-t.txt

@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "locations")
 public class FileLocationConfig {
   private String outdatedSymbols;
+  private String imntMaxWeights;
   private String marketTransactionsBuy;
   private String marketTransactionsSell;
   private String marketTransactionsDivTfsa;

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
+import com.vv.personal.twm.portfolio.remote.market.max_weight.InstrumentMaxWeight;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -28,12 +29,13 @@ class ComputeMarketStatisticsServiceImplTest {
 
   @Mock private TickerDataWarehouseService tickerDataWarehouseService;
   private ComputeMarketStatisticsServiceImpl computeStatisticsServiceImpl;
+  private InstrumentMaxWeight instrumentMaxWeight;
 
   @BeforeEach
   void setUp() {
     computeStatisticsServiceImpl =
         new ComputeMarketStatisticsServiceImpl(
-            new DateLocalDateCache(), tickerDataWarehouseService);
+            new DateLocalDateCache(), tickerDataWarehouseService, instrumentMaxWeight);
   }
 
   @AfterEach

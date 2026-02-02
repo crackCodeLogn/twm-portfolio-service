@@ -1,6 +1,8 @@
 package com.vv.personal.twm.portfolio.cache;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -8,21 +10,26 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2026-01-16
  */
 public class KeyInstrumentValueCache {
-  private final ConcurrentHashMap<String, ConcurrentHashMap<String, Double>> keyImntValueCache;
+  private final ConcurrentHashMap<String, Record> keyImntValueCache;
 
   public KeyInstrumentValueCache() {
     keyImntValueCache = new ConcurrentHashMap<>();
   }
 
+  public void setFlushForKey(String key, boolean flush) {
+    if (!keyImntValueCache.containsKey(key)) {
+      keyImntValueCache.put(key, new Record(flush, new ConcurrentHashMap<>()));
+    }
+  }
+
   public void offer(String key, String imnt, Double value) {
-    System.out.println(key);
-    keyImntValueCache.computeIfAbsent(key, k -> new ConcurrentHashMap<>());
-    keyImntValueCache.get(key).put(imnt, value);
+    if (!keyImntValueCache.containsKey(key)) setFlushForKey(key, true);
+    keyImntValueCache.get(key).imntValueMap().put(imnt, value);
   }
 
   public Optional<Double> get(String key, String symbol) {
     if (keyImntValueCache.containsKey(key))
-      return Optional.ofNullable(keyImntValueCache.get(key).get(symbol));
+      return Optional.ofNullable(keyImntValueCache.get(key).imntValueMap().get(symbol));
     return Optional.empty();
   }
 
@@ -30,9 +37,9 @@ public class KeyInstrumentValueCache {
     final Double[] removedVal = new Double[1];
     keyImntValueCache.computeIfPresent(
         key,
-        (k, innerMap) -> {
-          removedVal[0] = innerMap.remove(symbol);
-          return innerMap.isEmpty() ? null : innerMap;
+        (k, record) -> {
+          removedVal[0] = record.imntValueMap().remove(symbol);
+          return record.imntValueMap().isEmpty() ? null : record;
         });
     return removedVal[0];
   }
@@ -42,7 +49,7 @@ public class KeyInstrumentValueCache {
   }
 
   public boolean containsImntForKey(String key, String imnt) {
-    return containsKey(key) && keyImntValueCache.get(key).containsKey(imnt);
+    return containsKey(key) && keyImntValueCache.get(key).imntValueMap().containsKey(imnt);
   }
 
   public void flushKey(String key) {
@@ -50,6 +57,12 @@ public class KeyInstrumentValueCache {
   }
 
   public void flushAll() {
-    keyImntValueCache.clear();
+    Set<String> keysToDel = new HashSet<>();
+    keyImntValueCache.keySet().stream()
+        .filter(key -> keyImntValueCache.get(key).flush())
+        .forEach(keysToDel::add);
+    keysToDel.forEach(keyImntValueCache::remove);
   }
+
+  private record Record(boolean flush, ConcurrentHashMap<String, Double> imntValueMap) {}
 }

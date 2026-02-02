@@ -100,4 +100,20 @@ class KeyInstrumentValueCacheTest {
         () -> assertFalse(cache.containsKey("K2")),
         () -> assertFalse(cache.containsImntForKey("K1", "CM.TO")));
   }
+
+  @Test
+  @DisplayName("Should clear all data on flushAll")
+  void testFlushAll_WithFlushOFf() {
+    cache.setFlushForKey("K1", false);
+    cache.offer("K1", "CM.TO", 10.0);
+    cache.offer("K2", "BNS.TO", 20.0);
+
+    cache.flushAll();
+
+    assertAll(
+        () -> assertTrue(cache.containsKey("K1")),
+        () -> assertTrue(cache.containsImntForKey("K1", "CM.TO")),
+        () -> assertFalse(cache.containsKey("K2")),
+        () -> assertFalse(cache.containsImntForKey("K2", "BNS.TO")));
+  }
 }
