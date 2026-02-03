@@ -1,5 +1,6 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
+import com.vv.personal.twm.portfolio.remote.market.max_weight.InstrumentMaxWeight;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
@@ -22,6 +23,7 @@ public class ReloadServiceImpl implements ReloadService {
   private final CompleteMarketDataService completeMarketDataService;
   private final CompleteBankDataService completeBankDataService;
   private final InstrumentMetaDataService instrumentMetaDataService;
+  private final InstrumentMaxWeight instrumentMaxWeight;
 
   @Override
   public boolean initialFullLoad() {
@@ -45,12 +47,12 @@ public class ReloadServiceImpl implements ReloadService {
     log.info("Starting reload...");
     StopWatch loadTimer = StopWatch.createStarted();
     try {
+      instrumentMaxWeight.reload();
       completeBankDataService.load();
       completeMarketDataService.load();
       completeMarketDataService.setReloadInProgress(false);
       instrumentMetaDataService.load(
           completeMarketDataService.getBenchMarkCurrentDate(), !firstTimeLoad && hardRefresh);
-
       loadTimer.stop();
       log.info("Reload completed in {} s", loadTimer.getTime(TimeUnit.SECONDS));
       return true;

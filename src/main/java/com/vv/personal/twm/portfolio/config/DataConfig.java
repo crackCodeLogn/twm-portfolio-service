@@ -179,6 +179,9 @@ public class DataConfig {
   @Bean
   public ReloadService reloadService() {
     return new ReloadServiceImpl(
-        completeMarketDataService(), completeBankDataService(), instrumentMetaDataService());
+        completeMarketDataService(),
+        completeBankDataService(),
+        instrumentMetaDataService(),
+        instrumentMaxWeight());
   }
 }
