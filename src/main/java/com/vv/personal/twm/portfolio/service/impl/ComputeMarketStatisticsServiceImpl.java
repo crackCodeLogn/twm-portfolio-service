@@ -169,7 +169,7 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
       return imntMaxWeightOverride.get();
     }
 
-    double weight = .25;
+    double weight = .12;
     Optional<Double> ma200 = computeLatestMovingAverage(imnt, 200, integerDates);
     Optional<Double> ma50 = computeLatestMovingAverage(imnt, 50, integerDates);
     Optional<Double> rsi = computeRsi(imnt, 14, integerDates);
@@ -190,11 +190,11 @@ public class ComputeMarketStatisticsServiceImpl implements ComputeMarketStatisti
     }
     // aggressive dip buy as it is undervalued
     else if (rsi.get() < 30) {
-      weight = .35;
-      if (currentPrice.get() < ma200.get() * .90) weight = .45;
+      weight = .20;
+      if (currentPrice.get() < ma200.get() * .90) weight = .25;
     }
     // aggressive profit take by selling current positions and buy more from under undervalued imnts
-    else if (currentPrice.get() > ma50.get() * 1.15 && rsi.get() > 70) weight = .10;
+    else if (currentPrice.get() > ma50.get() * 1.15 && rsi.get() > 70) weight = .65;
     return weight;
   }
 
