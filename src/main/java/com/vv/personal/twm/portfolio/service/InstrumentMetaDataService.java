@@ -52,4 +52,6 @@ public interface InstrumentMetaDataService {
   MarketDataProto.Portfolio getCorporateActionNews();
 
   void setOutdatedSymbols(OutdatedSymbols outdatedSymbols);
+
+  String backup();
 }

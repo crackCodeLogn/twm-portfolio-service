@@ -1,5 +1,6 @@
 package com.vv.personal.twm.portfolio.remote.market.outdated;
 
+import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.util.CsvDownloaderUtil;
 import com.vv.personal.twm.portfolio.util.TextReaderUtil;
@@ -72,6 +73,21 @@ public class OutdatedSymbols {
     return get(imnt)
         .filter(symbols -> symbols.last().outdateEndDate() == LAST_DAY_OF_2XXX)
         .isPresent();
+  }
+
+  public List<MarketDataProto.Instrument> getDelistedSymbols() {
+    return outdatedSymbols.keySet().stream()
+        .filter(this::isDelisted)
+        .map(
+            symbol ->
+                MarketDataProto.Instrument.newBuilder()
+                    .setTicker(
+                        MarketDataProto.Ticker.newBuilder()
+                            .setSymbol(String.format(symbol))
+                            .setName(String.format("[D] %s", symbol))
+                            .build())
+                    .build())
+        .toList();
   }
 
   public boolean contains(String symbol) {

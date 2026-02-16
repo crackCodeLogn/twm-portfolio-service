@@ -244,6 +244,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public String backupEntireMetaData() {
+    return instrumentMetaDataService.backup();
+  }
+
+  @Override
   public String reloadMetaDataCache() {
     return instrumentMetaDataService.reloadMetaDataCache();
   }

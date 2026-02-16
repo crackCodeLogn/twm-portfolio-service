@@ -387,6 +387,28 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     return portfolio.build();
   }
 
+  @Override
+  public String backup() {
+    MarketDataProto.Portfolio entireMetaData = getEntireMetaData();
+    StringBuilder builder = new StringBuilder();
+    List<MarketDataProto.Instrument> md = new ArrayList<>(entireMetaData.getInstrumentsList());
+    md.addAll(outdatedSymbols.getDelistedSymbols());
+    md.sort(Comparator.comparing(v -> v.getTicker().getSymbol()));
+    md.forEach(
+        imntMetaData -> {
+          List<String> values = new ArrayList<>();
+          values.add(imntMetaData.getTicker().getSymbol());
+          if (imntMetaData.getTicker().getType().equals(MarketDataProto.InstrumentType.ETF))
+            values.add(String.format("mer=%.2f", imntMetaData.getMer()));
+          if (!imntMetaData.getSignal().equals(MarketDataProto.Signal.SIG_HOLD))
+            values.add(String.format("signal=%s", imntMetaData.getSignal()));
+          if (imntMetaData.getTicker().getName().startsWith("[D]"))
+            values.add(String.format("name=%s", imntMetaData.getTicker().getName()));
+          builder.append(String.join("|", values)).append(";\n");
+        });
+    return builder.toString();
+  }
+
   Optional<MarketDataProto.Instrument> parseInstrument(
       String imnt, DataPacketProto.DataPacket dataPacket) {
     try {

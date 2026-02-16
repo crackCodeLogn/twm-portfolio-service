@@ -84,6 +84,8 @@ public interface CentralDataPointService {
 
   String bulkAddEntireMetaData(DataPacketProto.DataPacket dataPacket);
 
+  String backupEntireMetaData();
+
   String reloadMetaDataCache();
 
   MarketDataProto.Portfolio getCorporateActionNews();

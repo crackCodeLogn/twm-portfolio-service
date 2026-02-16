@@ -414,6 +414,12 @@ public class PortfolioController {
     return centralDataPointService.bulkAddEntireMetaData(dataPacket);
   }
 
+  @GetMapping("/manual/market/metadata/backup")
+  public String backupEntireMetaData() {
+    log.info("manual backupEntireMetaData invoked");
+    return centralDataPointService.backupEntireMetaData();
+  }
+
   @GetMapping("/")
   public String get() {
     return "hi";
