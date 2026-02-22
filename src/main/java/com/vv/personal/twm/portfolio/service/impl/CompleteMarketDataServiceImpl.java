@@ -9,13 +9,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.vv.personal.twm.artifactory.generated.data.DataPacketProto;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.cache.KeyInstrumentValueCache;
+import com.vv.personal.twm.portfolio.model.market.ACB;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DataNode;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.model.market.SellRecord;
 import com.vv.personal.twm.portfolio.model.tracking.ProgressTracker;
 import com.vv.personal.twm.portfolio.remote.feign.CalcPythonEngine;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
@@ -39,6 +42,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -91,6 +96,19 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
               .put(MarketDataProto.Country.US, "^RF-US") // 10 YR
               .build();
 
+  private static final Map<MarketDataProto.Country, List<MarketDataProto.AccountType>>
+      COUNTRY_MARKET_ACCOUNT_TYPES =
+          ImmutableMap.<MarketDataProto.Country, List<MarketDataProto.AccountType>>builder()
+              .put(
+                  MarketDataProto.Country.CA,
+                  Lists.newArrayList(
+                      MarketDataProto.AccountType.TFSA,
+                      MarketDataProto.AccountType.NR,
+                      MarketDataProto.AccountType.FHSA,
+                      MarketDataProto.AccountType.RRSP))
+              .put(MarketDataProto.Country.IN, Lists.newArrayList(MarketDataProto.AccountType.NR))
+              .build();
+
   private static final boolean IGNORE_ALL_EXCEPT_EQUITY_FOR_OPTIMIZER = true;
 
   // Holds map of ticker x (map of account type x doubly linked list nodes of transactions done)
@@ -100,6 +118,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       imntDividendsMap;
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>>
       dateDividendsMap; // date x account type x divs for that date
+  private final Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, List<SellRecord>>>>
+      imntSellRecordMap;
 
   // post processes, i.e. not filled during startup
   // todo - think about filling all the date based maps with 0s based off entire dates
@@ -159,6 +179,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       MarketDataCrdbServiceFeign marketDataCrdbServiceFeign) {
     marketData = new ConcurrentHashMap<>();
     imntDividendsMap = new ConcurrentHashMap<>();
+    imntSellRecordMap = new ConcurrentHashMap<>();
     dateDividendsMap = new ConcurrentHashMap<>();
     realizedDatePnLMap = Collections.synchronizedMap(new TreeMap<>());
     unrealizedDatePnLMap = Collections.synchronizedMap(new TreeMap<>());
@@ -233,6 +254,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     progressTrackerService.publishProgressTracker(
         CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_LOAD_ANALYSIS);
     tickerDataWarehouseService.loadAnalysisDataForInstruments(getInstruments(), isReloadInProgress);
+
+    // load sell pnl data
+    progressTrackerService.publishProgressTracker(
+        CLIENT_VIVEK, ProgressTracker.LOADING_MARKET_SELL_PNL_DATA);
+    populateSellPnlData();
 
     // load risk-free return
     tickerDataWarehouseService.loadAnalysisDataForInstrumentsViaDbOnly(
@@ -396,6 +422,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     log.warn("Initiating complete market data clearing");
     marketData.clear();
     imntDividendsMap.clear();
+    imntSellRecordMap.clear();
     dateDividendsMap.clear();
     realizedDatePnLMap.clear();
     unrealizedDatePnLMap.clear();
@@ -1325,6 +1352,17 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   @Override
+  public MarketDataProto.Portfolio getSellPnl() {
+    return getSellPnl(null);
+  }
+
+  @Override
+  public MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType) {
+    List<SellRecord> sellRecords = getSellRecords(Optional.ofNullable(accType));
+    return getSellRecordsPortfolio(sellRecords);
+  }
+
+  @Override
   public Optional<Double> fetchLatestPrice(String imnt, int tDate) {
     int days = 11;
     LocalDate tLocalDate = DateFormatUtil.getLocalDate(tDate);
@@ -1528,9 +1566,13 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             dateIndex++;
             continue;
           }
-          computeRealizedPnL(
-              imnt, type, node, date, marketPrice); // realized pnl (w/o div) changes only on SELL
-          // fixed realized pnl mis-calc. rn, because of the last STLC sell node, the dates beyond
+          Double soldPps =
+              Double.valueOf(node.getInstrument().getMetaDataMap().get("pricePerShare"));
+          computeRealizedPnL(imnt, type, node, date, soldPps);
+          // shifted to actual pps instead of end of day marketPrice
+
+          // realized pnl (w/o div) changes only on SELL fixed realized pnl mis-calc. rn, because of
+          // the last STLC sell node, the dates beyond
           // keep on using the same node and keep showing unnecessary gains whereas the gain was
           // only for 1 day
           // realizedImntPnLMap.get("STLC.TO").get(MarketDataProto.AccountType.TFSA).values().stream().mapToDouble(Double::doubleValue).sum()
@@ -1586,6 +1628,121 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                   .getValue()
                   .get(MarketDataProto.AccountType.FHSA));
     } else log.error("Failed to compute pnL. Check logs for relevant error.");
+  }
+
+  void populateSellPnlData() {
+    AtomicInteger sellRecs = new AtomicInteger(0);
+    AtomicDouble totalSellPnL = new AtomicDouble(0.0);
+    marketData.forEach(
+        (imnt, accountTypeDataListMap) ->
+            accountTypeDataListMap.forEach(
+                (acctType, dataList) -> {
+                  DataNode node = dataList.getHead();
+                  boolean failed = false;
+                  while (node != null) {
+                    if (node.getInstrument().getDirection() == MarketDataProto.Direction.SELL) {
+                      if (node.getPrev() == null) {
+                        log.error("Cannot handle short sell yet.");
+                        failed = true;
+                        break;
+                      }
+                      DataNode prev = node.getPrev();
+                      double soldQty = node.getInstrument().getQty();
+                      double soldPps =
+                          Double.parseDouble(
+                              node.getInstrument().getMetaDataMap().get("pricePerShare"));
+                      ACB preAcb = prev.getAcb();
+                      ACB currentAcb = node.getAcb();
+                      double pnl = (soldPps - preAcb.getAcbPerUnit()) * soldQty;
+                      double soldPrice = node.getInstrument().getTicker().getData(0).getPrice();
+                      int date = node.getInstrument().getTicker().getData(0).getDate();
+                      boolean closingPosition = node.getRunningQuantity() <= 0.0;
+                      SellRecord sellRecord =
+                          new SellRecord(
+                              imnt,
+                              date,
+                              acctType,
+                              soldQty,
+                              pnl,
+                              soldPps,
+                              preAcb,
+                              soldPrice,
+                              currentAcb,
+                              closingPosition);
+
+                      // init part
+                      Map<MarketDataProto.AccountType, TreeMap<Integer, List<SellRecord>>>
+                          acctDateSellMap =
+                              imntSellRecordMap.computeIfAbsent(imnt, k -> new HashMap<>());
+                      acctDateSellMap.computeIfAbsent(acctType, k -> new TreeMap<>());
+                      acctDateSellMap.get(acctType).computeIfAbsent(date, k -> new ArrayList<>());
+
+                      // actual insertion
+                      acctDateSellMap.get(acctType).get(date).add(sellRecord);
+                      sellRecs.incrementAndGet();
+                      totalSellPnL.addAndGet(pnl);
+                      log.info("{} -> {}", imnt, sellRecord);
+                    }
+                    node = node.getNext();
+                  }
+                }));
+    log.info(
+        "Populated {} sell records, with a total sell pnL of ${}",
+        sellRecs.get(),
+        totalSellPnL.get());
+  }
+
+  private List<SellRecord> getSellRecords(
+      Optional<MarketDataProto.AccountType> optionalAccountType) {
+    Set<MarketDataProto.AccountType> filterAccountTypes =
+        optionalAccountType.map(Sets::newHashSet).orElseGet(() -> new HashSet<>(getAccountTypes()));
+
+    List<SellRecord> sellRecords = new ArrayList<>(100);
+    imntSellRecordMap
+        .values()
+        .forEach(
+            acctTypeDateSellListMap ->
+                filterAccountTypes.forEach(
+                    filterAccountType -> {
+                      if (acctTypeDateSellListMap.containsKey(filterAccountType)) {
+                        acctTypeDateSellListMap
+                            .get(filterAccountType)
+                            .values()
+                            .forEach(sellRecords::addAll);
+                      }
+                    }));
+    return sellRecords;
+  }
+
+  private MarketDataProto.Portfolio getSellRecordsPortfolio(List<SellRecord> sellRecords) {
+    return MarketDataProto.Portfolio.newBuilder()
+        .addAllInstruments(
+            sellRecords.stream().map(this::generateImntFromSellRecord).collect(Collectors.toList()))
+        .build();
+  }
+
+  private MarketDataProto.Instrument generateImntFromSellRecord(SellRecord sellRecord) {
+    return MarketDataProto.Instrument.newBuilder()
+        .setTicker(
+            MarketDataProto.Ticker.newBuilder()
+                .setSymbol(sellRecord.symbol())
+                .addData(
+                    MarketDataProto.Value.newBuilder()
+                        .setPrice(sellRecord.soldPrice())
+                        .setDate(sellRecord.date())
+                        .build())
+                .addData(MarketDataProto.Value.newBuilder().setPrice(sellRecord.pnL()).build())
+                .addData(
+                    MarketDataProto.Value.newBuilder().setPrice(sellRecord.pricePerShare()).build())
+                .build())
+        .setAccountType(sellRecord.accountType())
+        .setQty(sellRecord.quantity())
+        .putMetaData("closing", String.valueOf(sellRecord.closingPosition()))
+        .putMetaData("pre-acb-total", String.valueOf(sellRecord.preAcb().getTotalAcb()))
+        .putMetaData("pre-acb-unit", String.valueOf(sellRecord.preAcb().getAcbPerUnit()))
+        .putMetaData("cur-acb-total", String.valueOf(sellRecord.currentAcb().getTotalAcb()))
+        .putMetaData("cur-acb-unit", String.valueOf(sellRecord.currentAcb().getAcbPerUnit()))
+        .build();
   }
 
   private Optional<Pair<Double, Integer>> fetchTMinusPrice(
@@ -1714,11 +1871,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   private void computeRealizedPnL(
-      String imnt, MarketDataProto.AccountType type, DataNode node, int date, Double marketPrice) {
+      String imnt, MarketDataProto.AccountType type, DataNode node, int date, Double soldPps) {
     double sellQty = node.getInstrument().getQty();
 
     double tickerPrice = node.getPrev().getAcb().getAcbPerUnit();
-    double pnL = (marketPrice - tickerPrice) * sellQty;
+    double pnL = (soldPps - tickerPrice) * sellQty;
 
     // if (date == TODAY_DATE)
     log.info(
@@ -1727,7 +1884,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         type.name(),
         date,
         node.getInstrument().getDirection().name(),
-        marketPrice,
+        soldPps,
         sellQty,
         tickerPrice,
         pnL);
@@ -2056,9 +2213,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   }
 
   private List<MarketDataProto.AccountType> getAccountTypes() {
-    return Arrays.stream(MarketDataProto.AccountType.values())
-        .filter(t -> t != MarketDataProto.AccountType.UNRECOGNIZED)
-        .toList();
+    return COUNTRY_MARKET_ACCOUNT_TYPES.get(MarketDataProto.Country.CA);
   }
 
   private record ImntValuationCurrentPnLAndActual(

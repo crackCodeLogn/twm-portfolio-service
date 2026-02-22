@@ -369,6 +369,20 @@ public class PortfolioController {
         imntsScope);
   }
 
+  @GetMapping("/market/sell/pnl")
+  public MarketDataProto.Portfolio getSellPnlForPortfolio() {
+    log.info("getSellPnlForPortfolio invoked");
+    return centralDataPointService.getSellPnl();
+  }
+
+  @GetMapping("/market/sell/pnl/{accountType}")
+  public MarketDataProto.Portfolio getSellPnlForAccountType(
+      @PathVariable("accountType") String accountType) {
+    log.info("getSellPnlForAccountType invoked for {}", accountType);
+    MarketDataProto.AccountType accType = MarketDataProto.AccountType.valueOf(accountType);
+    return centralDataPointService.getSellPnl(accType);
+  }
+
   // METADATA
 
   @GetMapping("/market/metadata")

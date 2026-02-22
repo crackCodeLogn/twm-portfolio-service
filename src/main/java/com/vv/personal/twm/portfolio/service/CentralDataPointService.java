@@ -106,5 +106,9 @@ public interface CentralDataPointService {
       String forceImnts,
       String imntsScope);
 
+  MarketDataProto.Portfolio getSellPnl();
+
+  MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType);
+
   void testInfo();
 }

@@ -293,6 +293,16 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public MarketDataProto.Portfolio getSellPnl() {
+    return completeMarketDataService.getSellPnl();
+  }
+
+  @Override
+  public MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType) {
+    return completeMarketDataService.getSellPnl(accType);
+  }
+
+  @Override
   public void testInfo() {
     completeMarketDataService.testInfo();
   }

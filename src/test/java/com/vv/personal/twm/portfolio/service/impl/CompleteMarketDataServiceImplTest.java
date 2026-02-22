@@ -13,6 +13,7 @@ import com.vv.personal.twm.portfolio.cache.DateLocalDateCache;
 import com.vv.personal.twm.portfolio.cache.KeyInstrumentValueCache;
 import com.vv.personal.twm.portfolio.model.market.DataList;
 import com.vv.personal.twm.portfolio.model.market.DividendRecord;
+import com.vv.personal.twm.portfolio.model.market.SellRecord;
 import com.vv.personal.twm.portfolio.remote.feign.CalcPythonEngine;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
@@ -528,7 +529,11 @@ class CompleteMarketDataServiceImplTest {
         DELTA_PRECISION);
     assertEquals(
         0.0,
-        dateDividendsCumulativeMap.get(0).get(MarketDataProto.AccountType.IND),
+        dateDividendsCumulativeMap.get(0).get(MarketDataProto.AccountType.RRSP),
+        DELTA_PRECISION);
+    assertEquals(
+        0.0,
+        dateDividendsCumulativeMap.get(0).get(MarketDataProto.AccountType.FHSA),
         DELTA_PRECISION);
     assertEquals(
         10.0,
@@ -540,7 +545,7 @@ class CompleteMarketDataServiceImplTest {
         DELTA_PRECISION);
     assertEquals(
         0.0,
-        dateDividendsCumulativeMap.get(20240912).get(MarketDataProto.AccountType.IND),
+        dateDividendsCumulativeMap.get(20240912).get(MarketDataProto.AccountType.RRSP),
         DELTA_PRECISION);
     assertEquals(
         15.0,
@@ -552,7 +557,7 @@ class CompleteMarketDataServiceImplTest {
         DELTA_PRECISION);
     assertEquals(
         0.0,
-        dateDividendsCumulativeMap.get(20240914).get(MarketDataProto.AccountType.IND),
+        dateDividendsCumulativeMap.get(20240914).get(MarketDataProto.AccountType.RRSP),
         DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> dividendsDateDivMap =
@@ -874,6 +879,39 @@ class CompleteMarketDataServiceImplTest {
     assertTrue(instrumentSelectedForCorrelationMatrixCompute.contains("t-v2-2.to"));
   }
 
+  @Test
+  void testPopulateSellPnlData_FullFlow() {
+    MarketDataProto.Portfolio portfolio =
+        MarketDataProto.Portfolio.newBuilder().addAllInstruments(generateTestInstruments()).build();
+
+    completeMarketDataService.populate(portfolio);
+    completeMarketDataService.computeAcb();
+    completeMarketDataService.populateSellPnlData();
+
+    var sellMap = completeMarketDataService.getImntSellRecordMap();
+    System.out.println(sellMap);
+    assertEquals(1, sellMap.size());
+    assertTrue(sellMap.containsKey("CM.TO"), "Should contain records for cm.to");
+    assertFalse(
+        sellMap.get("CM.TO").containsKey(MarketDataProto.AccountType.NR),
+        "NR account only had a BUY, so it should not have a SellRecord");
+    var accountMap = sellMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
+    assertNotNull(accountMap);
+    List<SellRecord> records = accountMap.get(20240913);
+    assertEquals(1, records.size());
+    SellRecord record = records.get(0);
+
+    assertEquals(94.95, record.pnL(), DELTA_PRECISION);
+    assertEquals(5.0, record.quantity(), DELTA_PRECISION);
+    assertEquals(120.0, record.soldPrice(), DELTA_PRECISION); // total amt sold
+    assertFalse(record.closingPosition());
+    assertEquals(50.1, record.preAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5.01, record.preAcb().getAcbPerUnit(), DELTA_PRECISION);
+    // known, because profit was too much, crashing the ACB => 120 > 50.1
+    assertEquals(0.0, record.currentAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(0.0, record.currentAcb().getAcbPerUnit(), DELTA_PRECISION);
+  }
+
   private List<MarketDataProto.Instrument> generateTestInstruments() {
     return Lists.newArrayList(
         TestInstrument.builder()
@@ -907,6 +945,7 @@ class CompleteMarketDataServiceImplTest {
             .price(120)
             .direction(SELL)
             .date(20240913) // forced fudging
+            .metadata(Map.of("pricePerShare", String.valueOf(24.0)))
             .build()
             .getInstrument(),
         TestInstrument.builder()
@@ -953,6 +992,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240913) // forced fudging
+            .metadata(Map.of("pricePerShare", String.valueOf(7.0)))
             .build()
             .getInstrument(),
         TestInstrument.builder()
@@ -999,6 +1039,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240912) // forced fudging
+            .metadata(Map.of("pricePerShare", String.valueOf(7.0)))
             .build()
             .getInstrument());
   }
@@ -1028,6 +1069,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240912)
+            .metadata(Map.of("pricePerShare", String.valueOf(7)))
             .build()
             .getInstrument());
   }
@@ -1058,6 +1100,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240912)
+            .metadata(Map.of("pricePerShare", String.valueOf(14.0)))
             .build()
             .getInstrument(),
         TestInstrument.builder()
@@ -1075,6 +1118,7 @@ class CompleteMarketDataServiceImplTest {
             .price(120)
             .direction(SELL)
             .date(20240916)
+            .metadata(Map.of("pricePerShare", String.valueOf(9.0)))
             .build()
             .getInstrument());
   }

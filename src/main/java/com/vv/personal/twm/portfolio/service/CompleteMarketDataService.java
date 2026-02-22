@@ -89,4 +89,8 @@ public interface CompleteMarketDataService {
       String imntsScope);
 
   List<Integer> getMarketDates();
+
+  MarketDataProto.Portfolio getSellPnl();
+
+  MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType);
 }
