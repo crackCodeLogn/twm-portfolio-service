@@ -7,6 +7,7 @@ import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.util.TextReaderUtil;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class InstrumentMetaDataServiceImplTest {
     Mockito.when(marketDataPythonEngineFeign.getTickerInfo("CM.TO")).thenReturn(cibcInfo);
     MarketDataProto.Instrument.Builder imntBuilder = MarketDataProto.Instrument.newBuilder();
 
-    instrumentMetaDataService.queryInfo("CM.TO", imntBuilder);
+    instrumentMetaDataService.queryInfo("CM.TO", imntBuilder, Collections.emptyList());
     System.out.println(imntBuilder);
     assertEquals(2, imntBuilder.getCorporateActionsCount());
     assertEquals(10, imntBuilder.getCompanyOfficersCount());
@@ -65,7 +66,7 @@ class InstrumentMetaDataServiceImplTest {
     Mockito.when(marketDataPythonEngineFeign.getTickerInfo("VFV.TO")).thenReturn(vfvInfo);
     MarketDataProto.Instrument.Builder imntBuilder = MarketDataProto.Instrument.newBuilder();
 
-    instrumentMetaDataService.queryInfo("VFV.TO", imntBuilder);
+    instrumentMetaDataService.queryInfo("VFV.TO", imntBuilder, Collections.emptyList());
     System.out.println(imntBuilder);
     assertEquals(0, imntBuilder.getCorporateActionsCount());
     assertEquals(0, imntBuilder.getCompanyOfficersCount());
@@ -85,7 +86,7 @@ class InstrumentMetaDataServiceImplTest {
     Mockito.when(marketDataPythonEngineFeign.getTickerInfo("CADUSD=X")).thenReturn(vfvInfo);
     MarketDataProto.Instrument.Builder imntBuilder = MarketDataProto.Instrument.newBuilder();
 
-    instrumentMetaDataService.queryInfo("CADUSD=X", imntBuilder);
+    instrumentMetaDataService.queryInfo("CADUSD=X", imntBuilder, Collections.emptyList());
     System.out.println(imntBuilder);
     assertEquals(0, imntBuilder.getCorporateActionsCount());
     assertEquals(0, imntBuilder.getCompanyOfficersCount());

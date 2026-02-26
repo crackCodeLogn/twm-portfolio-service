@@ -3,6 +3,7 @@ package com.vv.personal.twm.portfolio.util;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.util.Locale;
 
 /**
  * @author Vivek
@@ -11,8 +12,9 @@ import java.time.format.DateTimeFormatterBuilder;
 public final class DateFormatUtil {
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       new DateTimeFormatterBuilder()
-          .appendPattern("[MM/dd/yyyy][M/dd/yyyy][MM/d/yyyy][M/d/yyyy][yyyy-MM-dd][yyyyMMdd]")
-          .toFormatter();
+          .appendPattern(
+              "[MM/dd/yyyy][M/dd/yyyy][MM/d/yyyy][M/d/yyyy][yyyy-MM-dd][yyyyMMdd][EEE MMM dd HH:mm:ss zzz yyyy][EEE MMM dd HH:mm:ss zzz uuuu]")
+          .toFormatter(Locale.US);
 
   private DateFormatUtil() {}
 

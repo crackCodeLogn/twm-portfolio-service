@@ -32,6 +32,12 @@ class DateFormatUtilTest {
 
     result = DateFormatUtil.getLocalDate("09/03/2024");
     assertEquals(LocalDate.of(2024, 9, 3), result);
+
+    result = DateFormatUtil.getLocalDate("Wed Feb 25 22:43:09 EST 2026");
+    assertEquals(LocalDate.of(2026, 2, 25), result);
+
+    result = DateFormatUtil.getLocalDate("Fri Feb 27 00:00:00 GMT-05:00 2026");
+    assertEquals(LocalDate.of(2026, 2, 27), result);
   }
 
   @Test

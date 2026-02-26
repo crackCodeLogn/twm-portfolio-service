@@ -16,9 +16,11 @@ import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -135,7 +137,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                       MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
             }
 
-            queryInfo(imnt, imntBuilder); // update the imnt with latest metadata
+            // update the imnt with latest metadata
+            queryInfo(imnt, imntBuilder, instrument.getCorporateActionsList());
           }
           MarketDataProto.Instrument updatedImnt = imntBuilder.build();
           instrumentMetaDataCache.offer(updatedImnt);
@@ -388,6 +391,13 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   }
 
   @Override
+  public Optional<List<MarketDataProto.CorporateAction>> getCorporateActions(String imnt) {
+    return instrumentMetaDataCache
+        .get(imnt)
+        .map(MarketDataProto.Instrument::getCorporateActionsList);
+  }
+
+  @Override
   public String backup() {
     MarketDataProto.Portfolio entireMetaData = getEntireMetaData();
     StringBuilder builder = new StringBuilder();
@@ -458,7 +468,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
         queryName(imnt).ifPresent(tickerBuilder::setName);
       }
       imntBuilder.setTicker(tickerBuilder);
-      queryInfo(imnt, imntBuilder);
+      queryInfo(imnt, imntBuilder, Collections.emptyList());
 
       Optional<MarketDataProto.Instrument> build = Optional.of(imntBuilder.build());
       log.debug(build.toString());
@@ -510,7 +520,10 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
     return Optional.empty();
   }
 
-  void queryInfo(String imnt, MarketDataProto.Instrument.Builder imntBuilder) {
+  void queryInfo(
+      String imnt,
+      MarketDataProto.Instrument.Builder imntBuilder,
+      List<MarketDataProto.CorporateAction> existingCorporateActions) {
     log.info("Querying detailed info for imnt {}", imnt);
     try {
       String info = marketDataPythonEngineFeign.getTickerInfo(imnt);
@@ -518,7 +531,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
         log.warn("No info data found for {}", imnt);
       } else {
         JsonNode root = mapper.readTree(info);
-        populateInformationFromMap(root, imntBuilder, imnt);
+        populateInformationFromMap(root, imntBuilder, imnt, existingCorporateActions);
 
         updateBeta(imnt, imntBuilder);
         updateImntType(imnt, imntBuilder);
@@ -530,8 +543,11 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   }
 
   void populateInformationFromMap(
-      JsonNode root, MarketDataProto.Instrument.Builder imntBuilder, String imnt) {
-    handleCorporateActions(root, imntBuilder, imnt);
+      JsonNode root,
+      MarketDataProto.Instrument.Builder imntBuilder,
+      String imnt,
+      List<MarketDataProto.CorporateAction> existingCorporateActions) {
+    handleCorporateActions(root, imntBuilder, imnt, existingCorporateActions);
     handleCompanyOfficers(root, imntBuilder);
 
     Map<String, Object> result = mapper.convertValue(root, new TypeReference<>() {});
@@ -597,8 +613,12 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   }
 
   private void handleCorporateActions(
-      JsonNode root, MarketDataProto.Instrument.Builder imntBuilder, String imnt) {
+      JsonNode root,
+      MarketDataProto.Instrument.Builder imntBuilder,
+      String imnt,
+      List<MarketDataProto.CorporateAction> existingCorporateActions) {
     List<MarketDataProto.CorporateAction> corporateActions = new ArrayList<>();
+    Set<String> corpActionStringSet = new HashSet<>();
 
     JsonNode corpActions = root.get(JSON_KEY_CORP_ACTIONS);
     if (Objects.nonNull(corpActions))
@@ -614,12 +634,32 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                   handleDividendCorporateAction(corporateAction, node);
                 else log.warn("Unknown corporate action : {}", corporateAction.getHeader());
 
+                corpActionStringSet.add(corporateAction.toString());
                 corporateActions.add(corporateAction.build());
               });
     if (!corporateActions.isEmpty())
       log.info("Found {} dividend corporate actions for {}", corporateActions.size(), imnt);
     imntBuilder.clearCorporateActions();
     imntBuilder.addAllCorporateActions(corporateActions);
+
+    if (!existingCorporateActions.isEmpty()) {
+      LocalDate tDate = DateFormatUtil.getLocalDate(CompleteMarketDataServiceImpl.TODAY_DATE);
+      // todo - shift to a specialized date component
+
+      for (MarketDataProto.CorporateAction corporateAction : existingCorporateActions) {
+        boolean retain = true;
+        LocalDate corpActionDate = DateFormatUtil.getLocalDate(corporateAction.getMetaDate());
+        if (corpActionDate.isBefore(tDate)
+            || corpActionStringSet.contains(corporateAction.toString())) {
+          retain = false;
+        }
+
+        log.info("Previous corp action for {} x retained: {}", imnt, retain);
+        if (retain) {
+          imntBuilder.addCorporateActions(corporateAction);
+        }
+      }
+    }
   }
 
   private void handleDividendCorporateAction(

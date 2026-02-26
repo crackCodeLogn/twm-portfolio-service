@@ -61,8 +61,9 @@ import org.springframework.stereotype.Service;
 @Setter
 @Service
 public class CompleteMarketDataServiceImpl implements CompleteMarketDataService {
+  public static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
+
   private static final String CLIENT_VIVEK = "vivek-v2";
-  private static final int TODAY_DATE = DateFormatUtil.getDate(LocalDate.now());
 
   private static final String UNKNOWN_SECTOR = "UNKNOWN";
   private static final String KEY_ACCOUNT_TYPE = "accountType";
