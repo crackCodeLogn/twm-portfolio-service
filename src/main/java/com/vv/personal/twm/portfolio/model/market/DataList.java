@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Vivek
- * @since 2024-09-11
- *     <p>Hold a doubly linked list of DataNode
+ * @since 2024-09-11 <br>
+ *     Hold a doubly linked list of DataNode
  */
 @Slf4j
 @Getter

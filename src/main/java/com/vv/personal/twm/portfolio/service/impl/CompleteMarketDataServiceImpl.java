@@ -1569,6 +1569,18 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           }
           Double soldPps =
               Double.valueOf(node.getInstrument().getMetaDataMap().get("pricePerShare"));
+          /*double v =
+              node.getInstrument().getTicker().getData(0).getPrice()
+                  / node.getInstrument().getQty();
+          double delta =
+              soldPps
+                  - node.getInstrument().getTicker().getData(0).getPrice()
+                      / node.getInstrument().getQty();
+          delta = Math.abs(MathUtil.round2(delta));
+          log.info("\t\timnt > {}, pps: {}, v: {}, delta: {}", imnt, soldPps, v, delta);
+          if (delta > 0) {
+            log.info("******************* delta > 0");
+          }*/
           computeRealizedPnL(imnt, type, node, date, soldPps);
           // shifted to actual pps instead of end of day marketPrice
 

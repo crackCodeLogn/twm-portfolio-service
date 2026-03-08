@@ -69,9 +69,12 @@ class DataNodeTest {
     firstNode.computeAcb();
     assertEquals(10, firstNode.getRunningQuantity(), DELTA_PRECISION);
     assertEquals(50.1, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertTrue(firstNode.getPnl().isEmpty());
+
     secondNode.computeAcb();
     assertEquals(30, secondNode.getRunningQuantity(), DELTA_PRECISION);
     assertEquals(150.1, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertTrue(secondNode.getPnl().isEmpty());
 
     firstNode.computeAcb();
     assertEquals(10, firstNode.getRunningQuantity(), DELTA_PRECISION);
@@ -98,15 +101,19 @@ class DataNodeTest {
     assertEquals(50.1, firstNode.getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(10, firstNode.getRunningQuantity(), DELTA_PRECISION);
     assertEquals(5.01, firstNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
-    secondNode.computeAcb();
-    assertEquals(9, secondNode.getRunningQuantity(), DELTA_PRECISION);
-    assertEquals(44.1, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
-    assertEquals(4.9, secondNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
+    assertTrue(firstNode.getPnl().isEmpty());
 
     secondNode.computeAcb();
     assertEquals(9, secondNode.getRunningQuantity(), DELTA_PRECISION);
-    assertEquals(44.1, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
-    assertEquals(4.9, secondNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
+    assertEquals(45.09, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5.01, secondNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
+    assertFalse(secondNode.getPnl().isEmpty());
+    assertEquals(.99, secondNode.getPnl().get(), DELTA_PRECISION);
+
+    secondNode.computeAcb();
+    assertEquals(9, secondNode.getRunningQuantity(), DELTA_PRECISION);
+    assertEquals(45.09, secondNode.getAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5.01, secondNode.getAcb().getAcbPerUnit(), DELTA_PRECISION);
   }
 
   private MarketDataProto.Instrument generateInstrument(

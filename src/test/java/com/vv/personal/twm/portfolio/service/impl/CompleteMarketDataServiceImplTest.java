@@ -2,6 +2,7 @@ package com.vv.personal.twm.portfolio.service.impl;
 
 import static com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto.Direction.SELL;
 import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION;
+import static com.vv.personal.twm.portfolio.TestConstants.DELTA_PRECISION2;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
@@ -84,8 +85,9 @@ class CompleteMarketDataServiceImplTest {
     assertNotNull(cibcTfsaList);
     assertEquals(3, cibcTfsaList.getBlocks());
     assertEquals(50.1, cibcTfsaList.getHead().getAcb().getTotalAcb());
-    assertEquals(0, cibcTfsaList.getHead().getNext().getAcb().getTotalAcb());
-    assertEquals(150, cibcTfsaList.getTail().getAcb().getTotalAcb());
+    assertEquals(
+        25.05, cibcTfsaList.getHead().getNext().getAcb().getTotalAcb(), DELTA_PRECISION2); // 25.05
+    assertEquals(175.05, cibcTfsaList.getTail().getAcb().getTotalAcb());
 
     DataList cmNrList = result.get("CM.TO").get(MarketDataProto.AccountType.NR);
     assertNotNull(cmNrList);
@@ -145,15 +147,15 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        74.6,
+        29.7,
         unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION); // should be 74.61 though
     assertEquals(
-        104.6,
+        59.7,
         unrealizedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
     assertEquals(
-        104.6,
+        59.7,
         unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
 
@@ -167,9 +169,9 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
     assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
     assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
-    assertEquals(74.6, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
-    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
-    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+    assertEquals(29.7, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(59.7, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
+    assertEquals(59.7, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
         completeMarketDataService.getRealizedDatePnLMap();
@@ -181,7 +183,7 @@ class CompleteMarketDataServiceImplTest {
     assertFalse(realizedPnLMap.containsKey(20240910));
     assertNull(realizedPnLMap.get(20240911));
     assertEquals(
-        9.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        44.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(realizedPnLMap.containsKey(20240913));
     assertFalse(realizedPnLMap.containsKey(20240916));
 
@@ -192,7 +194,7 @@ class CompleteMarketDataServiceImplTest {
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
     Map<Integer, Double> realizedImntPnLCibcMap =
         realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
-    assertEquals(9.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(44.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
         completeMarketDataService.getCombinedDatePnLMap();
@@ -207,11 +209,11 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        84.5, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        74.6, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        104.6, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        59.7, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        104.6, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        59.7, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
   }
 
   @Test
@@ -364,11 +366,11 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        179.6, // should be 179.7 tbh, but fine
+        134.7, // should be 179.7 tbh, but fine
         unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
     assertEquals(
-        67.1,
+        22.2,
         unrealizedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
     assertEquals(
@@ -385,8 +387,8 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
     assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
     assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
-    assertEquals(179.6, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
-    assertEquals(67.1, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
+    assertEquals(134.7, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(22.2, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
     assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
     assertNull(unrealizedImntPnLCibcMap.get(20240917));
 
@@ -403,7 +405,7 @@ class CompleteMarketDataServiceImplTest {
         44.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(realizedPnLMap.containsKey(20240913));
     assertEquals(
-        129.6, realizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        84.7, realizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(realizedPnLMap.containsKey(20240917));
 
     Map<String, Map<MarketDataProto.AccountType, Map<Integer, Double>>> realizedImntPnLMap =
@@ -415,7 +417,7 @@ class CompleteMarketDataServiceImplTest {
         realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
     assertEquals(2, realizedImntPnLCibcMap.size());
     assertEquals(44.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
-    assertEquals(129.6, realizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+    assertEquals(84.7, realizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
         completeMarketDataService.getCombinedDatePnLMap();
@@ -430,11 +432,11 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        224.5, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        179.6, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        67.1, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        22.2, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        129.6, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        84.7, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(combinedPnLMap.containsKey(20240917));
   }
 
@@ -607,15 +609,15 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0, datePriceNrMap.floorEntry(20240910).getValue(), DELTA_PRECISION);
     assertEquals(0, datePriceTfsaMap.floorEntry(20240911).getValue(), DELTA_PRECISION);
     assertEquals(0, datePriceNrMap.floorEntry(20240911).getValue(), DELTA_PRECISION);
-    assertEquals(19.9, datePriceTfsaMap.floorEntry(20240912).getValue(), DELTA_PRECISION);
+    assertEquals(10 + 44.90, datePriceTfsaMap.floorEntry(20240912).getValue(), DELTA_PRECISION);
     assertEquals(20, datePriceNrMap.floorEntry(20240912).getValue(), DELTA_PRECISION);
-    assertEquals(19.9, datePriceTfsaMap.floorEntry(20240913).getValue(), DELTA_PRECISION);
+    assertEquals(54.90, datePriceTfsaMap.floorEntry(20240913).getValue(), DELTA_PRECISION);
     assertEquals(20, datePriceNrMap.floorEntry(20240913).getValue(), DELTA_PRECISION);
-    assertEquals(24.9, datePriceTfsaMap.floorEntry(20240914).getValue(), DELTA_PRECISION);
+    assertEquals(59.9, datePriceTfsaMap.floorEntry(20240914).getValue(), DELTA_PRECISION);
     assertEquals(20.0, datePriceNrMap.floorEntry(20240914).getValue(), DELTA_PRECISION);
-    assertEquals(24.9, datePriceTfsaMap.floorEntry(20240915).getValue(), DELTA_PRECISION);
+    assertEquals(59.9, datePriceTfsaMap.floorEntry(20240915).getValue(), DELTA_PRECISION);
     assertEquals(20, datePriceNrMap.floorEntry(20240915).getValue(), DELTA_PRECISION);
-    assertEquals(24.9, datePriceTfsaMap.floorEntry(20240916).getValue(), DELTA_PRECISION);
+    assertEquals(59.9, datePriceTfsaMap.floorEntry(20240916).getValue(), DELTA_PRECISION);
     assertEquals(20.0, datePriceNrMap.floorEntry(20240916).getValue(), DELTA_PRECISION);
 
     TreeMap<Integer, Map<MarketDataProto.AccountType, Double>> realizedWithDividendDatePnLMap =
@@ -642,17 +644,17 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0.0, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(0.0, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = realizedWithDividendDatePnLMap.get(20240912);
-    assertEquals(19.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(54.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = realizedWithDividendDatePnLMap.get(20240913);
-    assertEquals(19.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(54.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(20.0, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = realizedWithDividendDatePnLMap.get(20240914);
-    assertEquals(24.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(59.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     assertFalse(realizedWithDividendDatePnLMap.containsKey(20240915));
     typeDividendMap = realizedWithDividendDatePnLMap.get(20240916);
-    assertEquals(24.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(59.9, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
 
     // todo - work
@@ -680,27 +682,29 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0.0, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = combinedDatePnLCumulativeMap.floorEntry(20240912).getValue();
     assertEquals(
-        94.5, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION); // 19.9+74.6
+        44.9 + 10 + 29.7,
+        typeDividendMap.get(MarketDataProto.AccountType.TFSA),
+        DELTA_PRECISION); // 84.6
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = combinedDatePnLCumulativeMap.floorEntry(20240913).getValue();
     assertEquals(
-        124.5,
+        114.6,
         typeDividendMap.get(MarketDataProto.AccountType.TFSA),
-        DELTA_PRECISION); // 104.6+19.9
+        DELTA_PRECISION); // 44.9+10+59.7
     assertEquals(20.0, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     typeDividendMap = combinedDatePnLCumulativeMap.floorEntry(20240914).getValue();
     // this is special situation. 20240914 is not present in combinedDatePnLMap as it got alive
     // due to div payout on a non-market date. Thus, the 14th will not exist, but its calc will show
     // up on next date
     assertEquals(
-        124.5,
+        114.6,
         typeDividendMap.get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION); // 104.6+24.9
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     assertFalse(combinedDatePnLCumulativeMap.containsKey(20240915));
     typeDividendMap = combinedDatePnLCumulativeMap.floorEntry(20240916).getValue();
     // the 14th tfsa div of $5 shows up here
-    assertEquals(129.5, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+    assertEquals(119.6, typeDividendMap.get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(20, typeDividendMap.get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
 
     // SECTION START - SANITY checks on the non dividend impacted data structures
@@ -718,15 +722,15 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, unrealizedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        74.6,
+        29.7,
         unrealizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION); // should be 74.61 though
     assertEquals(
-        104.6,
+        59.7,
         unrealizedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
     assertEquals(
-        104.6,
+        59.7,
         unrealizedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA),
         DELTA_PRECISION);
 
@@ -741,9 +745,9 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(0.0, unrealizedImntPnLCibcMap.get(20240909), DELTA_PRECISION);
     assertEquals(5.6, unrealizedImntPnLCibcMap.get(20240910), DELTA_PRECISION);
     assertEquals(9.6, unrealizedImntPnLCibcMap.get(20240911), DELTA_PRECISION);
-    assertEquals(74.6, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
-    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
-    assertEquals(104.6, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
+    assertEquals(29.7, unrealizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(59.7, unrealizedImntPnLCibcMap.get(20240913), DELTA_PRECISION);
+    assertEquals(59.7, unrealizedImntPnLCibcMap.get(20240916), DELTA_PRECISION);
 
     // pure realized calc should not be impacted due to divs, thus this is just for sanity
     Map<Integer, Map<MarketDataProto.AccountType, Double>> realizedPnLMap =
@@ -756,7 +760,7 @@ class CompleteMarketDataServiceImplTest {
     assertFalse(realizedPnLMap.containsKey(20240910));
     assertNull(realizedPnLMap.get(20240911));
     assertEquals(
-        9.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        44.9, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
         0, realizedPnLMap.get(20240912).get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     assertFalse(realizedPnLMap.containsKey(20240913));
@@ -772,7 +776,7 @@ class CompleteMarketDataServiceImplTest {
     assertTrue(realizedImntPnLMap.containsKey("CM.TO"));
     Map<Integer, Double> realizedImntPnLCibcMap =
         realizedImntPnLMap.get("CM.TO").get(MarketDataProto.AccountType.TFSA);
-    assertEquals(9.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
+    assertEquals(44.9, realizedImntPnLCibcMap.get(20240912), DELTA_PRECISION);
 
     // pure combined calc should not be impacted due to divs, thus this is just for sanity
     Map<Integer, Map<MarketDataProto.AccountType, Double>> combinedPnLMap =
@@ -788,15 +792,15 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(
         9.6, combinedPnLMap.get(20240911).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
-        84.5, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        74.6, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertEquals(
         0.0, combinedPnLMap.get(20240912).get(MarketDataProto.AccountType.NR), DELTA_PRECISION);
     assertEquals(
-        104.6, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        59.7, combinedPnLMap.get(20240913).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     assertFalse(combinedPnLMap.containsKey(20240914));
     assertFalse(combinedPnLMap.containsKey(20240915));
     assertEquals(
-        104.6, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
+        59.7, combinedPnLMap.get(20240916).get(MarketDataProto.AccountType.TFSA), DELTA_PRECISION);
     // SECTION END - SANITY checks
   }
 
@@ -819,7 +823,7 @@ class CompleteMarketDataServiceImplTest {
     assertTrue(sectorLevelTfsaAggrMap.containsKey("energy"));
     assertEquals(500.0, sectorLevelTfsaAggrMap.get("energy"), DELTA_PRECISION);
     assertTrue(sectorLevelTfsaAggrMap.containsKey("fin"));
-    assertEquals(189.0, sectorLevelTfsaAggrMap.get("fin"), DELTA_PRECISION);
+    assertEquals(190.0, sectorLevelTfsaAggrMap.get("fin"), DELTA_PRECISION);
 
     Map<String, Double> sectorLevelNrAggrMap =
         completeMarketDataService.getSectorLevelAggrDataMap(MarketDataProto.AccountType.NR);
@@ -835,7 +839,7 @@ class CompleteMarketDataServiceImplTest {
         completeMarketDataService.getSectorLevelImntAggrDataMap(MarketDataProto.AccountType.TFSA);
     assertEquals(2, sectorLevelTfsaImntAggrMap.size());
     assertTrue(sectorLevelTfsaImntAggrMap.containsKey("fin"));
-    assertEquals("BNS.TO=100.00|CM.TO=89.00", sectorLevelTfsaImntAggrMap.get("fin"));
+    assertEquals("BNS.TO=100.00|CM.TO=90.00", sectorLevelTfsaImntAggrMap.get("fin"));
     assertTrue(sectorLevelTfsaImntAggrMap.containsKey("energy"));
     assertEquals("SU.TO=500.00", sectorLevelTfsaImntAggrMap.get("energy"));
     Map<String, String> sectorLevelNrImntAggrMap =
@@ -908,8 +912,8 @@ class CompleteMarketDataServiceImplTest {
     assertEquals(50.1, record.preAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(5.01, record.preAcb().getAcbPerUnit(), DELTA_PRECISION);
     // known, because profit was too much, crashing the ACB => 120 > 50.1
-    assertEquals(0.0, record.currentAcb().getTotalAcb(), DELTA_PRECISION);
-    assertEquals(0.0, record.currentAcb().getAcbPerUnit(), DELTA_PRECISION);
+    assertEquals(25.05, record.currentAcb().getTotalAcb(), DELTA_PRECISION);
+    assertEquals(5.01, record.currentAcb().getAcbPerUnit(), DELTA_PRECISION);
   }
 
   private List<MarketDataProto.Instrument> generateTestInstruments() {
@@ -992,7 +996,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240913) // forced fudging
-            .metadata(Map.of("pricePerShare", String.valueOf(7.0)))
+            .metadata(Map.of("pricePerShare", String.valueOf(14.0)))
             .build()
             .getInstrument(),
         TestInstrument.builder()
@@ -1039,7 +1043,7 @@ class CompleteMarketDataServiceImplTest {
             .price(70)
             .direction(SELL)
             .date(20240912) // forced fudging
-            .metadata(Map.of("pricePerShare", String.valueOf(7.0)))
+            .metadata(Map.of("pricePerShare", String.valueOf(14)))
             .build()
             .getInstrument());
   }
@@ -1066,7 +1070,7 @@ class CompleteMarketDataServiceImplTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(20)
-            .price(70)
+            .price(140)
             .direction(SELL)
             .date(20240912)
             .metadata(Map.of("pricePerShare", String.valueOf(7)))
@@ -1115,7 +1119,7 @@ class CompleteMarketDataServiceImplTest {
             .symbol("cm.to")
             .name("cibc")
             .qty(25)
-            .price(120)
+            .price(225)
             .direction(SELL)
             .date(20240916)
             .metadata(Map.of("pricePerShare", String.valueOf(9.0)))
