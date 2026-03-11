@@ -546,8 +546,10 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
                   lastImntNode.getAcb().getAcbPerUnit() * lastImntNode.getRunningQuantity();
               double qty = lastImntNode.getRunningQuantity();
 
-              imntInfoListMap.put(
-                  imnt, Lists.newArrayList(currentValuationPnL, investmentActual, qty));
+              if (qty > 0.0) {
+                imntInfoListMap.put(
+                    imnt, Lists.newArrayList(currentValuationPnL, investmentActual, qty));
+              }
             }
           }
         });
@@ -1581,18 +1583,29 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
           if (delta > 0) {
             log.info("******************* delta > 0");
           }*/
-          computeRealizedPnL(imnt, type, node, date, soldPps);
-          // shifted to actual pps instead of end of day marketPrice
 
           // realized pnl (w/o div) changes only on SELL fixed realized pnl mis-calc. rn, because of
           // the last STLC sell node, the dates beyond
           // keep on using the same node and keep showing unnecessary gains whereas the gain was
           // only for 1 day
           // realizedImntPnLMap.get("STLC.TO").get(MarketDataProto.AccountType.TFSA).values().stream().mapToDouble(Double::doubleValue).sum()
-          if (node.getNext() == null) {
+          if (getDate(node) == date) {
+            // shifted to actual pps instead of end of day marketPrice
+            computeRealizedPnL(imnt, type, node, date, soldPps);
+          }
+
+          // no more position exists, thereby no more unrealized / realized
+          // TODO - think about what happens to last dividends received after position closure
+          if (node.isClosingPositionNode()) {
             log.info("Reached the end of position for {} x {} on {}", imnt, type, date);
             break;
           }
+          /*
+          INCORRECT: Was causing outdated unrealized pnl for imnts who had last block as SELL and not closed position
+          if (node.getNext() == null) {
+            log.info("Reached the end of position for {} x {} on {}", imnt, type, date);
+            break;
+          } */
           dateIndex++;
         }
       }

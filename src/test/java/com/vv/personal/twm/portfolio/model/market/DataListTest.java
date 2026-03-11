@@ -51,17 +51,20 @@ class DataListTest {
     assertEquals(50.1, result.get(0).getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(5.01, result.get(0).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(0).getInstrument().getDirection());
+    assertFalse(result.get(0).isClosingPositionNode());
 
     assertEquals(30, result.get(1).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(150.1, result.get(1).getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(5.0033333, result.get(1).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(1).getInstrument().getDirection());
+    assertFalse(result.get(1).isClosingPositionNode());
 
     assertEquals(0, result.get(2).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(0, result.get(2).getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(0, result.get(2).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(SELL, result.get(2).getInstrument().getDirection());
     assertEquals(dataList.getTail(), result.get(2));
+    assertTrue(result.get(2).isClosingPositionNode());
   }
 
   @Test
@@ -92,12 +95,14 @@ class DataListTest {
     assertEquals(5.01, result.get(0).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(0).getInstrument().getDirection());
     assertTrue(result.get(0).getPnl().isEmpty());
+    assertFalse(result.get(0).isClosingPositionNode());
 
     assertEquals(30, result.get(1).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(150.1, result.get(1).getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(5.0033333, result.get(1).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(1).getInstrument().getDirection());
     assertTrue(result.get(1).getPnl().isEmpty());
+    assertFalse(result.get(1).isClosingPositionNode());
 
     assertEquals(25, result.get(2).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(125.0833325, result.get(2).getAcb().getTotalAcb(), DELTA_PRECISION);
@@ -105,6 +110,7 @@ class DataListTest {
     assertEquals(SELL, result.get(2).getInstrument().getDirection());
     assertFalse(result.get(2).getPnl().isEmpty());
     assertEquals(94.9833335, result.get(2).getPnl().get(), DELTA_PRECISION);
+    assertFalse(result.get(2).isClosingPositionNode());
 
     assertEquals(35, result.get(3).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(275.0833325, result.get(3).getAcb().getTotalAcb(), DELTA_PRECISION);
@@ -112,6 +118,7 @@ class DataListTest {
     assertEquals(BUY, result.get(3).getInstrument().getDirection());
     assertTrue(result.get(3).getPnl().isEmpty());
     assertEquals(dataList.getTail(), result.get(3));
+    assertFalse(result.get(3).isClosingPositionNode());
   }
 
   @Test
@@ -145,12 +152,14 @@ class DataListTest {
     assertEquals(5.01, result.get(0).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(0).getInstrument().getDirection());
     assertTrue(result.get(0).getPnl().isEmpty());
+    assertFalse(result.get(0).isClosingPositionNode());
 
     assertEquals(20, result.get(1).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(100.4, result.get(1).getAcb().getTotalAcb(), DELTA_PRECISION);
     assertEquals(5.02, result.get(1).getAcb().getAcbPerUnit(), DELTA_PRECISION);
     assertEquals(BUY, result.get(1).getInstrument().getDirection());
     assertTrue(result.get(1).getPnl().isEmpty());
+    assertFalse(result.get(1).isClosingPositionNode());
 
     assertEquals(15, result.get(2).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(75.3, result.get(2).getAcb().getTotalAcb(), DELTA_PRECISION);
@@ -158,6 +167,7 @@ class DataListTest {
     assertEquals(SELL, result.get(2).getInstrument().getDirection());
     assertFalse(result.get(2).getPnl().isEmpty());
     assertEquals(44.9, result.get(2).getPnl().get(), DELTA_PRECISION);
+    assertFalse(result.get(2).isClosingPositionNode());
 
     assertEquals(25, result.get(3).getRunningQuantity(), DELTA_PRECISION);
     assertEquals(165.3, result.get(3).getAcb().getTotalAcb(), DELTA_PRECISION);
@@ -165,6 +175,7 @@ class DataListTest {
     assertEquals(BUY, result.get(3).getInstrument().getDirection());
     assertTrue(result.get(3).getPnl().isEmpty());
     assertEquals(dataList.getTail(), result.get(3));
+    assertFalse(result.get(3).isClosingPositionNode());
   }
 
   @Test
@@ -208,6 +219,7 @@ class DataListTest {
     assertEquals(BUY, result.get(0).getInstrument().getDirection());
     assertTrue(result.get(0).getPnl().isEmpty());
     assertTrue(result.get(0).getPnlSoldQty().isEmpty());
+    assertFalse(result.get(0).isClosingPositionNode());
 
     assertEquals(195, result.get(1).getRunningQuantity(), DELTA_PRECISION2);
     assertEquals(6049.50, result.get(1).getAcb().getTotalAcb(), DELTA_PRECISION2);
@@ -215,6 +227,7 @@ class DataListTest {
     assertEquals(BUY, result.get(1).getInstrument().getDirection());
     assertTrue(result.get(1).getPnl().isEmpty());
     assertTrue(result.get(1).getPnlSoldQty().isEmpty());
+    assertFalse(result.get(1).isClosingPositionNode());
 
     assertEquals(255, result.get(2).getRunningQuantity(), DELTA_PRECISION2);
     assertEquals(8264.70, result.get(2).getAcb().getTotalAcb(), DELTA_PRECISION2);
@@ -222,6 +235,7 @@ class DataListTest {
     assertEquals(BUY, result.get(2).getInstrument().getDirection());
     assertTrue(result.get(2).getPnl().isEmpty());
     assertTrue(result.get(2).getPnlSoldQty().isEmpty());
+    assertFalse(result.get(2).isClosingPositionNode());
 
     assertEquals(235, result.get(3).getRunningQuantity(), DELTA_PRECISION2);
     assertEquals(7616.488, result.get(3).getAcb().getTotalAcb(), DELTA_PRECISION2); // 7616.50
@@ -231,6 +245,7 @@ class DataListTest {
     assertEquals(30.98, result.get(3).getPnl().get(), DELTA_PRECISION2); // 31
     assertFalse(result.get(3).getPnlSoldQty().isEmpty());
     assertEquals(20, result.get(3).getPnlSoldQty().get(), DELTA_PRECISION2);
+    assertFalse(result.get(3).isClosingPositionNode());
 
     assertEquals(345, result.get(4).getRunningQuantity(), DELTA_PRECISION2);
     assertEquals(12024.188, result.get(4).getAcb().getTotalAcb(), DELTA_PRECISION2); // 12024.20
@@ -238,6 +253,7 @@ class DataListTest {
     assertEquals(BUY, result.get(4).getInstrument().getDirection());
     assertTrue(result.get(4).getPnl().isEmpty());
     assertTrue(result.get(4).getPnlSoldQty().isEmpty());
+    assertFalse(result.get(4).isClosingPositionNode());
 
     assertEquals(323, result.get(5).getRunningQuantity(), DELTA_PRECISION2);
     assertEquals(11257.428, result.get(5).getAcb().getTotalAcb(), DELTA_PRECISION2); // 11257.50
@@ -247,5 +263,6 @@ class DataListTest {
     assertEquals(75.6201, result.get(5).getPnl().get(), DELTA_PRECISION2); // 75.68
     assertFalse(result.get(5).getPnlSoldQty().isEmpty());
     assertEquals(22, result.get(5).getPnlSoldQty().get(), DELTA_PRECISION2);
+    assertFalse(result.get(5).isClosingPositionNode());
   }
 }

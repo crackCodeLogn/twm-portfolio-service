@@ -22,6 +22,7 @@ public class DataNode {
   private ACB acb;
   private Optional<Double> pnl;
   private Optional<Double> pnlSoldQty;
+  private boolean isClosingPositionNode;
   private boolean oneTimeProcessed; // helps in enforcing single time calc and not mistaken re-runs
 
   public DataNode(MarketDataProto.Instrument instrument) {
@@ -33,6 +34,7 @@ public class DataNode {
     this.oneTimeProcessed = false;
     this.pnl = Optional.empty();
     this.pnlSoldQty = Optional.empty();
+    this.isClosingPositionNode = false;
   }
 
   @Override
@@ -99,6 +101,14 @@ public class DataNode {
       }
     }
     acb = ACB.builder().totalAcb(totalAcb).acbPerUnit(acbU).build();
+    if (runningQuantity == 0.0 && next == null) {
+      setClosingPositionNode(true);
+      log.info(
+          "Marked node for imnt {} x {} as closed on {}",
+          instrument.getTicker().getSymbol(),
+          instrument.getAccountType(),
+          instrument.getTicker().getData(0).getDate());
+    }
 
     /* INCORRECT LOGIC
     // cannot allow negative, but seems if 0, then tax implications become crazy - future work maybe
