@@ -618,7 +618,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       String imnt,
       List<MarketDataProto.CorporateAction> existingCorporateActions) {
     List<MarketDataProto.CorporateAction> corporateActions = new ArrayList<>();
-    Set<String> corpActionStringSet = new HashSet<>();
+    Set<String> corpActionMessageSet = new HashSet<>();
 
     JsonNode corpActions = root.get(JSON_KEY_CORP_ACTIONS);
     if (Objects.nonNull(corpActions))
@@ -634,7 +634,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
                   handleDividendCorporateAction(corporateAction, node);
                 else log.warn("Unknown corporate action : {}", corporateAction.getHeader());
 
-                corpActionStringSet.add(corporateAction.toString());
+                corpActionMessageSet.add(corporateAction.getMessage());
                 corporateActions.add(corporateAction.build());
               });
     if (!corporateActions.isEmpty())
@@ -650,13 +650,14 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
         boolean retain = true;
         LocalDate corpActionDate = DateFormatUtil.getLocalDate(corporateAction.getMetaDate());
         if (corpActionDate.isBefore(tDate)
-            || corpActionStringSet.contains(corporateAction.toString())) {
+            || corpActionMessageSet.contains(corporateAction.getMessage())) {
           retain = false;
         }
 
-        log.info("Previous corp action for {} x retained: {}", imnt, retain);
+        log.info("Previous corp action for {} x retained: {} -> {}", imnt, retain, corporateAction);
         if (retain) {
           imntBuilder.addCorporateActions(corporateAction);
+          corpActionMessageSet.add(corporateAction.getMessage());
         }
       }
     }
