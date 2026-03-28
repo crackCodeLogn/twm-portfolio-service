@@ -650,6 +650,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
         boolean retain = true;
         LocalDate corpActionDate = DateFormatUtil.getLocalDate(corporateAction.getMetaDate());
         if (corpActionDate.isBefore(tDate)
+            || corpActionDate.plusDays(1).equals(tDate)
             || corpActionMessageSet.contains(corporateAction.getMessage())) {
           retain = false;
         }
