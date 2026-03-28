@@ -1,5 +1,7 @@
 package com.vv.personal.twm.portfolio.remote.feign;
 
+import static com.vv.personal.twm.portfolio.constants.GlobalConstants.BANK_CRDB_SERVICE_FEIGN_NAME;
+
 import com.vv.personal.twm.artifactory.generated.bank.BankProto;
 import com.vv.personal.twm.artifactory.generated.deposit.FixedDepositProto;
 import com.vv.personal.twm.ping.remote.feign.PingFeign;
@@ -11,7 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @author Vivek
  * @since 2024-08-11
  */
-@FeignClient("twm-bank-crdb-service")
+@FeignClient(BANK_CRDB_SERVICE_FEIGN_NAME)
 public interface BankCrdbServiceFeign extends PingFeign {
 
   @GetMapping("/crdb/bank/fixed-deposits?field={field}&value={value}")

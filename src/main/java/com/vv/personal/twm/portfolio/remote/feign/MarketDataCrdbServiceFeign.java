@@ -1,5 +1,7 @@
 package com.vv.personal.twm.portfolio.remote.feign;
 
+import static com.vv.personal.twm.portfolio.constants.GlobalConstants.MARKET_DATA_CRDB_SERVICE_FEIGN_NAME;
+
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.ping.remote.feign.PingFeign;
 import java.util.List;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author Vivek
  * @since 2024-08-11
  */
-@FeignClient("twm-market-data-crdb-service")
+@FeignClient(MARKET_DATA_CRDB_SERVICE_FEIGN_NAME)
 public interface MarketDataCrdbServiceFeign extends PingFeign {
 
   // market-data

@@ -1,5 +1,7 @@
 package com.vv.personal.twm.portfolio.remote.feign;
 
+import static com.vv.personal.twm.portfolio.constants.GlobalConstants.MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME;
+
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
  * @author Vivek
  * @since 2023-11-24
  */
-@FeignClient("twm-market-data-engine")
+@FeignClient(MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME)
 public interface MarketDataPythonEngineFeign {
 
   @GetMapping("/mkt/{countryCode}/ticker/name/{symbol}")

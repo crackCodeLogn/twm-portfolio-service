@@ -14,6 +14,8 @@ import com.vv.personal.twm.portfolio.service.CentralDataPointService;
 import com.vv.personal.twm.portfolio.service.CompleteBankDataService;
 import com.vv.personal.twm.portfolio.service.CompleteMarketDataService;
 import com.vv.personal.twm.portfolio.service.ComputeMarketStatisticsService;
+import com.vv.personal.twm.portfolio.service.DiscoveryClientService;
+import com.vv.personal.twm.portfolio.service.ExecutorProviderService;
 import com.vv.personal.twm.portfolio.service.ExtractMarketPortfolioDataService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.service.ProgressTrackerService;
@@ -23,6 +25,8 @@ import com.vv.personal.twm.portfolio.service.impl.CentralDataPointServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteBankDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.CompleteMarketDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ComputeMarketStatisticsServiceImpl;
+import com.vv.personal.twm.portfolio.service.impl.DiscoveryClientServiceImpl;
+import com.vv.personal.twm.portfolio.service.impl.ExecutorProviderServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ExtractMarketPortfolioDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.InstrumentMetaDataServiceImpl;
 import com.vv.personal.twm.portfolio.service.impl.ProgressTrackerServiceImpl;
@@ -36,6 +40,7 @@ import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import com.vv.personal.twm.portfolio.warehouse.market.impl.TickerDataWarehouseImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -55,6 +60,7 @@ public class DataConfig {
   private final BankCrdbServiceFeign bankCrdbServiceFeign;
   private final CalcServiceFeign calcServiceFeign;
   private final CalcPythonEngine calcPythonEngine;
+  private final DiscoveryClient discoveryClient;
 
   @Bean
   public TickerDataWarehouse tickerDataWarehouse() {
@@ -105,7 +111,9 @@ public class DataConfig {
             marketDataPythonEngineFeign,
             marketDataCrdbServiceFeign,
             tickerDataWarehouse(),
-            outdatedSymbols());
+            outdatedSymbols(),
+            executorProviderService(),
+            discoveryClientService());
     tickerDataWarehouseService.loadBenchmarkData();
     return tickerDataWarehouseService;
   }
@@ -150,7 +158,11 @@ public class DataConfig {
   public InstrumentMetaDataService instrumentMetaDataService() {
     InstrumentMetaDataService instrumentMetaDataService =
         new InstrumentMetaDataServiceImpl(
-            instrumentMetaDataCache(), marketDataCrdbServiceFeign, marketDataPythonEngineFeign);
+            instrumentMetaDataCache(),
+            marketDataCrdbServiceFeign,
+            marketDataPythonEngineFeign,
+            executorProviderService(),
+            discoveryClientService());
     instrumentMetaDataService.setOutdatedSymbols(outdatedSymbols());
     return instrumentMetaDataService;
   }
@@ -183,5 +195,15 @@ public class DataConfig {
         completeBankDataService(),
         instrumentMetaDataService(),
         instrumentMaxWeight());
+  }
+
+  @Bean(destroyMethod = "shutdownAllExecutors")
+  public ExecutorProviderService executorProviderService() {
+    return new ExecutorProviderServiceImpl();
+  }
+
+  @Bean
+  public DiscoveryClientService discoveryClientService() {
+    return new DiscoveryClientServiceImpl(discoveryClient);
   }
 }

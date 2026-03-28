@@ -6,6 +6,8 @@ import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
+import com.vv.personal.twm.portfolio.service.DiscoveryClientService;
+import com.vv.personal.twm.portfolio.service.ExecutorProviderService;
 import com.vv.personal.twm.portfolio.util.TextReaderUtil;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +28,8 @@ class InstrumentMetaDataServiceImplTest {
   @Mock private InstrumentMetaDataCache instrumentMetaDataCache;
   @Mock private MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   @Mock private MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+  @Mock private ExecutorProviderService executorProviderService;
+  @Mock private DiscoveryClientService discoveryClientService;
 
   private InstrumentMetaDataServiceImpl instrumentMetaDataService;
 
@@ -33,7 +37,11 @@ class InstrumentMetaDataServiceImplTest {
   void setUp() {
     instrumentMetaDataService =
         new InstrumentMetaDataServiceImpl(
-            instrumentMetaDataCache, marketDataCrdbServiceFeign, marketDataPythonEngineFeign);
+            instrumentMetaDataCache,
+            marketDataCrdbServiceFeign,
+            marketDataPythonEngineFeign,
+            executorProviderService,
+            discoveryClientService);
   }
 
   @Test

@@ -1,5 +1,7 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
+import static com.vv.personal.twm.portfolio.constants.GlobalConstants.MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +14,8 @@ import com.vv.personal.twm.portfolio.cache.InstrumentMetaDataCache;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
+import com.vv.personal.twm.portfolio.service.DiscoveryClientService;
+import com.vv.personal.twm.portfolio.service.ExecutorProviderService;
 import com.vv.personal.twm.portfolio.service.InstrumentMetaDataService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import java.time.LocalDate;
@@ -26,11 +30,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.springframework.stereotype.Service;
 
 /**
@@ -42,6 +50,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService {
 
+  private static final String EXECUTOR_NAME = "imnt-metadata-service";
   //  private static final List<String> dataFieldsForMetaDataUpdateViaMarketEngine =
   //      Lists.newArrayList("divYield");
   private static final String SECTOR_ETF_BONDS = "etf-bon";
@@ -84,6 +93,8 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   private final InstrumentMetaDataCache instrumentMetaDataCache;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
+  private final ExecutorProviderService executorProviderService;
+  private final DiscoveryClientService discoveryClientService;
 
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -94,6 +105,7 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
   public boolean load(int benchMarkCurrentDate, boolean forceReloadDataForCurrentDate) {
     setBenchMarkCurrentDate(benchMarkCurrentDate);
     log.info("Initiating complete instrument metadata load");
+    StopWatch stopWatch = StopWatch.createStarted();
     try {
       log.info("Initiating read from db of entire metadata");
       MarketDataProto.Portfolio entireMetaData =
@@ -105,53 +117,75 @@ public class InstrumentMetaDataServiceImpl implements InstrumentMetaDataService 
       }
 
       log.info("Received {} instrument meta data from db", entireMetaData.getInstrumentsCount());
-      boolean writeBackToDb = false;
+      AtomicBoolean writeBackToDb = new AtomicBoolean(false);
 
       // checking for stale state and enforcing a reload if required
+      List<Callable<Void>> tasks = Lists.newArrayList();
       for (MarketDataProto.Instrument instrument : entireMetaData.getInstrumentsList()) {
         String imnt = instrument.getTicker().getSymbol();
         if (outdatedSymbols != null && outdatedSymbols.isDelisted(imnt)) {
           log.info("Skipping load of delisted imnt: {}", imnt);
           continue;
         }
-
-        MarketDataProto.Instrument.Builder imntBuilder =
-            MarketDataProto.Instrument.newBuilder().mergeFrom(instrument);
-
-        if (instrument.getTicker().getDataCount() > 0) {
-          int metaDataDate = instrument.getTicker().getData(0).getDate();
-
-          if (metaDataDate < benchMarkCurrentDate || forceReloadDataForCurrentDate) {
-            log.info("\tComputing meta data for {}", imnt);
-            if (!OVERRIDE_INSTRUMENTS_DIV_YIELD_SKIP_UPDATE.contains(imnt)) {
-              // div-yield is the only thing getting updated for now from yfinance (mkt engine)
-              Optional<Double> divYield = queryDividendYield(imnt);
-              if (divYield.isPresent()) {
-                imntBuilder.setDividendYield(divYield.get());
-                writeBackToDb = true; // found a new update, thus need to write back to the db
-              }
-              imntBuilder.getTickerBuilder().clearData();
-              imntBuilder
-                  .getTickerBuilder()
-                  .addData(
-                      MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
-            }
-
-            // update the imnt with latest metadata
-            queryInfo(imnt, imntBuilder, instrument.getCorporateActionsList());
-          }
-          MarketDataProto.Instrument updatedImnt = imntBuilder.build();
-          instrumentMetaDataCache.offer(updatedImnt);
-        }
+        tasks.add(
+            () ->
+                processInstrumentForLoad(
+                    imnt, instrument, writeBackToDb, forceReloadDataForCurrentDate));
       }
+      int executorThreads =
+          Math.max(
+              1, discoveryClientService.getAppInstanceCount(MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME));
+      executorProviderService.procure(EXECUTOR_NAME, executorThreads).invokeAll(tasks);
 
-      if (writeBackToDb) writeBackToDb();
+      if (writeBackToDb.get()) writeBackToDb();
 
       return true;
     } catch (Exception e) {
       log.warn("Unable to load instrument meta data from db", e);
+    } finally {
+      stopWatch.stop();
+      log.info(
+          "Instrument metadata service load took {} seconds", stopWatch.getTime(TimeUnit.SECONDS));
+      executorProviderService.shutdown(EXECUTOR_NAME);
     }
     return false;
+  }
+
+  private Void processInstrumentForLoad(
+      String imnt,
+      MarketDataProto.Instrument instrument,
+      AtomicBoolean writeBackToDb,
+      boolean forceReloadDataForCurrentDate) {
+    MarketDataProto.Instrument.Builder imntBuilder =
+        MarketDataProto.Instrument.newBuilder().mergeFrom(instrument);
+
+    if (instrument.getTicker().getDataCount() > 0) {
+      int metaDataDate = instrument.getTicker().getData(0).getDate();
+
+      if (metaDataDate < benchMarkCurrentDate || forceReloadDataForCurrentDate) {
+        log.info("\tComputing meta data for {}", imnt);
+        if (!OVERRIDE_INSTRUMENTS_DIV_YIELD_SKIP_UPDATE.contains(imnt)) {
+          // div-yield is the only thing getting updated for now from yfinance (mkt
+          // engine)
+          Optional<Double> divYield = queryDividendYield(imnt);
+          if (divYield.isPresent()) {
+            imntBuilder.setDividendYield(divYield.get());
+            // found a new update, thus need to write back to the db
+            writeBackToDb.set(true);
+          }
+          imntBuilder.getTickerBuilder().clearData();
+          imntBuilder
+              .getTickerBuilder()
+              .addData(MarketDataProto.Value.newBuilder().setDate(benchMarkCurrentDate).build());
+        }
+
+        // update the imnt with latest metadata
+        queryInfo(imnt, imntBuilder, instrument.getCorporateActionsList());
+      }
+      MarketDataProto.Instrument updatedImnt = imntBuilder.build();
+      instrumentMetaDataCache.offer(updatedImnt);
+    }
+    return null;
   }
 
   @Override

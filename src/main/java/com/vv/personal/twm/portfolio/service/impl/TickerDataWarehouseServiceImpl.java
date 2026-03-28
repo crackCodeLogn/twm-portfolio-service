@@ -1,5 +1,8 @@
 package com.vv.personal.twm.portfolio.service.impl;
 
+import static com.vv.personal.twm.portfolio.constants.GlobalConstants.MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME;
+
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.vv.personal.twm.artifactory.generated.equitiesMarket.MarketDataProto;
 import com.vv.personal.twm.portfolio.config.TickerDataWarehouseConfig;
@@ -7,13 +10,18 @@ import com.vv.personal.twm.portfolio.model.market.OutdatedSymbol;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataCrdbServiceFeign;
 import com.vv.personal.twm.portfolio.remote.feign.MarketDataPythonEngineFeign;
 import com.vv.personal.twm.portfolio.remote.market.outdated.OutdatedSymbols;
+import com.vv.personal.twm.portfolio.service.DiscoveryClientService;
+import com.vv.personal.twm.portfolio.service.ExecutorProviderService;
 import com.vv.personal.twm.portfolio.service.TickerDataWarehouseService;
 import com.vv.personal.twm.portfolio.util.DateFormatUtil;
 import com.vv.personal.twm.portfolio.warehouse.market.TickerDataWarehouse;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +33,15 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseService {
+  private static final String EXECUTOR_NAME = "ticker-data-warehouse-service";
+
   private final TickerDataWarehouseConfig tickerDataWarehouseConfig;
   private final MarketDataPythonEngineFeign marketDataPythonEngineFeign;
   private final MarketDataCrdbServiceFeign marketDataCrdbServiceFeign;
   private final TickerDataWarehouse tickerDataWarehouse;
   private final OutdatedSymbols outdatedSymbols;
+  private final ExecutorProviderService executorProviderService;
+  private final DiscoveryClientService discoveryClientService;
 
   private final List<Integer> marketDates = new ArrayList<>(100000);
   private final LocalDate endDate = LocalDate.now().plusDays(1);
@@ -52,77 +64,99 @@ public class TickerDataWarehouseServiceImpl implements TickerDataWarehouseServic
 
   @Override
   public void loadAnalysisDataForInstruments(Set<String> instruments, boolean isReloadInProgress) {
-    instruments.forEach( // don't parallelize just yet due to py flask
-        instrument -> {
-          log.info("Loading analysis data for {}", instrument);
-          if (isReloadInProgress) {
-            LocalDate now = LocalDate.now();
-            int currentDateForMarketDataRemoval = DateFormatUtil.getDate(now);
-            log.info(
-                "Forcing removal of market data for {} x {}",
-                instrument,
-                currentDateForMarketDataRemoval);
+    // starting gradual parallelize, accounting for pressure on py flask
+    List<Callable<Void>> tasks = Lists.newArrayList();
+    StopWatch stopWatch = StopWatch.createStarted();
+    for (String instrument : instruments) {
+      tasks.add(
+          () -> {
+            log.info("Loading analysis data for {}", instrument);
+            if (isReloadInProgress) {
+              LocalDate now = LocalDate.now();
+              int currentDateForMarketDataRemoval = DateFormatUtil.getDate(now);
+              log.info(
+                  "Forcing removal of market data for {} x {}",
+                  instrument,
+                  currentDateForMarketDataRemoval);
 
-            marketDataCrdbServiceFeign.deleteMarketData(
-                instrument, currentDateForMarketDataRemoval);
-            tickerDataWarehouse.delete(now, instrument);
-          }
+              marketDataCrdbServiceFeign.deleteMarketData(
+                  instrument, currentDateForMarketDataRemoval);
+              tickerDataWarehouse.delete(now, instrument);
+            }
 
-          MarketDataProto.Ticker tickerDataFromDb =
-              marketDataCrdbServiceFeign.getMarketDataByTicker(instrument);
-          fillAnalysisWarehouse(tickerDataFromDb);
+            MarketDataProto.Ticker tickerDataFromDb =
+                marketDataCrdbServiceFeign.getMarketDataByTicker(instrument);
+            fillAnalysisWarehouse(tickerDataFromDb);
 
-          List<Pair<LocalDate, LocalDate>> missingDbDataDates =
-              identifyMissingDbDates(tickerDataFromDb, marketDates);
-          missingDbDataDates.forEach(
-              inputDates -> {
-                List<Pair<LocalDate, LocalDate>> dateList = new ArrayList<>();
-                if (outdatedSymbols.contains(instrument)) {
-                  dateList =
-                      identifyMissingDatesDueToOutdated(
-                          outdatedSymbols, instrument, inputDates, marketDates);
+            List<Pair<LocalDate, LocalDate>> missingDbDataDates =
+                identifyMissingDbDates(tickerDataFromDb, marketDates);
+            missingDbDataDates.forEach(
+                inputDates -> {
+                  List<Pair<LocalDate, LocalDate>> dateList = new ArrayList<>();
+                  if (outdatedSymbols.contains(instrument)) {
+                    dateList =
+                        identifyMissingDatesDueToOutdated(
+                            outdatedSymbols, instrument, inputDates, marketDates);
 
-                  if (dateList.isEmpty()) {
-                    log.info(
-                        "Skipping outdated symbol {} from {} to {}",
-                        instrument,
-                        inputDates.getLeft(),
-                        inputDates.getRight());
+                    if (dateList.isEmpty()) {
+                      log.info(
+                          "Skipping outdated symbol {} from {} to {}",
+                          instrument,
+                          inputDates.getLeft(),
+                          inputDates.getRight());
+                    }
+                  } else { // imnt not in outdated list
+                    dateList.add(inputDates);
                   }
-                } else { // imnt not in outdated list
-                  dateList.add(inputDates);
-                }
-                for (Pair<LocalDate, LocalDate> dates : dateList) {
-                  log.info(
-                      "Downloading missing data for {} from {} -> {}",
-                      instrument,
-                      dates.getLeft(),
-                      dates.getRight());
-                  MarketDataProto.Ticker missingTickerDataRange =
-                      marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
-                          instrument, dates.getLeft().toString(), dates.getRight().toString());
-
-                  if (missingTickerDataRange == null
-                      || missingTickerDataRange.getDataCount() == 0) {
-                    log.warn(
-                        "No data found for {} from {} -> {}",
+                  for (Pair<LocalDate, LocalDate> dates : dateList) {
+                    log.info(
+                        "Downloading missing data for {} from {} -> {}",
                         instrument,
                         dates.getLeft(),
                         dates.getRight());
-                  } else {
-                    fillAnalysisWarehouse(missingTickerDataRange);
-                    log.info(
-                        "Adding market data to db for {} from {} -> {}",
-                        instrument,
-                        missingTickerDataRange.getData(0).getDate(),
-                        missingTickerDataRange
-                            .getData(missingTickerDataRange.getDataCount() - 1)
-                            .getDate());
-                    marketDataCrdbServiceFeign.addMarketDataForSingleTicker(missingTickerDataRange);
+                    MarketDataProto.Ticker missingTickerDataRange =
+                        marketDataPythonEngineFeign.getTickerDataWithoutCountryCode(
+                            instrument, dates.getLeft().toString(), dates.getRight().toString());
+
+                    if (missingTickerDataRange == null
+                        || missingTickerDataRange.getDataCount() == 0) {
+                      log.warn(
+                          "No data found for {} from {} -> {}",
+                          instrument,
+                          dates.getLeft(),
+                          dates.getRight());
+                    } else {
+                      fillAnalysisWarehouse(missingTickerDataRange);
+                      log.info(
+                          "Adding market data to db for {} from {} -> {}",
+                          instrument,
+                          missingTickerDataRange.getData(0).getDate(),
+                          missingTickerDataRange
+                              .getData(missingTickerDataRange.getDataCount() - 1)
+                              .getDate());
+                      marketDataCrdbServiceFeign.addMarketDataForSingleTicker(
+                          missingTickerDataRange);
+                    }
                   }
-                }
-              });
-        });
+                });
+            return null;
+          });
+    }
+    try {
+      int executorThreads =
+          Math.max(
+              1, discoveryClientService.getAppInstanceCount(MARKET_DATA_PYTHON_ENGINE_FEIGN_NAME));
+      executorProviderService.procure(EXECUTOR_NAME, executorThreads).invokeAll(tasks);
+    } catch (Exception e) {
+      log.error("Failed to execute tasks", e);
+    } finally {
+      stopWatch.stop();
+      log.info(
+          "loadAnalysisDataForInstruments took {}s for {} imnts",
+          stopWatch.getTime(TimeUnit.SECONDS),
+          instruments.size());
+      executorProviderService.shutdown(EXECUTOR_NAME);
+    }
   }
 
   @Override
