@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.vv.personal</groupId>
     <artifactId>twm-portfolio-service</artifactId>
-    <version>1.23.1</version>
+    <version>1.23.2</version>
     <name>twm-portfolio-service</name>
     <description>TWM Portfolio service</description>
     <packaging>jar</packaging>
@@ -30,7 +30,7 @@
         <artifactory.version>1.1.27</artifactory.version>
         <apache-commons-io.version>2.21.0</apache-commons-io.version>
         <google-guava.version>33.5.0-jre</google-guava.version>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
         <mockito.version>5.20.0</mockito.version>
         <openapi-webmvc.version>2.8.14</openapi-webmvc.version>
         <opencsv.version>5.12.0</opencsv.version>
