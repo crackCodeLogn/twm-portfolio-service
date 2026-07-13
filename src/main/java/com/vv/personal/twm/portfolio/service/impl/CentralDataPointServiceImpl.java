@@ -303,6 +303,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public MarketDataProto.Portfolio getAllDividendsReceived() {
+    return completeMarketDataService.getAllDividendsReceived();
+  }
+
+  @Override
   public void testInfo() {
     completeMarketDataService.testInfo();
   }

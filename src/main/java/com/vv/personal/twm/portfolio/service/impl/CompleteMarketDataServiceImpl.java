@@ -166,6 +166,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private boolean isReloadInProgress;
   private List<LocalDate> localDates;
   private List<Integer> integerDates;
+  private List<DividendRecord> allDividends;
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
@@ -211,6 +212,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     this.computeMarketStatisticsService = computeMarketStatisticsService;
     this.marketDataCrdbServiceFeign = marketDataCrdbServiceFeign;
     this.calcPythonEngine = calcPythonEngine;
+    this.allDividends = new ArrayList<>(10000);
   }
 
   @Override
@@ -250,6 +252,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
         extractMarketPortfolioDataService
             .extractMarketPortfolioDividendData(MarketDataProto.AccountType.FHSA)
             .getPortfolio());
+    allDividends.sort(Comparator.comparingInt(DividendRecord::date));
 
     // load analysis data for imnts which are bought
     progressTrackerService.publishProgressTracker(
@@ -442,6 +445,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     localDates.clear();
     dateLocalDateCache.flush();
     keyInstrumentValueCache.flushAll();
+    allDividends.clear();
     log.info("Completed market data clearing");
   }
 
@@ -1365,6 +1369,34 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return getSellRecordsPortfolio(sellRecords);
   }
 
+  /**
+   * Returns list of all dividends received, already sorted on date + combined across all accounts
+   */
+  @Override
+  public MarketDataProto.Portfolio getAllDividendsReceived() {
+    List<MarketDataProto.Instrument> allDividendsForPortfolio =
+        allDividends.stream()
+            .map(
+                dividendRecord ->
+                    MarketDataProto.Instrument.newBuilder()
+                        .setTicker(
+                            MarketDataProto.Ticker.newBuilder()
+                                .setSymbol(dividendRecord.symbol())
+                                .addData(
+                                    MarketDataProto.Value.newBuilder()
+                                        .setDate(dividendRecord.date())
+                                        .setPrice(dividendRecord.dividend())
+                                        .build())
+                                .build())
+                        .setAccountType(dividendRecord.accountType())
+                        .build())
+            .toList();
+
+    return MarketDataProto.Portfolio.newBuilder()
+        .addAllInstruments(allDividendsForPortfolio)
+        .build();
+  }
+
   @Override
   public Optional<Double> fetchLatestPrice(String imnt, int tDate) {
     int days = 11;
@@ -1414,14 +1446,19 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
 
       // record dividend data in imntDividendsMap as the data structure holding translated data from
       // the div list
-      imntDividendsMap.computeIfAbsent(instrument.getTicker().getSymbol(), k -> new HashMap<>());
       Map<MarketDataProto.AccountType, TreeMap<Integer, List<DividendRecord>>> divDateValueMap =
-          imntDividendsMap.get(instrument.getTicker().getSymbol());
+          imntDividendsMap.computeIfAbsent(
+              instrument.getTicker().getSymbol(), k -> new HashMap<>());
       divDateValueMap.computeIfAbsent(accountType, k -> new TreeMap<>());
+
+      DividendRecord dividendRecord =
+          new DividendRecord(
+              instrument.getTicker().getSymbol(), divDate, dividend, orderId, accountType);
       divDateValueMap
           .get(accountType)
           .compute(divDate, (k, v) -> v == null ? new ArrayList<>() : v)
-          .add(new DividendRecord(instrument.getTicker().getSymbol(), divDate, dividend, orderId));
+          .add(dividendRecord);
+      allDividends.add(dividendRecord);
 
       // equivalent of above structure but an agg based on date and irrespective of imnt
       Map<MarketDataProto.AccountType, Double> dateDivAccountTypeDivMap =

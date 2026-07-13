@@ -322,6 +322,12 @@ public class PortfolioController {
         .build();
   }
 
+  @GetMapping("/market/dividends/all")
+  public MarketDataProto.Portfolio getAllDividendsReceived() {
+    log.info("getAllDividendsReceived invoked");
+    return centralDataPointService.getAllDividendsReceived();
+  }
+
   @GetMapping("/market/news/corp-actions")
   public MarketDataProto.Portfolio getCorporateActionNews() {
     log.info("getCorporateActionNews invoked");

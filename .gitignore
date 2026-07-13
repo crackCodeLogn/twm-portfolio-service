@@ -6,6 +6,8 @@ target/
 .mvn/*
 mvn*
 
+tasks.md
+
 ### STS ###
 .apt_generated
 .classpath

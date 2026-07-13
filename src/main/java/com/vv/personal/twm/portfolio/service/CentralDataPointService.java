@@ -110,5 +110,7 @@ public interface CentralDataPointService {
 
   MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType);
 
+  MarketDataProto.Portfolio getAllDividendsReceived();
+
   void testInfo();
 }
