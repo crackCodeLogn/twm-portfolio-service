@@ -15,7 +15,7 @@ public final class SanitizerUtil {
   private SanitizerUtil() {}
 
   public static String sanitizeDollar(String input) {
-    return sanitizeString(input).replaceAll("\\$", "");
+    return sanitizeString(input).replaceAll("\\$", EMPTY).replace(",", EMPTY);
   }
 
   public static double sanitizeDouble(String input) {
