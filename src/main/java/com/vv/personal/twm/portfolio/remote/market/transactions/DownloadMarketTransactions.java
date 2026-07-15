@@ -97,6 +97,32 @@ public class DownloadMarketTransactions {
     return extractMarketTransactions(portfolio, transactionsLines, accountType);
   }
 
+  public static MarketDataProto.Portfolio downloadMarketRegisteredAccountContributions(
+      String fileLocation, MarketDataProto.AccountType accountType) {
+    MarketDataProto.Portfolio.Builder portfolio = MarketDataProto.Portfolio.newBuilder();
+
+    List<String> lines = TextReaderUtil.readTextLines(fileLocation);
+    if (lines.isEmpty()) {
+      log.error("Empty file {}", fileLocation);
+      return portfolio.build();
+    }
+
+    String link = lines.get(0).strip();
+    String downloadLocation = CsvDownloaderUtil.downloadCsv(link);
+    if (StringUtils.isEmpty(downloadLocation)) {
+      log.error("Empty / Missing download location {}", link);
+      return portfolio.build();
+    }
+
+    List<List<String>> transactionsLines = TextReaderUtil.readCsvLines(downloadLocation);
+    if (transactionsLines.isEmpty()) {
+      log.error("Empty / Missing registered account transactions file {}", downloadLocation);
+      return portfolio.build();
+    }
+
+    return extractMarketRegisteredAccountTransactions(portfolio, transactionsLines, accountType);
+  }
+
   private static MarketDataProto.Portfolio extractMarketTransactions(
       MarketDataProto.Portfolio.Builder portfolio,
       List<List<String>> transactionsLines,
@@ -168,7 +194,6 @@ public class DownloadMarketTransactions {
       return extractTfsaDividends(portfolio, transactionsLines);
     else if (accountType == MarketDataProto.AccountType.FHSA)
       return extractFhsaDividends(portfolio, transactionsLines);
-
     return portfolio.build();
   }
 
@@ -257,6 +282,52 @@ public class DownloadMarketTransactions {
     return portfolio.build();
   }
 
+  private static MarketDataProto.Portfolio extractMarketRegisteredAccountTransactions(
+      MarketDataProto.Portfolio.Builder portfolio,
+      List<List<String>> transactionsLines,
+      MarketDataProto.AccountType accountType) {
+    if (accountType != MarketDataProto.AccountType.TFSA
+        && accountType != MarketDataProto.AccountType.FHSA)
+      throw new IllegalStateException("Not supported as selected account type is Non-Registered");
+
+    return extractRegisteredTransactions(portfolio, transactionsLines, accountType);
+  }
+
+  private static MarketDataProto.Portfolio extractRegisteredTransactions(
+      MarketDataProto.Portfolio.Builder portfolio,
+      List<List<String>> transactionsLines,
+      MarketDataProto.AccountType accountType) {
+    double maxContributionLimit = 0.0;
+    for (int i = 1; i < transactionsLines.size(); i++) { // skipping the first line as header
+      List<String> parts = transactionsLines.get(i);
+      if (parts.size() < 7) {
+        log.warn("Failed to parse {} registered transactions {}", accountType, parts);
+        continue;
+      }
+
+      String date = sanitizeString(parts.get(0));
+      double contributionAmount = sanitizeDouble(parts.get(1));
+      String type = sanitizeString(parts.get(6)).toLowerCase();
+      // maxContributionLimit = Math.max(contributionAmount, sanitizeDouble(parts.get(3)));
+      maxContributionLimit =
+          sanitizeDouble(parts.get(3)); // keep on overwriting until last active record
+
+      if (!"push".equals(type) && !"gic".equals(type)) continue;
+      // 2 types of contributions -> push::to WS, gic::to GIC
+
+      int contributionDate = DateFormatUtil.getDate(date);
+      boolean isGic = "gic".equals(type);
+
+      MarketDataProto.Instrument instrument =
+          generateRegisteredContributionInstrument(
+              contributionDate, contributionAmount, accountType, isGic);
+      portfolio.addInstruments(instrument);
+    }
+    portfolio.addInstruments(
+        generateRegisteredContributionInstrument(-1, maxContributionLimit, accountType, false));
+    return portfolio.build();
+  }
+
   private static MarketDataProto.Instrument generateDividendInstrument(
       String symbol,
       int date,
@@ -273,6 +344,18 @@ public class DownloadMarketTransactions {
                 .build())
         .putMetaData("orderId", generateDividendOrderId(symbol, date, accountType, isManufactured))
         .putMetaData("isManufactured", String.valueOf(isManufactured))
+        .build();
+  }
+
+  private static MarketDataProto.Instrument generateRegisteredContributionInstrument(
+      int date, double amount, MarketDataProto.AccountType accountType, boolean isGic) {
+    return MarketDataProto.Instrument.newBuilder()
+        .setAccountType(accountType)
+        .setTicker(
+            MarketDataProto.Ticker.newBuilder()
+                .addData(MarketDataProto.Value.newBuilder().setDate(date).setPrice(amount).build())
+                .build())
+        .putMetaData("isGic", String.valueOf(isGic))
         .build();
   }
 

@@ -80,6 +80,11 @@ public class ExtractMarketPortfolioDataServiceImpl implements ExtractMarketPortf
     return extractPortfolioData(accountType, getFileLocationConfig(accountType));
   }
 
+  @Override
+  public PortfolioData extractRegisteredContributionsData(MarketDataProto.AccountType accountType) {
+    return extractRegisteredContributionsData(accountType, getFileLocationConfig(accountType));
+  }
+
   private String getFileLocationConfig(MarketDataProto.Direction direction) {
     return switch (direction) {
       case BUY -> fileLocationConfig.getMarketTransactionsBuy();
@@ -159,5 +164,13 @@ public class ExtractMarketPortfolioDataServiceImpl implements ExtractMarketPortf
         accountTypeStr,
         stopwatch.getTime(TimeUnit.SECONDS));
     return new PortfolioData(dividends);
+  }
+
+  private PortfolioData extractRegisteredContributionsData(
+      MarketDataProto.AccountType accountType, String fileLocation) {
+    MarketDataProto.Portfolio contributions =
+        DownloadMarketTransactions.downloadMarketRegisteredAccountContributions(
+            fileLocation, accountType);
+    return new PortfolioData(contributions);
   }
 }

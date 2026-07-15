@@ -308,6 +308,11 @@ public class CentralDataPointServiceImpl implements CentralDataPointService {
   }
 
   @Override
+  public MarketDataProto.Portfolio getRegisteredAccountUsage(MarketDataProto.AccountType accType) {
+    return completeMarketDataService.getRegisteredAccountUsage(accType);
+  }
+
+  @Override
   public void testInfo() {
     completeMarketDataService.testInfo();
   }

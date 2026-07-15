@@ -422,6 +422,14 @@ public class PortfolioController {
     return centralDataPointService.deleteEntireMetaData();
   }
 
+  @GetMapping("/registered/usage/{accountType}")
+  public MarketDataProto.Portfolio getRegisteredAccountUsage(@PathVariable String accountType) {
+    log.info("getRegisteredAccountUsage invoked for {}", accountType);
+    MarketDataProto.AccountType accType = MarketDataProto.AccountType.valueOf(accountType);
+
+    return centralDataPointService.getRegisteredAccountUsage(accType);
+  }
+
   @GetMapping("/manual/market/metadata/reload")
   public String reloadMetaDataCache() {
     log.info("reloadMetaDataCache invoked");

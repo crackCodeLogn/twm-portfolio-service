@@ -112,5 +112,7 @@ public interface CentralDataPointService {
 
   MarketDataProto.Portfolio getAllDividendsReceived();
 
+  MarketDataProto.Portfolio getRegisteredAccountUsage(MarketDataProto.AccountType accType);
+
   void testInfo();
 }

@@ -121,7 +121,8 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
       dateDividendsMap; // date x account type x divs for that date
   private final Map<String, Map<MarketDataProto.AccountType, TreeMap<Integer, List<SellRecord>>>>
       imntSellRecordMap;
-
+  private final Map<MarketDataProto.AccountType, MarketDataProto.Portfolio>
+      registeredAccountContributions;
   // post processes, i.e. not filled during startup
   // todo - think about filling all the date based maps with 0s based off entire dates
   private final Map<Integer, Map<MarketDataProto.AccountType, Double>>
@@ -166,7 +167,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
   private boolean isReloadInProgress;
   private List<LocalDate> localDates;
   private List<Integer> integerDates;
-  private List<DividendRecord> allDividends;
+  private List<DividendRecord> allDividends; // all dividends across all account types
 
   public CompleteMarketDataServiceImpl(
       DateLocalDateCache dateLocalDateCache,
@@ -199,6 +200,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     localDates = new ArrayList<>();
     integerDates = new ArrayList<>();
     imntsNotInPortfolio = new HashSet<>();
+    registeredAccountContributions = new ConcurrentHashMap<>();
 
     this.tickerDataWarehouseService = tickerDataWarehouseService;
     this.dateLocalDateCache = dateLocalDateCache;
@@ -253,6 +255,18 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
             .extractMarketPortfolioDividendData(MarketDataProto.AccountType.FHSA)
             .getPortfolio());
     allDividends.sort(Comparator.comparingInt(DividendRecord::date));
+
+    // download registered contributions made to tfsa/fhsa
+    registeredAccountContributions.put(
+        MarketDataProto.AccountType.TFSA,
+        extractMarketPortfolioDataService
+            .extractRegisteredContributionsData(MarketDataProto.AccountType.TFSA)
+            .getPortfolio());
+    registeredAccountContributions.put(
+        MarketDataProto.AccountType.FHSA,
+        extractMarketPortfolioDataService
+            .extractRegisteredContributionsData(MarketDataProto.AccountType.FHSA)
+            .getPortfolio());
 
     // load analysis data for imnts which are bought
     progressTrackerService.publishProgressTracker(
@@ -446,6 +460,7 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     dateLocalDateCache.flush();
     keyInstrumentValueCache.flushAll();
     allDividends.clear();
+    registeredAccountContributions.clear();
     log.info("Completed market data clearing");
   }
 
@@ -1395,6 +1410,11 @@ public class CompleteMarketDataServiceImpl implements CompleteMarketDataService 
     return MarketDataProto.Portfolio.newBuilder()
         .addAllInstruments(allDividendsForPortfolio)
         .build();
+  }
+
+  @Override
+  public MarketDataProto.Portfolio getRegisteredAccountUsage(MarketDataProto.AccountType accType) {
+    return registeredAccountContributions.get(accType);
   }
 
   @Override

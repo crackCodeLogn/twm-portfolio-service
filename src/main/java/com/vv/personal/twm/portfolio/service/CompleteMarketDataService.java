@@ -95,4 +95,6 @@ public interface CompleteMarketDataService {
   MarketDataProto.Portfolio getSellPnl(MarketDataProto.AccountType accType);
 
   MarketDataProto.Portfolio getAllDividendsReceived();
+
+  MarketDataProto.Portfolio getRegisteredAccountUsage(MarketDataProto.AccountType accType);
 }

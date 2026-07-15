@@ -12,4 +12,6 @@ public interface ExtractMarketPortfolioDataService {
   PortfolioData extractMarketPortfolioData(MarketDataProto.Direction direction);
 
   PortfolioData extractMarketPortfolioDividendData(MarketDataProto.AccountType accountType);
+
+  PortfolioData extractRegisteredContributionsData(MarketDataProto.AccountType accountType);
 }
